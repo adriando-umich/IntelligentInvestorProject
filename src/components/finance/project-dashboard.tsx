@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
@@ -17,6 +17,7 @@ import {
 import { useLocale } from "@/components/app/locale-provider";
 import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { MetricCard } from "@/components/finance/metric-card";
+import { ProjectTransactionsTable } from "@/components/finance/project-transactions-table";
 import {
   EntryFamilyReport,
   ProjectCapitalVisuals,
@@ -49,18 +50,13 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
-  type EntryType,
-  getEntryFamilyLabel,
-  getEntryTypeLabel,
   getReconciliationStatusLabel,
-  getEntryFamily,
   type EntryFamily,
   type ProjectSnapshot,
 } from "@/lib/finance/types";
 import {
   formatCompactCurrency,
   formatCurrency,
-  formatDateLabel,
   formatPercent,
   formatSignedCurrency,
 } from "@/lib/format";
@@ -82,31 +78,6 @@ function reconciliationTone(status: string) {
   }
   if (status === "pending") {
     return "bg-amber-100 text-amber-800";
-  }
-  return "bg-slate-100 text-slate-700";
-}
-
-function entryTone(entryType: EntryType) {
-  if (entryType === "operating_income") {
-    return "bg-emerald-100 text-emerald-800";
-  }
-  if (
-    entryType === "shared_loan_drawdown" ||
-    entryType === "shared_loan_repayment_principal"
-  ) {
-    return "bg-sky-100 text-sky-800";
-  }
-  if (entryType === "shared_loan_interest_payment") {
-    return "bg-amber-100 text-amber-800";
-  }
-  if (entryType === "operating_expense") {
-    return "bg-rose-100 text-rose-800";
-  }
-  if (entryType === "capital_contribution" || entryType === "capital_return") {
-    return "bg-sky-100 text-sky-800";
-  }
-  if (entryType === "profit_distribution") {
-    return "bg-violet-100 text-violet-800";
   }
   return "bg-slate-100 text-slate-700";
 }
@@ -348,43 +319,6 @@ export function ProjectDashboard({
             "Profit is only paid when a manager posts a distribution.",
           ],
         };
-  const profileNames = new Map(
-    snapshot.memberSummaries.map((summary) => [
-      summary.projectMember.userId,
-      summary.profile.displayName,
-    ])
-  );
-  const tagNameById = new Map(
-    snapshot.dataset.tags.map((tag) => [tag.id, tag.name])
-  );
-  const tagNamesByEntryId = new Map<string, string[]>();
-
-  for (const entryTag of snapshot.dataset.entryTags) {
-    const current = tagNamesByEntryId.get(entryTag.ledgerEntryId) ?? [];
-    const tagName = tagNameById.get(entryTag.projectTagId);
-
-    if (tagName) {
-      current.push(tagName);
-      tagNamesByEntryId.set(entryTag.ledgerEntryId, current);
-    }
-  }
-
-  const filteredRecentEntries = useMemo(() => {
-    if (activityFamilyFilter === "all") {
-      return snapshot.recentEntries;
-    }
-
-    return snapshot.dataset.entries
-      .filter((entry) => entry.status === "posted")
-      .filter((entry) => getEntryFamily(entry.entryType) === activityFamilyFilter)
-      .sort(
-        (left, right) =>
-          new Date(right.effectiveAt).getTime() -
-          new Date(left.effectiveAt).getTime()
-      )
-      .slice(0, 8);
-  }, [activityFamilyFilter, snapshot.dataset.entries, snapshot.recentEntries]);
-
   return (
     <TooltipProvider>
       <div className="space-y-8">
@@ -511,7 +445,7 @@ export function ProjectDashboard({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
+                <Table className="min-w-[820px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>{copy.member}</TableHead>
@@ -552,92 +486,7 @@ export function ProjectDashboard({
             </Card>
 
             <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-              <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
-                <CardHeader className="gap-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <CardTitle>{copy.recentActivityTitle}</CardTitle>
-                      <CardDescription className="mt-1">
-                        {copy.recentActivityDescription}
-                      </CardDescription>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {([
-                        ["all", copy.allActivity],
-                        ["business", getEntryFamilyLabel("business", locale)],
-                        ["correction", getEntryFamilyLabel("correction", locale)],
-                      ] as const).map(([key, label]) => (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => setActivityFamilyFilter(key)}
-                          className={
-                            activityFamilyFilter === key
-                              ? "rounded-full bg-slate-950 px-3 py-1.5 text-sm font-medium text-white"
-                              : "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                          }
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {filteredRecentEntries.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
-                        {copy.noEntriesForFilter}
-                      </div>
-                    ) : (
-                      filteredRecentEntries.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge className={cn("rounded-full", entryTone(entry.entryType))}>
-                              {getEntryTypeLabel(entry.entryType, locale)}
-                            </Badge>
-                            <Badge className="rounded-full bg-white text-slate-700 ring-1 ring-slate-200">
-                              {getEntryFamilyLabel(getEntryFamily(entry.entryType), locale)}
-                            </Badge>
-                            <span className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                              {formatDateLabel(entry.effectiveAt, locale)}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-950">{entry.description}</p>
-                            <p className="text-sm text-slate-500">
-                              {entry.cashInMemberId
-                                ? `${copy.inLabel}: ${profileNames.get(entry.cashInMemberId)}`
-                                : copy.noReceivingMember}
-                              {entry.cashOutMemberId ? ` • Out: ${profileNames.get(entry.cashOutMemberId)}` : ""}
-                            </p>
-                            {tagNamesByEntryId.get(entry.id)?.length ? (
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {tagNamesByEntryId.get(entry.id)?.map((tagName) => (
-                                  <Badge
-                                    key={`${entry.id}-${tagName}`}
-                                    className="rounded-full bg-slate-100 text-slate-700"
-                                  >
-                                    {tagName}
-                                  </Badge>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                        <p className="text-right text-lg font-semibold text-slate-950">
-                          {formatCurrency(entry.amount, entry.currencyCode, locale)}
-                        </p>
-                      </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              <ProjectTransactionsTable snapshot={snapshot} />
 
               <div className="space-y-6">
                 <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
@@ -728,7 +577,7 @@ export function ProjectDashboard({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
+                <Table className="min-w-[820px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>{copy.debtor}</TableHead>
@@ -798,7 +647,7 @@ export function ProjectDashboard({
                       {copy.noInflowTags}
                     </div>
                   ) : (
-                    <Table>
+                    <Table className="min-w-[820px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>{copy.tag}</TableHead>
@@ -844,7 +693,7 @@ export function ProjectDashboard({
                       {copy.noExpenseTags}
                     </div>
                   ) : (
-                    <Table>
+                    <Table className="min-w-[820px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>{copy.tag}</TableHead>
@@ -889,7 +738,7 @@ export function ProjectDashboard({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
+                  <Table className="min-w-[820px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>{copy.member}</TableHead>
@@ -928,7 +777,7 @@ export function ProjectDashboard({
                     {copy.noOpenReconciliationRun}
                   </div>
                 ) : (
-                  <Table>
+                  <Table className="min-w-[820px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>{copy.member}</TableHead>

@@ -3,7 +3,7 @@ import { AlertTriangle, CircleCheckBig, Hourglass } from "lucide-react";
 
 import { PageHeader } from "@/components/app/page-header";
 import { MetricCard } from "@/components/finance/metric-card";
-import { Badge } from "@/components/ui/badge";
+import { ProjectReconciliationTable } from "@/components/finance/project-reconciliation-table";
 import {
   Card,
   CardContent,
@@ -11,51 +11,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { getProjectSnapshot } from "@/lib/data/repository";
 import { getServerI18n } from "@/lib/i18n/server";
-import { formatDateLabel, formatSignedCurrency } from "@/lib/format";
-import { cn } from "@/lib/utils";
-
-function statusTone(status: string) {
-  if (status === "matched") {
-    return "bg-emerald-100 text-emerald-800";
-  }
-  if (status === "variance_found") {
-    return "bg-rose-100 text-rose-800";
-  }
-  if (status === "pending") {
-    return "bg-amber-100 text-amber-800";
-  }
-  return "bg-slate-100 text-slate-700";
-}
-
-function getStatusLabel(status: string, locale: "en" | "vi") {
-  if (locale === "vi") {
-    if (status === "matched") {
-      return "Khớp";
-    }
-    if (status === "variance_found") {
-      return "Có chênh lệch";
-    }
-    if (status === "accepted") {
-      return "Đã chấp nhận";
-    }
-    if (status === "adjustment_posted") {
-      return "Đã ghi điều chỉnh";
-    }
-    return "Đang chờ";
-  }
-
-  return status.replaceAll("_", " ");
-}
+import { formatDateLabel } from "@/lib/format";
 
 export default async function ReconciliationPage({
   params,
@@ -148,68 +106,7 @@ export default async function ReconciliationPage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{locale === "vi" ? "Thành viên" : "Member"}</TableHead>
-                    <TableHead>
-                      {locale === "vi" ? "Tiền dự án theo hệ thống" : "Expected project cash"}
-                    </TableHead>
-                    <TableHead>
-                      {locale === "vi" ? "Tiền dự án báo cáo" : "Reported project cash"}
-                    </TableHead>
-                    <TableHead>{locale === "vi" ? "Chênh lệch" : "Variance"}</TableHead>
-                    <TableHead>{locale === "vi" ? "Trạng thái" : "Status"}</TableHead>
-                    <TableHead>
-                      {locale === "vi" ? "Ghi chú thành viên" : "Member note"}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {run.checks.map(({ check, profile }) => (
-                    <TableRow key={check.id}>
-                      <TableCell>{profile.displayName}</TableCell>
-                      <TableCell>
-                        {formatSignedCurrency(
-                          check.expectedProjectCash,
-                          snapshot.dataset.project.currencyCode,
-                          locale
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {check.reportedProjectCash == null
-                          ? locale === "vi"
-                            ? "Đang chờ"
-                            : "Pending"
-                          : formatSignedCurrency(
-                              check.reportedProjectCash,
-                              snapshot.dataset.project.currencyCode,
-                              locale
-                            )}
-                      </TableCell>
-                      <TableCell>
-                        {check.varianceAmount == null
-                          ? locale === "vi"
-                            ? "Đang chờ"
-                            : "Pending"
-                          : formatSignedCurrency(
-                              check.varianceAmount,
-                              snapshot.dataset.project.currencyCode,
-                              locale
-                            )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={cn("rounded-full", statusTone(check.status))}>
-                          {getStatusLabel(check.status, locale)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[240px] whitespace-normal text-slate-600">
-                        {check.memberNote ?? "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <ProjectReconciliationTable snapshot={snapshot} />
             </CardContent>
           </Card>
         </>

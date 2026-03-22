@@ -10,6 +10,7 @@ import {
 } from "@/app/actions/project-invites";
 import { useLocale } from "@/components/app/locale-provider";
 import { ProfileAvatar } from "@/components/app/profile-avatar";
+import { TableSurface, TableToolbar } from "@/components/finance/table-toolbar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { formatDateLabel } from "@/lib/format";
 import { getMemberRoleLabel } from "@/lib/finance/types";
+import { normalizeSearchText } from "@/lib/search";
 
 type MemberSummary = {
   id: string;
@@ -52,7 +54,11 @@ type InviteSummary = {
 
 const initialState: ProjectInviteActionState = { status: "idle" };
 
-function RoleBadge({ role }: { role: MemberSummary["role"] | InviteSummary["role"] }) {
+function RoleBadge({
+  role,
+}: {
+  role: MemberSummary["role"] | InviteSummary["role"];
+}) {
   const { locale } = useLocale();
   const className =
     role === "owner"
@@ -92,11 +98,26 @@ export function ProjectMemberManager({
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [revokePending, startRevokeTransition] = useTransition();
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberRoleFilter, setMemberRoleFilter] = useState<
+    "all" | "owner" | "manager" | "member"
+  >("all");
+  const [memberSort, setMemberSort] = useState<
+    "name_asc" | "joined_desc" | "role"
+  >("name_asc");
+  const [inviteSearch, setInviteSearch] = useState("");
+  const [inviteStatusFilter, setInviteStatusFilter] = useState<
+    "all" | InviteSummary["status"]
+  >("all");
+  const [inviteSort, setInviteSort] = useState<
+    "created_desc" | "expires_asc" | "email_asc"
+  >("created_desc");
 
   const pendingInvites = useMemo(
     () => invites.filter((invite) => invite.status === "pending"),
     [invites]
   );
+
   const copy =
     locale === "vi"
       ? {
@@ -143,6 +164,23 @@ export function ProjectMemberManager({
           revoke: "Thu hồi",
           member: "Thành viên",
           manager: "Quản lý",
+          owner: "Owner",
+          memberSearchPlaceholder: "Tìm theo tên thành viên hoặc email...",
+          searchLabel: "Tìm kiếm",
+          inviteSearchPlaceholder: "Tìm theo email hoặc chính link mời...",
+          allRoles: "Tất cả vai trò",
+          allStatuses: "Tất cả trạng thái",
+          sort: "Sắp xếp",
+          sortByName: "Tên A-Z",
+          sortByJoined: "Mới tham gia nhất",
+          sortByRole: "Theo vai trò",
+          sortByCreated: "Lời mời mới nhất",
+          sortByExpiry: "Sắp hết hạn",
+          sortByEmail: "Email A-Z",
+          showingMembers: (count: number) => `${count} thành viên đang hiển thị.`,
+          showingInvites: (count: number) => `${count} lời mời đang hiển thị.`,
+          noMembersMatch: "Không có thành viên nào khớp với tìm kiếm hoặc bộ lọc hiện tại.",
+          noInvitesMatch: "Không có lời mời nào khớp với tìm kiếm hoặc bộ lọc hiện tại.",
         }
       : {
           currentMembers: "Current members",
@@ -188,17 +226,107 @@ export function ProjectMemberManager({
           revoke: "Revoke",
           member: "Member",
           manager: "Manager",
+          owner: "Owner",
+          memberSearchPlaceholder: "Search member name or email...",
+          searchLabel: "Search",
+          inviteSearchPlaceholder: "Search email or invite link...",
+          allRoles: "All roles",
+          allStatuses: "All statuses",
+          sort: "Sort",
+          sortByName: "Name A-Z",
+          sortByJoined: "Newest joined",
+          sortByRole: "Role",
+          sortByCreated: "Newest invite",
+          sortByExpiry: "Expiring soon",
+          sortByEmail: "Email A-Z",
+          showingMembers: (count: number) => `${count} members shown.`,
+          showingInvites: (count: number) => `${count} invites shown.`,
+          noMembersMatch: "No members match the current search or filters.",
+          noInvitesMatch: "No invites match the current search or filters.",
         };
-  const copyButtonLabel = locale === "vi" ? "Sao chep" : "Copy";
-  const copiedMessage = locale === "vi" ? "Da sao chep link moi." : "Invite link copied.";
+
+  const copyButtonLabel = locale === "vi" ? "Sao chép" : "Copy";
+  const copiedMessage = locale === "vi" ? "Đã sao chép link mời." : "Invite link copied.";
   const copyFailedMessage =
     locale === "vi"
-      ? "Khong the sao chep tu dong. Ban van co the tu copy link nay."
+      ? "Không thể sao chép tự động. Bạn vẫn có thể tự copy link này."
       : "Could not copy automatically. You can still copy the link manually.";
   const revokeFailedMessage =
-    locale === "vi" ? "Khong the thu hoi loi moi." : "Unable to revoke invite.";
-  const revokedMessage = locale === "vi" ? "Da thu hoi loi moi." : "Invite revoked.";
-  const memberLabel = locale === "vi" ? "Thanh vien" : "Member";
+    locale === "vi" ? "Không thể thu hồi lời mời." : "Unable to revoke invite.";
+  const revokedMessage = locale === "vi" ? "Đã thu hồi lời mời." : "Invite revoked.";
+  const memberLabel = locale === "vi" ? "Thành viên" : "Member";
+
+  const displayedMembers = useMemo(() => {
+    const normalizedSearch = normalizeSearchText(memberSearch);
+
+    const roleRank: Record<MemberSummary["role"], number> = {
+      owner: 0,
+      manager: 1,
+      member: 2,
+    };
+
+    return [...members]
+      .filter((member) => {
+        if (memberRoleFilter !== "all" && member.role !== memberRoleFilter) {
+          return false;
+        }
+
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        return (
+          normalizeSearchText(member.displayName).includes(normalizedSearch) ||
+          normalizeSearchText(member.email).includes(normalizedSearch)
+        );
+      })
+      .sort((left, right) => {
+        if (memberSort === "joined_desc") {
+          return new Date(right.joinedAt).getTime() - new Date(left.joinedAt).getTime();
+        }
+
+        if (memberSort === "role") {
+          const diff = roleRank[left.role] - roleRank[right.role];
+
+          if (diff !== 0) {
+            return diff;
+          }
+        }
+
+        return left.displayName.localeCompare(right.displayName, locale);
+      });
+  }, [locale, memberRoleFilter, memberSearch, memberSort, members]);
+
+  const displayedInvites = useMemo(() => {
+    const normalizedSearch = normalizeSearchText(inviteSearch);
+
+    return [...invites]
+      .filter((invite) => {
+        if (inviteStatusFilter !== "all" && invite.status !== inviteStatusFilter) {
+          return false;
+        }
+
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        return (
+          normalizeSearchText(invite.email).includes(normalizedSearch) ||
+          normalizeSearchText(invite.inviteLink).includes(normalizedSearch)
+        );
+      })
+      .sort((left, right) => {
+        if (inviteSort === "expires_asc") {
+          return new Date(left.expiresAt).getTime() - new Date(right.expiresAt).getTime();
+        }
+
+        if (inviteSort === "email_asc") {
+          return (left.email ?? "").localeCompare(right.email ?? "", locale);
+        }
+
+        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+      });
+  }, [inviteSearch, inviteSort, inviteStatusFilter, invites, locale]);
 
   async function copyInvite(link: string) {
     try {
@@ -224,6 +352,7 @@ export function ProjectMemberManager({
       }
 
       setRevokeMessage(result.message ?? revokedMessage);
+      window.location.reload();
     });
   }
 
@@ -248,7 +377,9 @@ export function ProjectMemberManager({
             </div>
             <div>
               <p className="text-sm text-slate-500">{copy.pendingInvites}</p>
-              <p className="text-2xl font-semibold text-slate-950">{pendingInvites.length}</p>
+              <p className="text-2xl font-semibold text-slate-950">
+                {pendingInvites.length}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -270,43 +401,95 @@ export function ProjectMemberManager({
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
           <CardTitle>{copy.currentMembersTitle}</CardTitle>
-          <CardDescription>
-            {copy.currentMembersDescription}
-          </CardDescription>
+          <CardDescription>{copy.currentMembersDescription}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{memberLabel}</TableHead>
-                <TableHead>{copy.email}</TableHead>
-                <TableHead>{copy.role}</TableHead>
-                <TableHead>{copy.joined}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <ProfileAvatar
-                        name={member.displayName}
-                        avatarUrl={member.avatarUrl}
-                        size="sm"
-                        className="after:hidden"
-                      />
-                      <span className="font-medium text-slate-950">{member.displayName}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-slate-600">{member.email || copy.noEmail}</TableCell>
-                  <TableCell>
-                    <RoleBadge role={member.role} />
-                  </TableCell>
-                  <TableCell>{formatDateLabel(member.joinedAt, locale)}</TableCell>
+        <CardContent className="space-y-4">
+          <TableToolbar
+            searchLabel={copy.searchLabel}
+            searchValue={memberSearch}
+            onSearchChange={setMemberSearch}
+            searchPlaceholder={copy.memberSearchPlaceholder}
+            resultLabel={copy.showingMembers(displayedMembers.length)}
+            filters={[
+              {
+                key: "member-role",
+                label: copy.role,
+                value: memberRoleFilter,
+                onValueChange: (value) =>
+                  setMemberRoleFilter(
+                    value as "all" | "owner" | "manager" | "member"
+                  ),
+                options: [
+                  { value: "all", label: copy.allRoles },
+                  { value: "owner", label: copy.owner },
+                  { value: "manager", label: copy.manager },
+                  { value: "member", label: copy.member },
+                ],
+              },
+              {
+                key: "member-sort",
+                label: copy.sort,
+                value: memberSort,
+                onValueChange: (value) =>
+                  setMemberSort(value as "name_asc" | "joined_desc" | "role"),
+                options: [
+                  { value: "name_asc", label: copy.sortByName },
+                  { value: "joined_desc", label: copy.sortByJoined },
+                  { value: "role", label: copy.sortByRole },
+                ],
+              },
+            ]}
+          />
+
+          <TableSurface>
+            <Table className="min-w-[880px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[240px]">{memberLabel}</TableHead>
+                  <TableHead className="min-w-[220px]">{copy.email}</TableHead>
+                  <TableHead className="w-[160px]">{copy.role}</TableHead>
+                  <TableHead className="w-[150px]">{copy.joined}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {displayedMembers.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="py-10 text-center whitespace-normal text-slate-500"
+                    >
+                      {copy.noMembersMatch}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  displayedMembers.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <ProfileAvatar
+                            name={member.displayName}
+                            avatarUrl={member.avatarUrl}
+                            size="sm"
+                            className="after:hidden"
+                          />
+                          <span className="font-medium text-slate-950">
+                            {member.displayName}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-slate-600">
+                        {member.email || copy.noEmail}
+                      </TableCell>
+                      <TableCell>
+                        <RoleBadge role={member.role} />
+                      </TableCell>
+                      <TableCell>{formatDateLabel(member.joinedAt, locale)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableSurface>
         </CardContent>
       </Card>
 
@@ -321,25 +504,19 @@ export function ProjectMemberManager({
           <CardContent className="space-y-4 text-sm leading-6 text-slate-200">
             <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
               <p className="font-medium text-teal-100">{copy.emailRestrictedTitle}</p>
-              <p className="mt-2">
-                {copy.emailRestrictedDescription}
-              </p>
+              <p className="mt-2">{copy.emailRestrictedDescription}</p>
             </div>
             <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
               <p className="font-medium text-teal-100">{copy.reusableInviteTitle}</p>
-              <p className="mt-2">
-                {copy.reusableInviteDescription}
-              </p>
+              <p className="mt-2">{copy.reusableInviteDescription}</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
           <CardHeader>
-          <CardTitle>{copy.inviteMemberTitle}</CardTitle>
-          <CardDescription>
-            {copy.inviteMemberDescription}
-          </CardDescription>
+            <CardTitle>{copy.inviteMemberTitle}</CardTitle>
+            <CardDescription>{copy.inviteMemberDescription}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             {!liveModeEnabled ? (
@@ -384,7 +561,7 @@ export function ProjectMemberManager({
                   <div className="space-y-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-900">
                     <p>{createState.message}</p>
                     {createState.inviteLink ? (
-                      <div className="rounded-2xl border border-emerald-200 bg-white px-3 py-3 text-xs text-slate-700">
+                      <div className="rounded-2xl border border-emerald-200 bg-white px-3 py-3 text-xs break-all text-slate-700">
                         {createState.inviteLink}
                       </div>
                     ) : null}
@@ -434,9 +611,7 @@ export function ProjectMemberManager({
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
           <CardTitle>{copy.pendingInviteLinksTitle}</CardTitle>
-          <CardDescription>
-            {copy.pendingInviteLinksDescription}
-          </CardDescription>
+          <CardDescription>{copy.pendingInviteLinksDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           {invites.length === 0 ? (
@@ -444,72 +619,127 @@ export function ProjectMemberManager({
               {copy.noInvites}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{copy.invite}</TableHead>
-                  <TableHead>{copy.role}</TableHead>
-                  <TableHead>{copy.status}</TableHead>
-                  <TableHead>{copy.expires}</TableHead>
-                  <TableHead>{copy.created}</TableHead>
-                  <TableHead className="text-right">{copy.action}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invites.map((invite) => (
-                  <TableRow key={invite.id}>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <p className="font-medium text-slate-950">
-                          {invite.email || copy.reusableShareLink}
-                        </p>
-                        <p className="text-xs text-slate-500">{invite.inviteLink}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <RoleBadge role={invite.role} />
-                    </TableCell>
-                    <TableCell className="capitalize text-slate-700">
-                      {locale === "vi"
-                        ? ({
-                            pending: "đang chờ",
-                            accepted: "đã chấp nhận",
-                            revoked: "đã thu hồi",
-                            expired: "đã hết hạn",
-                          } as const)[invite.status]
-                        : invite.status}
-                    </TableCell>
-                    <TableCell>{formatDateLabel(invite.expiresAt, locale)}</TableCell>
-                    <TableCell>{formatDateLabel(invite.createdAt, locale)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="rounded-xl"
-                          onClick={() => copyInvite(invite.inviteLink)}
+            <div className="space-y-4">
+              <TableToolbar
+                searchLabel={copy.searchLabel}
+                searchValue={inviteSearch}
+                onSearchChange={setInviteSearch}
+                searchPlaceholder={copy.inviteSearchPlaceholder}
+                resultLabel={copy.showingInvites(displayedInvites.length)}
+                filters={[
+                  {
+                    key: "invite-status",
+                    label: copy.status,
+                    value: inviteStatusFilter,
+                    onValueChange: (value) =>
+                      setInviteStatusFilter(value as "all" | InviteSummary["status"]),
+                    options: [
+                      { value: "all", label: copy.allStatuses },
+                      { value: "pending", label: locale === "vi" ? "Đang chờ" : "Pending" },
+                      { value: "accepted", label: locale === "vi" ? "Đã chấp nhận" : "Accepted" },
+                      { value: "revoked", label: locale === "vi" ? "Đã thu hồi" : "Revoked" },
+                      { value: "expired", label: locale === "vi" ? "Đã hết hạn" : "Expired" },
+                    ],
+                  },
+                  {
+                    key: "invite-sort",
+                    label: copy.sort,
+                    value: inviteSort,
+                    onValueChange: (value) =>
+                      setInviteSort(
+                        value as "created_desc" | "expires_asc" | "email_asc"
+                      ),
+                    options: [
+                      { value: "created_desc", label: copy.sortByCreated },
+                      { value: "expires_asc", label: copy.sortByExpiry },
+                      { value: "email_asc", label: copy.sortByEmail },
+                    ],
+                  },
+                ]}
+              />
+
+              <TableSurface>
+                <Table className="min-w-[1080px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[300px]">{copy.invite}</TableHead>
+                      <TableHead className="w-[140px]">{copy.role}</TableHead>
+                      <TableHead className="w-[140px]">{copy.status}</TableHead>
+                      <TableHead className="w-[150px]">{copy.expires}</TableHead>
+                      <TableHead className="w-[150px]">{copy.created}</TableHead>
+                      <TableHead className="w-[200px] text-right">{copy.action}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {displayedInvites.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="py-10 text-center whitespace-normal text-slate-500"
                         >
-                          <Copy className="size-4" />
-                          {copyButtonLabel}
-                        </Button>
-                        {canManageInvites && invite.status === "pending" ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50"
-                            disabled={revokePending}
-                            onClick={() => revokeInvite(invite.id)}
-                          >
-                            <Trash2 className="size-4" />
-                            {copy.revoke}
-                          </Button>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                          {copy.noInvitesMatch}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      displayedInvites.map((invite) => (
+                        <TableRow key={invite.id}>
+                          <TableCell className="whitespace-normal">
+                            <div className="space-y-1">
+                              <p className="font-medium text-slate-950">
+                                {invite.email || copy.reusableShareLink}
+                              </p>
+                              <p className="break-all text-xs text-slate-500">
+                                {invite.inviteLink}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <RoleBadge role={invite.role} />
+                          </TableCell>
+                          <TableCell className="capitalize text-slate-700">
+                            {locale === "vi"
+                              ? ({
+                                  pending: "đang chờ",
+                                  accepted: "đã chấp nhận",
+                                  revoked: "đã thu hồi",
+                                  expired: "đã hết hạn",
+                                } as const)[invite.status]
+                              : invite.status}
+                          </TableCell>
+                          <TableCell>{formatDateLabel(invite.expiresAt, locale)}</TableCell>
+                          <TableCell>{formatDateLabel(invite.createdAt, locale)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="rounded-xl"
+                                onClick={() => copyInvite(invite.inviteLink)}
+                              >
+                                <Copy className="size-4" />
+                                {copyButtonLabel}
+                              </Button>
+                              {canManageInvites && invite.status === "pending" ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50"
+                                  disabled={revokePending}
+                                  onClick={() => revokeInvite(invite.id)}
+                                >
+                                  <Trash2 className="size-4" />
+                                  {copy.revoke}
+                                </Button>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableSurface>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -38,7 +38,7 @@ The app must keep those concepts separate in both data and UI.
 - `src/components/app/`
   - Shell, sign-in, page-level framing, and global locale switcher
 - `src/components/finance/`
-  - Finance dashboard and statement UI
+  - Finance dashboard, statement UI, and reusable finance-table toolbars
 - `src/lib/finance/`
   - Domain types and derived-balance engine
 - `src/lib/data/`
@@ -80,6 +80,7 @@ The transaction model now also exposes a second classification axis in code: `en
 The business-event shortcuts now include `shared_loan_interest_payment`, which behaves like a shared operating cost while staying distinct from shared-loan principal.
 The ledger planner now lets users choose the entry family first, then narrows the entry-type picker accordingly. The planner currently supports `reconciliation_adjustment` inside the `correction` family, while `reversal` still remains guide-only until a dedicated original-entry workflow exists.
 Project tags now have a dedicated management page for create, rename, and delete, rather than being attach-only from the planner.
+Primary table-heavy surfaces now use a shared toolbar pattern with search, filter, sort, and wider scroll-safe table shells. Search is accent-insensitive so Vietnamese users can search with or without diacritics.
 
 ## Current Routes
 
@@ -196,5 +197,8 @@ Only `.env.example` should be committed.
 - Added a cookie-backed EN/VI locale layer with a global language switcher and flag buttons in the root layout.
 - Made currency/date/percent formatting locale-aware and started threading locale through dashboard, planner, statements, invites, tags, settlements, reconciliation, and project-management screens.
 - Added route- and component-level bilingual copy for the main signed-in workflows so English and Vietnamese can be toggled across the current UI.
+- Added a shared finance table toolbar/shell pattern and applied it to transactions, transaction guide, members, invites, tags, settlements, and reconciliation tables.
+- Added accent-insensitive search normalization so Vietnamese users can search naturally with or without diacritics across the new table toolbars.
+- Replaced the dashboard's old recent-activity cards with a sortable/filterable transactions table and tightened table min-width handling so horizontal scroll is explicit on denser views.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

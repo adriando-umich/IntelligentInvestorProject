@@ -11,6 +11,7 @@
 - GitHub-triggered auto deploy is not confirmed yet; the current working deployment path is Vercel CLI plus linked project
 - Live sign-up/login behavior can still vary based on Supabase Auth settings such as email confirmation requirements.
 - The EN/VI rollout still needs one live QA pass to catch any remaining English-only strings in secondary dashboard/chart states.
+- The new table-toolbar rollout still needs one production pass with real signed-in data, not just the sample workspace and local production build.
 
 ## Resolved Issues
 
@@ -52,6 +53,8 @@
 - There was no real way to add members after creating a project; resolved by adding `project_invites`, manager-created share links, email-restricted invites, revoke support, and a public `/join/[inviteToken]` accept page.
 - Deep links like invite accept could lose their destination after email/password auth because server actions always redirected to `/projects`; resolved by adding hidden `nextPath` propagation through sign-in and sign-up actions.
 - The product started requiring English and Vietnamese across the UI while the app was still mostly English-only; resolved by adding a locale cookie, a global language switcher with flags, locale-aware formatters, and bilingual copy across the main routes and finance components.
+- Table-heavy workflows were hard to scan and hard to query because most finance tables had no shared search/filter/sort pattern and some columns collapsed too tightly; resolved by adding a reusable finance table toolbar/shell, applying it across the main tables, and widening dense tables so horizontal scroll is explicit.
+- Vietnamese searches initially matched only exact accented text; resolved by adding shared accent-insensitive search normalization across the new table toolbars.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -75,6 +78,7 @@
 - For first-time remote bootstrap migrations, sanity-check function/table ordering before assuming the CLI failure is an environment problem.
 - When Supabase social auth looks wired in code but absent in production, check both the public `/auth/v1/settings` endpoint and the project-level auth config (`site_url`, provider enabled flag, callback allow-list).
 - When a workflow depends on returning to a deep link after auth, preserve the `next` path consistently across OAuth, password sign-in, and sign-up.
+- For Vietnamese operator-facing search, normalize both the query and searchable text so users are not forced to type diacritics exactly.
 
 ## Latest Session Delta
 
@@ -112,3 +116,6 @@
 - Investigated the live create-project failure from the UI screenshot, traced it to RLS being enforced inside `create_project_with_owner`, and applied a new live migration that changes the function to `security definer`.
 - Added a shared project layout with persistent section navigation, then introduced a `/members` page and invite-backed self-join flow with a new live Supabase migration.
 - Added the first full EN/VI localization pass, including a root language switcher, locale-aware number/date formatting, and bilingual copy across sign-in, projects, planner, guide, tags, invites, member statements, settlements, reconciliation, and major dashboard/chart surfaces.
+- Added a reusable table toolbar/shell across transactions, transaction guide, members, invites, tags, settlements, and reconciliation, including per-table search, filter, and sort controls.
+- Added accent-insensitive Vietnamese search matching so queries like `lai vay`, `doi tru`, and `thanh vien` still hit the intended rows.
+- Verified on a local production `next start` build that transactions filtering/sorting, guide filtering/sorting, members search, and settlement/reconciliation toolbar searches all update the rendered rows as expected.

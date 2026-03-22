@@ -26,6 +26,12 @@
   - check for any remaining English-only strings in less-frequent dashboard/chart states
   - tighten Vietnamese wording where it still sounds too literal or overly technical
   - confirm emoji flag rendering on Windows, macOS, iOS, and Android
+- Run a live production QA pass on the new table toolbars:
+  - transactions search/filter/sort
+  - transaction guide search/filter/sort
+  - members and invites search/filter/sort
+  - tags search/filter/sort
+  - settlements and reconciliation table search/filter/sort
 
 ## Next
 
@@ -90,4 +96,6 @@
 - Updated auth forms so email sign-in/sign-up preserve `next` redirects for invite acceptance and other deep links.
 - Added a first-pass EN/VI localization layer with a global language switcher, locale cookie, and locale-aware formatting helpers.
 - Localized the main route headers plus key finance surfaces including sign-in, projects, create-project, member statements, tags, invite acceptance, ledger guide/planner, settlements, reconciliation, and much of the dashboard/chart storytelling.
+- Added reusable table search/filter/sort toolbars and wider table shells across the main finance tables, then QAed them locally on a production `next start` build.
+- Added accent-insensitive search normalization for the new toolbar pattern so Vietnamese queries without diacritics still match intended rows.
 - Moved the remaining work to end-to-end real-user validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

@@ -1,14 +1,9 @@
 "use client";
 
-import {
-  businessEntryTypes,
-  correctionEntryTypes,
-  getEntryFamilyLabel,
-  getEntryTypeLabel,
-  type BusinessEntryType,
-  type CorrectionEntryType,
-} from "@/lib/finance/types";
+import { useMemo, useState } from "react";
+
 import { useLocale } from "@/components/app/locale-provider";
+import { TableSurface, TableToolbar } from "@/components/finance/table-toolbar";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -26,6 +21,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  businessEntryTypes,
+  correctionEntryTypes,
+  getEntryFamilyLabel,
+  getEntryTypeLabel,
+  type BusinessEntryType,
+  type CorrectionEntryType,
+} from "@/lib/finance/types";
+import { normalizeSearchText } from "@/lib/search";
 
 type MatrixRow = {
   entryType: BusinessEntryType | CorrectionEntryType;
@@ -42,6 +46,14 @@ type MatrixRow = {
   pnlEffectEn: string;
   pnlEffectVi: string;
 };
+
+type MatrixSort = "recommended" | "alphabetical" | "cash";
+type MatrixCashFilter =
+  | "all"
+  | "money_in"
+  | "money_out"
+  | "between_members"
+  | "adjustment";
 
 const businessRows: MatrixRow[] = [
   {
@@ -123,8 +135,10 @@ const businessRows: MatrixRow[] = [
     entryType: "shared_loan_interest_payment",
     useWhenEn: "The project pays shared loan interest and the team shares that bank cost.",
     useWhenVi: "Dự án trả lãi vay chung và cả team cùng chia khoản chi phí ngân hàng này.",
-    exampleEn: "Monthly bank interest on the project loan is paid from one member account and shared across members.",
-    exampleVi: "Lãi vay ngân hàng hằng tháng được một thành viên trả trước rồi chia cho các thành viên liên quan.",
+    exampleEn:
+      "Monthly bank interest on the project loan is paid from one member account and shared across members.",
+    exampleVi:
+      "Lãi vay ngân hàng hằng tháng được một thành viên trả trước rồi chia cho các thành viên liên quan.",
     cashEffectEn: "Money goes out",
     cashEffectVi: "Tiền đi ra",
     reimbursementEffectEn: "Can create teammate debt",
@@ -229,6 +243,24 @@ const correctionRows: MatrixRow[] = [
   },
 ];
 
+function getCashCategory(
+  row: MatrixRow
+): Exclude<MatrixCashFilter, "all"> {
+  if (row.cashEffectEn === "Money comes in") {
+    return "money_in";
+  }
+
+  if (row.cashEffectEn === "Money goes out") {
+    return "money_out";
+  }
+
+  if (row.cashEffectEn === "Moves between members") {
+    return "between_members";
+  }
+
+  return "adjustment";
+}
+
 function MatrixTable({
   rows,
   locale,
@@ -237,26 +269,26 @@ function MatrixTable({
   locale: "en" | "vi";
 }) {
   return (
-    <div className="overflow-x-auto">
-      <Table>
+    <TableSurface>
+      <Table className="min-w-[1120px]">
         <TableHeader>
           <TableRow>
-            <TableHead className="min-w-[200px]">
+            <TableHead className="w-[220px]">
               {locale === "vi" ? "Loại giao dịch" : "Transaction type"}
             </TableHead>
-            <TableHead className="min-w-[280px]">
+            <TableHead className="min-w-[340px] whitespace-normal">
               {locale === "vi" ? "Dùng khi nào" : "Use this when"}
             </TableHead>
-            <TableHead className="min-w-[160px]">
+            <TableHead className="w-[160px]">
               {locale === "vi" ? "Tiền mặt" : "Cash"}
             </TableHead>
-            <TableHead className="min-w-[180px]">
+            <TableHead className="w-[190px] whitespace-normal">
               {locale === "vi" ? "Hoàn trả" : "Reimbursement"}
             </TableHead>
-            <TableHead className="min-w-[120px]">
+            <TableHead className="w-[140px]">
               {locale === "vi" ? "Vốn" : "Capital"}
             </TableHead>
-            <TableHead className="min-w-[160px]">
+            <TableHead className="w-[220px] whitespace-normal">
               {locale === "vi" ? "P&L / Lợi nhuận" : "P&L / Profit"}
             </TableHead>
           </TableRow>
@@ -269,7 +301,7 @@ function MatrixTable({
                   {getEntryTypeLabel(row.entryType, locale)}
                 </Badge>
               </TableCell>
-              <TableCell className="align-top">
+              <TableCell className="align-top whitespace-normal">
                 <p className="font-medium text-slate-950">
                   {locale === "vi" ? row.useWhenVi : row.useWhenEn}
                 </p>
@@ -277,44 +309,149 @@ function MatrixTable({
                   {locale === "vi" ? row.exampleVi : row.exampleEn}
                 </p>
               </TableCell>
-              <TableCell className="align-top text-sm text-slate-700">
+              <TableCell className="align-top text-sm whitespace-normal text-slate-700">
                 {locale === "vi" ? row.cashEffectVi : row.cashEffectEn}
               </TableCell>
-              <TableCell className="align-top text-sm text-slate-700">
+              <TableCell className="align-top text-sm whitespace-normal text-slate-700">
                 {locale === "vi"
                   ? row.reimbursementEffectVi
                   : row.reimbursementEffectEn}
               </TableCell>
-              <TableCell className="align-top text-sm text-slate-700">
+              <TableCell className="align-top text-sm whitespace-normal text-slate-700">
                 {locale === "vi" ? row.capitalEffectVi : row.capitalEffectEn}
               </TableCell>
-              <TableCell className="align-top text-sm text-slate-700">
+              <TableCell className="align-top text-sm whitespace-normal text-slate-700">
                 {locale === "vi" ? row.pnlEffectVi : row.pnlEffectEn}
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </div>
+    </TableSurface>
   );
 }
 
 export function TransactionTypeMatrix() {
   const { locale } = useLocale();
+  const [activeFamily, setActiveFamily] = useState<"business" | "correction">(
+    "business"
+  );
+  const [search, setSearch] = useState("");
+  const [cashFilter, setCashFilter] = useState<MatrixCashFilter>("all");
+  const [sortOrder, setSortOrder] = useState<MatrixSort>("recommended");
+
+  const copy =
+    locale === "vi"
+      ? {
+          title: "Nên dùng loại giao dịch nào?",
+          description:
+            "App phân loại giao dịch theo 2 trục: nhóm và loại. Hãy bắt đầu bằng việc xác định đây là nghiệp vụ thật ngoài đời hay chỉ là thao tác điều chỉnh sổ.",
+          businessFamily:
+            "Dùng cho các sự kiện tiền thật xảy ra ngoài đời như vốn góp, chi phí, tiền vào, chuyển động gốc vay, chuyển tiền giữa thành viên, hoàn trả và chia lợi nhuận.",
+          correctionFamily:
+            "Chỉ dùng khi bạn đang sửa hoặc đảo sổ, chứ không phải khi có nghiệp vụ mới xảy ra ngoài thực tế.",
+          searchPlaceholder:
+            "Tìm theo loại giao dịch, ví dụ, cash effect hoặc reimbursement...",
+          searchLabel: "Tìm kiếm",
+          cashFilter: "Dòng tiền",
+          sort: "Sắp xếp",
+          allCashEffects: "Tất cả cash effect",
+          moneyIn: "Tiền đi vào",
+          moneyOut: "Tiền đi ra",
+          betweenMembers: "Di chuyển giữa thành viên",
+          adjustments: "Điều chỉnh / đảo giao dịch",
+          recommended: "Theo thứ tự khuyến nghị",
+          alphabetical: "Theo ABC",
+          cashEffectSort: "Theo cash effect",
+          results: (count: number) => `${count} loại giao dịch đang hiển thị.`,
+          noRows: "Không có loại giao dịch nào khớp với tìm kiếm hoặc bộ lọc hiện tại.",
+          businessTab: `Nghiệp vụ thật (${businessEntryTypes.length})`,
+          correctionTab: `Điều chỉnh (${correctionEntryTypes.length})`,
+        }
+      : {
+          title: "Which transaction should I use?",
+          description:
+            "The app classifies entries on two axes: family and type. Start by asking whether you are recording a real business event or simply fixing the ledger.",
+          businessFamily:
+            "Use this for real-world money events like capital, expenses, income, loan principal movements, cash handovers, repayments, and profit payouts.",
+          correctionFamily:
+            "Use this only when you are correcting or reversing the ledger, not when a new business event happened in the real world.",
+          searchPlaceholder:
+            "Search transaction type, example, cash effect, or reimbursement...",
+          searchLabel: "Search",
+          cashFilter: "Cash effect",
+          sort: "Sort",
+          allCashEffects: "All cash effects",
+          moneyIn: "Money comes in",
+          moneyOut: "Money goes out",
+          betweenMembers: "Moves between members",
+          adjustments: "Adjustments / reversals",
+          recommended: "Recommended order",
+          alphabetical: "Alphabetical",
+          cashEffectSort: "Cash effect",
+          results: (count: number) => `${count} transaction types shown.`,
+          noRows: "No transaction types match the current search or filters.",
+          businessTab: `Business events (${businessEntryTypes.length})`,
+          correctionTab: `Corrections (${correctionEntryTypes.length})`,
+        };
+
+  const currentRows = activeFamily === "business" ? businessRows : correctionRows;
+
+  const filteredRows = useMemo(() => {
+    const normalizedSearch = normalizeSearchText(search);
+
+    return [...currentRows]
+      .filter((row) => {
+        if (cashFilter !== "all" && getCashCategory(row) !== cashFilter) {
+          return false;
+        }
+
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        const searchParts = [
+          getEntryTypeLabel(row.entryType, locale),
+          locale === "vi" ? row.useWhenVi : row.useWhenEn,
+          locale === "vi" ? row.exampleVi : row.exampleEn,
+          locale === "vi" ? row.cashEffectVi : row.cashEffectEn,
+          locale === "vi"
+            ? row.reimbursementEffectVi
+            : row.reimbursementEffectEn,
+          locale === "vi" ? row.capitalEffectVi : row.capitalEffectEn,
+          locale === "vi" ? row.pnlEffectVi : row.pnlEffectEn,
+        ];
+
+        return searchParts.some((value) =>
+          normalizeSearchText(value).includes(normalizedSearch)
+        );
+      })
+      .sort((left, right) => {
+        if (sortOrder === "alphabetical") {
+          return getEntryTypeLabel(left.entryType, locale).localeCompare(
+            getEntryTypeLabel(right.entryType, locale),
+            locale
+          );
+        }
+
+        if (sortOrder === "cash") {
+          const cashCompare = getCashCategory(left).localeCompare(getCashCategory(right));
+
+          if (cashCompare !== 0) {
+            return cashCompare;
+          }
+        }
+
+        return currentRows.findIndex((row) => row.entryType === left.entryType) -
+          currentRows.findIndex((row) => row.entryType === right.entryType);
+      });
+  }, [cashFilter, currentRows, locale, search, sortOrder]);
 
   return (
     <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
       <CardHeader>
-        <CardTitle>
-          {locale === "vi"
-            ? "Nên dùng loại giao dịch nào?"
-            : "Which transaction should I use?"}
-        </CardTitle>
-        <CardDescription>
-          {locale === "vi"
-            ? "App phân loại giao dịch theo 2 trục: nhóm và loại. Hãy bắt đầu bằng việc xác định đây là nghiệp vụ thật ngoài đời hay chỉ là thao tác điều chỉnh sổ."
-            : "The app now classifies entries on two axes: family and type. Start by asking whether you are recording a real business event or just fixing the ledger."}
-        </CardDescription>
+        <CardTitle>{copy.title}</CardTitle>
+        <CardDescription>{copy.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 lg:grid-cols-2">
@@ -325,9 +462,7 @@ export function TransactionTypeMatrix() {
               </Badge>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              {locale === "vi"
-                ? "Dùng cho các sự kiện tiền thật xảy ra ngoài đời như vốn góp, chi phí, tiền vào, chuyển động gốc vay, chuyển tiền giữa thành viên, hoàn trả và chia lợi nhuận."
-                : "Use this for real-world money events like capital, expenses, income, loan principal movements, cash handovers, repayments, and profit payouts."}
+              {copy.businessFamily}
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
@@ -337,35 +472,80 @@ export function TransactionTypeMatrix() {
               </Badge>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              {locale === "vi"
-                ? "Chỉ dùng khi bạn đang sửa hoặc đảo sổ, chứ không phải khi có nghiệp vụ mới xảy ra ngoài thực tế."
-                : "Use this only when you are correcting or reversing the ledger, not when a new business event happened in the real world."}
+              {copy.correctionFamily}
             </p>
           </div>
         </div>
 
-        <Tabs defaultValue="business" className="gap-4">
+        <Tabs
+          value={activeFamily}
+          onValueChange={(value) => setActiveFamily(value as "business" | "correction")}
+          className="gap-4"
+        >
           <TabsList className="rounded-2xl bg-slate-100 p-1">
-            <TabsTrigger value="business">
-              {locale === "vi"
-                ? `Nghiệp vụ thật (${businessEntryTypes.length})`
-                : `Business events (${businessEntryTypes.length})`}
-            </TabsTrigger>
-            <TabsTrigger value="correction">
-              {locale === "vi"
-                ? `Điều chỉnh (${correctionEntryTypes.length})`
-                : `Corrections (${correctionEntryTypes.length})`}
-            </TabsTrigger>
+            <TabsTrigger value="business">{copy.businessTab}</TabsTrigger>
+            <TabsTrigger value="correction">{copy.correctionTab}</TabsTrigger>
           </TabsList>
 
+          <TableToolbar
+            searchLabel={copy.searchLabel}
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={copy.searchPlaceholder}
+            resultLabel={copy.results(filteredRows.length)}
+            filters={[
+              {
+                key: "cash",
+                label: copy.cashFilter,
+                value: cashFilter,
+                onValueChange: (value) =>
+                  setCashFilter(value as MatrixCashFilter),
+                options: [
+                  { value: "all", label: copy.allCashEffects },
+                  { value: "money_in", label: copy.moneyIn },
+                  { value: "money_out", label: copy.moneyOut },
+                  { value: "between_members", label: copy.betweenMembers },
+                  { value: "adjustment", label: copy.adjustments },
+                ],
+              },
+              {
+                key: "sort",
+                label: copy.sort,
+                value: sortOrder,
+                onValueChange: (value) => setSortOrder(value as MatrixSort),
+                options: [
+                  { value: "recommended", label: copy.recommended },
+                  { value: "alphabetical", label: copy.alphabetical },
+                  { value: "cash", label: copy.cashEffectSort },
+                ],
+              },
+            ]}
+          />
+
           <TabsContent value="business">
-            <MatrixTable rows={businessRows} locale={locale} />
+            {filteredRows.length === 0 ? (
+              <EmptyState message={copy.noRows} />
+            ) : (
+              <MatrixTable rows={filteredRows} locale={locale} />
+            )}
           </TabsContent>
           <TabsContent value="correction">
-            <MatrixTable rows={correctionRows} locale={locale} />
+            {filteredRows.length === 0 ? (
+              <EmptyState message={copy.noRows} />
+            ) : (
+              <MatrixTable rows={filteredRows} locale={locale} />
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+      {message}
+    </div>
   );
 }

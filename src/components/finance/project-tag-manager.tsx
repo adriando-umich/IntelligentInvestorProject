@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { FolderTree, LoaderCircle, PencilLine, Plus, Trash2 } from "lucide-react";
 
 import {
@@ -11,6 +10,7 @@ import {
   type ProjectTagActionState,
 } from "@/app/actions/project-tags";
 import { useLocale } from "@/components/app/locale-provider";
+import { TableSurface, TableToolbar } from "@/components/finance/table-toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/format";
+import { normalizeSearchText } from "@/lib/search";
 
 type TagSummary = {
   id: string;
@@ -55,10 +56,16 @@ export function ProjectTagManager({
   liveModeEnabled: boolean;
 }) {
   const { locale } = useLocale();
-  const router = useRouter();
   const [createName, setCreateName] = useState("");
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "in_use" | "unused">(
+    "all"
+  );
+  const [sortOrder, setSortOrder] = useState<
+    "name_asc" | "entries_desc" | "amount_desc"
+  >("name_asc");
   const [feedback, setFeedback] = useState<ProjectTagActionState>(idleState);
   const [isPending, startTransition] = useTransition();
 
@@ -66,6 +73,7 @@ export function ProjectTagManager({
     () => tagSummaries.filter((tag) => tag.entryCount > 0).length,
     [tagSummaries]
   );
+
   const copy =
     locale === "vi"
       ? {
@@ -97,6 +105,16 @@ export function ProjectTagManager({
           delete: "Xóa",
           deleteConfirm: (tagName: string) =>
             `Xóa tag "${tagName}"? Hành động này cũng sẽ gỡ tag khỏi các giao dịch cũ.`,
+          searchPlaceholder: "Tìm theo tên tag hoặc slug...",
+          searchLabel: "Tìm kiếm",
+          status: "Trạng thái",
+          sort: "Sắp xếp",
+          allTags: "Tất cả tag",
+          sortByName: "Tên A-Z",
+          sortByEntries: "Nhiều giao dịch nhất",
+          sortByAmount: "Giá trị gắn tag cao nhất",
+          showing: (count: number) => `${count} tag đang hiển thị.`,
+          emptyFiltered: "Không có tag nào khớp với tìm kiếm hoặc bộ lọc hiện tại.",
         }
       : {
           tagsInProject: "Tags in this project",
@@ -127,7 +145,52 @@ export function ProjectTagManager({
           delete: "Delete",
           deleteConfirm: (tagName: string) =>
             `Delete the tag "${tagName}"? This also removes it from older tagged entries.`,
+          searchPlaceholder: "Search tag name or slug...",
+          searchLabel: "Search",
+          status: "Status",
+          sort: "Sort",
+          allTags: "All tags",
+          sortByName: "Name A-Z",
+          sortByEntries: "Most entries",
+          sortByAmount: "Highest tagged amount",
+          showing: (count: number) => `${count} tags shown.`,
+          emptyFiltered: "No tags match the current search or filters.",
         };
+
+  const displayedTags = useMemo(() => {
+    const normalizedSearch = normalizeSearchText(search);
+
+    return [...tagSummaries]
+      .filter((tag) => {
+        if (statusFilter === "in_use" && tag.entryCount === 0) {
+          return false;
+        }
+
+        if (statusFilter === "unused" && tag.entryCount > 0) {
+          return false;
+        }
+
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        return (
+          normalizeSearchText(tag.name).includes(normalizedSearch) ||
+          normalizeSearchText(tag.slug).includes(normalizedSearch)
+        );
+      })
+      .sort((left, right) => {
+        if (sortOrder === "entries_desc") {
+          return right.entryCount - left.entryCount;
+        }
+
+        if (sortOrder === "amount_desc") {
+          return right.taggedAmount - left.taggedAmount;
+        }
+
+        return left.name.localeCompare(right.name, locale);
+      });
+  }, [locale, search, sortOrder, statusFilter, tagSummaries]);
 
   function handleCreate() {
     startTransition(async () => {
@@ -140,7 +203,7 @@ export function ProjectTagManager({
 
       if (result.status === "success") {
         setCreateName("");
-        router.refresh();
+        window.location.reload();
       }
     });
   }
@@ -168,7 +231,7 @@ export function ProjectTagManager({
 
       if (result.status === "success") {
         cancelEditing();
-        router.refresh();
+        window.location.reload();
       }
     });
   }
@@ -192,7 +255,7 @@ export function ProjectTagManager({
         if (editingTagId === tag.id) {
           cancelEditing();
         }
-        router.refresh();
+        window.location.reload();
       }
     });
   }
@@ -284,115 +347,171 @@ export function ProjectTagManager({
               {copy.noTags}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{copy.tag}</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>{copy.entries}</TableHead>
-                  <TableHead>{copy.taggedAmount}</TableHead>
-                  <TableHead>{copy.inflow}</TableHead>
-                  <TableHead>{copy.expense}</TableHead>
-                  <TableHead className="text-right">{copy.actions}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tagSummaries.map((tag) => {
-                  const isEditing = editingTagId === tag.id;
-                  return (
-                    <TableRow key={tag.id}>
-                      <TableCell className="align-top">
-                        {isEditing ? (
-                          <Input
-                            value={editingName}
-                            onChange={(event) => setEditingName(event.target.value)}
-                            disabled={isPending}
-                          />
-                        ) : (
-                          <div className="space-y-2">
-                            <p className="font-medium text-slate-950">{tag.name}</p>
-                            {tag.entryCount === 0 ? (
-                              <Badge className="rounded-full bg-slate-100 text-slate-700">
-                                {copy.unused}
-                              </Badge>
-                            ) : (
-                              <Badge className="rounded-full bg-teal-100 text-teal-800">
-                                {copy.inUse}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="align-top text-sm text-slate-500">
-                        {tag.slug}
-                      </TableCell>
-                      <TableCell className="align-top">{tag.entryCount}</TableCell>
-                      <TableCell className="align-top">
-                        {formatCurrency(tag.taggedAmount, currencyCode, locale)}
-                      </TableCell>
-                      <TableCell className="align-top text-emerald-700">
-                        {formatCurrency(tag.inflowAmount, currencyCode, locale)}
-                      </TableCell>
-                      <TableCell className="align-top text-rose-700">
-                        {formatCurrency(tag.expenseAmount, currencyCode, locale)}
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <div className="flex justify-end gap-2">
-                          {isEditing ? (
-                            <>
-                              <Button
-                                type="button"
-                                size="sm"
-                                className="rounded-xl bg-slate-950 text-white hover:bg-slate-800"
-                                disabled={!liveModeEnabled || isPending}
-                                onClick={() => handleUpdate(tag.id)}
-                              >
-                                {copy.save}
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="rounded-xl"
-                                disabled={isPending}
-                                onClick={cancelEditing}
-                              >
-                                {copy.cancel}
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="rounded-xl"
-                                disabled={!liveModeEnabled || isPending}
-                                onClick={() => startEditing(tag)}
-                              >
-                                <PencilLine className="size-3.5" />
-                                {copy.rename}
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50"
-                                disabled={!liveModeEnabled || isPending}
-                                onClick={() => handleDelete(tag)}
-                              >
-                                <Trash2 className="size-3.5" />
-                                {copy.delete}
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
+            <div className="space-y-4">
+              <TableToolbar
+                searchLabel={copy.searchLabel}
+                searchValue={search}
+                onSearchChange={setSearch}
+                searchPlaceholder={copy.searchPlaceholder}
+                resultLabel={copy.showing(displayedTags.length)}
+                filters={[
+                  {
+                    key: "status",
+                    label: copy.status,
+                    value: statusFilter,
+                    onValueChange: (value) =>
+                      setStatusFilter(value as "all" | "in_use" | "unused"),
+                    options: [
+                      { value: "all", label: copy.allTags },
+                      { value: "in_use", label: copy.inUse },
+                      { value: "unused", label: copy.unused },
+                    ],
+                  },
+                  {
+                    key: "sort",
+                    label: copy.sort,
+                    value: sortOrder,
+                    onValueChange: (value) =>
+                      setSortOrder(
+                        value as "name_asc" | "entries_desc" | "amount_desc"
+                      ),
+                    options: [
+                      { value: "name_asc", label: copy.sortByName },
+                      { value: "entries_desc", label: copy.sortByEntries },
+                      { value: "amount_desc", label: copy.sortByAmount },
+                    ],
+                  },
+                ]}
+              />
+
+              <TableSurface>
+                <Table className="min-w-[980px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[220px]">{copy.tag}</TableHead>
+                      <TableHead className="w-[180px]">Slug</TableHead>
+                      <TableHead className="w-[120px]">{copy.entries}</TableHead>
+                      <TableHead className="w-[180px]">{copy.taggedAmount}</TableHead>
+                      <TableHead className="w-[160px]">{copy.inflow}</TableHead>
+                      <TableHead className="w-[160px]">{copy.expense}</TableHead>
+                      <TableHead className="w-[220px] text-right">
+                        {copy.actions}
+                      </TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {displayedTags.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="py-10 text-center whitespace-normal text-slate-500"
+                        >
+                          {copy.emptyFiltered}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      displayedTags.map((tag) => {
+                        const isEditing = editingTagId === tag.id;
+
+                        return (
+                          <TableRow key={tag.id}>
+                            <TableCell className="align-top whitespace-normal">
+                              {isEditing ? (
+                                <Input
+                                  value={editingName}
+                                  onChange={(event) =>
+                                    setEditingName(event.target.value)
+                                  }
+                                  disabled={isPending}
+                                />
+                              ) : (
+                                <div className="space-y-2">
+                                  <p className="font-medium text-slate-950">{tag.name}</p>
+                                  {tag.entryCount === 0 ? (
+                                    <Badge className="rounded-full bg-slate-100 text-slate-700">
+                                      {copy.unused}
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="rounded-full bg-teal-100 text-teal-800">
+                                      {copy.inUse}
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="align-top text-sm text-slate-500">
+                              {tag.slug}
+                            </TableCell>
+                            <TableCell className="align-top">{tag.entryCount}</TableCell>
+                            <TableCell className="align-top">
+                              {formatCurrency(tag.taggedAmount, currencyCode, locale)}
+                            </TableCell>
+                            <TableCell className="align-top text-emerald-700">
+                              {formatCurrency(tag.inflowAmount, currencyCode, locale)}
+                            </TableCell>
+                            <TableCell className="align-top text-rose-700">
+                              {formatCurrency(tag.expenseAmount, currencyCode, locale)}
+                            </TableCell>
+                            <TableCell className="align-top">
+                              <div className="flex justify-end gap-2">
+                                {isEditing ? (
+                                  <>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      className="rounded-xl bg-slate-950 text-white hover:bg-slate-800"
+                                      disabled={!liveModeEnabled || isPending}
+                                      onClick={() => handleUpdate(tag.id)}
+                                    >
+                                      {copy.save}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="rounded-xl"
+                                      disabled={isPending}
+                                      onClick={cancelEditing}
+                                    >
+                                      {copy.cancel}
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="rounded-xl"
+                                      disabled={!liveModeEnabled || isPending}
+                                      onClick={() => startEditing(tag)}
+                                    >
+                                      <PencilLine className="size-3.5" />
+                                      {copy.rename}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50"
+                                      disabled={!liveModeEnabled || isPending}
+                                      onClick={() => handleDelete(tag)}
+                                    >
+                                      <Trash2 className="size-3.5" />
+                                      {copy.delete}
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </TableSurface>
+            </div>
           )}
         </CardContent>
       </Card>
