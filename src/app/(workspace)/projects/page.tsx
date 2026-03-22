@@ -10,7 +10,6 @@ import {
 import { MetricCard } from "@/components/finance/metric-card";
 import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -47,7 +46,7 @@ export default async function ProjectsPage() {
         <Link
           href="/projects/new"
           className={cn(
-            buttonVariants({ variant: "outline", size: "lg" }),
+            "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium whitespace-nowrap transition-all outline-none select-none hover:bg-muted hover:text-foreground active:translate-y-px disabled:pointer-events-none disabled:opacity-50",
             "rounded-2xl border-teal-200 bg-teal-50 text-teal-900 hover:bg-teal-100"
           )}
         >
@@ -99,7 +98,7 @@ export default async function ProjectsPage() {
             <Link
               href="/projects/new"
               className={cn(
-                buttonVariants({ size: "lg" }),
+                "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-primary px-2.5 text-sm font-medium whitespace-nowrap text-primary-foreground transition-all outline-none select-none hover:bg-primary/80 active:translate-y-px disabled:pointer-events-none disabled:opacity-50",
                 "rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
               )}
             >

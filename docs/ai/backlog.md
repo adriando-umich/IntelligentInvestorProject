@@ -64,4 +64,5 @@
 - Added a second transaction-classification axis in code (`business` vs `correction`) and surfaced it through a helper matrix on the ledger planner page.
 - Added `shared_loan_repayment_principal` for repaying bank principal without treating it as operating expense or capital return.
 - Added avatar sync from Google metadata into profiles plus avatar rendering in the shell and member-facing UI.
+- Fixed the `/projects` demo-mode crash after the avatar work by removing a client-only `buttonVariants()` call from the server page.
 - Moved the remaining work to live migration validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

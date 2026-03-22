@@ -36,6 +36,7 @@
 - The transaction enum was too flat to explain clearly to users; resolved in app code by adding a shared family classification (`business` vs `correction`) and a helper matrix on the planner page.
 - Shared loan drawdown existed without an equally explicit principal-paydown type; resolved by adding `shared_loan_repayment_principal`.
 - Google sign-in could succeed without the app persisting profile photos into workspace profiles; resolved in code by syncing avatar metadata and rendering avatars with a fallback.
+- `/projects` started returning `500` in demo mode after the avatar rollout; resolved by removing a server-side call to `buttonVariants()` from the client-only button module.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -51,6 +52,7 @@
 - For social auth on Supabase SSR, start OAuth from a browser client and finish the PKCE code exchange in a route handler that can persist auth cookies.
 - When the ledger model is still stored as one enum in SQL, add a shared classification helper in app code instead of forcing a breaking schema rewrite mid-project.
 - When social-auth metadata should survive beyond the current session, sync it into the app's profile table and gracefully tolerate older databases that have not received the new column yet.
+- If a route is a server page, do not call styling helpers exported from client components; keep shared class builders server-safe or inline the classes on that page.
 
 ## Latest Session Delta
 
@@ -69,3 +71,4 @@
 - Clarified the existing member-to-member repayment flow so users can more easily record one teammate paying another teammate back.
 - Added `shared_loan_repayment_principal`, a derived `business/correction` transaction family, and a planner helper matrix that explains which type to use and what each type affects.
 - Added Google-avatar sync and UI rendering while logging that the new `profiles.avatar_url` column still needs its live migration applied.
+- Fixed the resulting `/projects` server crash and re-verified the page in demo mode locally with the avatar shell still rendering fallback initials.

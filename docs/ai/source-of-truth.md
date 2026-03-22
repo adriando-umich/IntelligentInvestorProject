@@ -150,6 +150,7 @@ Only `.env.example` should be committed.
 - Added `shared_loan_repayment_principal` as a non-P&L financing outflow for repaying shared loan principal.
 - Added a transaction helper matrix on the ledger planner page so users can see, in one place, which cases are business events versus corrections and what each type affects.
 - Added avatar sync from Supabase auth metadata and started rendering avatars in the workspace shell plus member-facing project UI.
+- Fixed a follow-up regression where `/projects` crashed in demo mode because the server page was calling `buttonVariants()` from the client-only button module; the page now uses server-safe classes there and the avatar UI remains intact.
 - Current limitation: Google OAuth still depends on external provider setup in Supabase Auth and a Google OAuth client; no extra app env vars were added for that flow.
 - Current limitation: persistent avatar storage for live users depends on applying the new avatar migration so `profiles.avatar_url` exists in the database.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
