@@ -62,6 +62,7 @@
 - Reconciliation had only a reporting table and no real operating workflow for managers or members; resolved by adding SQL RPCs plus UI for opening a run, member submission, manager acceptance/adjustment, and closing the run.
 - The dashboard header looked like it had two competing tab/navigation systems; resolved by keeping the section nav as the only navigation layer and reducing the dashboard row to real actions only.
 - The ledger planner was showing `Open transaction guide` and `Manage tags` in two stacked places close together, which made the form feel repetitive and especially crowded on mobile; resolved by keeping one page-level support card above the planner and removing the duplicate CTA block from inside the form.
+- The ledger planner still showed both `Money out by` and `Money in to` for `capital_contribution`, even though only the receiving custody side is required there; resolved by showing only the cash-leg selectors relevant to the selected entry type and by adding clearer capital-specific helper copy.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -133,3 +134,4 @@
 - Found that reconciliation still stopped at read-only status cards and tables; fixed by shipping a new live reconciliation workflow migration, server actions, and page-level flow UI, then applying the migration to the real Supabase database.
 - The dashboard header still had one remaining pseudo-navigation CTA (`Manage tags`) after the larger nav cleanup; fixed by removing it so the secondary row now contains only true actions.
 - Added a planner-specific manual QA flow in `docs/manual-qa/ledger-planner-ui-ux.md`, then tightened the planner layout so guide/tag support lives in one place and the primary actions become full-width on mobile.
+- Found a follow-up planner confusion on capital entries while validating the production link: `capital_contribution` was still rendering an unnecessary `Money out by` field. Fixed the UI to show only the relevant cash legs and kept the validation helpers shared between schema and planner.

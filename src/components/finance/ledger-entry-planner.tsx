@@ -33,11 +33,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  entryTypeNeedsAllocation,
+  entryTypeNeedsCapitalOwner,
+  entryTypeNeedsCashIn,
+  entryTypeNeedsCashOut,
+  entryTypeNeedsSingleCashSide,
   getPlannerEntryLabel,
   getPlannerEntrySchema,
   getPlannerEntryTypesForFamily,
-  isAllocationEntryType,
-  isCapitalEntryType,
   parseTagNames,
   supportsLiveCreate,
   type PlannerEntryFormValues,
@@ -58,6 +61,10 @@ type MemberOption = {
 };
 
 function cashOutLabel(entryType: PlannerEntryType, locale: "en" | "vi") {
+  if (entryType === "capital_return") {
+    return locale === "vi" ? "Ai đang chi tiền dự án ra" : "Who pays the project money out";
+  }
+
   if (entryType === "reconciliation_adjustment") {
     return locale === "vi" ? "Giảm tiền dự án kỳ vọng của" : "Decrease expected cash for";
   }
@@ -74,6 +81,12 @@ function cashOutLabel(entryType: PlannerEntryType, locale: "en" | "vi") {
 }
 
 function cashInLabel(entryType: PlannerEntryType, locale: "en" | "vi") {
+  if (entryType === "capital_contribution") {
+    return locale === "vi"
+      ? "Ai đang giữ tiền dự án sau khi góp"
+      : "Who is holding the project money";
+  }
+
   if (entryType === "reconciliation_adjustment") {
     return locale === "vi" ? "Tăng tiền dự án kỳ vọng của" : "Increase expected cash for";
   }
@@ -90,6 +103,18 @@ function cashInLabel(entryType: PlannerEntryType, locale: "en" | "vi") {
 }
 
 function memberTransferHelperCopy(entryType: PlannerEntryType, locale: "en" | "vi") {
+  if (entryType === "capital_contribution") {
+    return locale === "vi"
+      ? "Với giao dịch góp vốn, hãy chọn ai đang giữ tiền dự án sau khi góp. 'Capital owner' là người có số dư vốn tăng."
+      : "For capital contribution, choose who is physically holding the project money after the contribution. 'Capital owner' is whose capital balance increases.";
+  }
+
+  if (entryType === "capital_return") {
+    return locale === "vi"
+      ? "Với hoàn vốn, hãy chọn ai đang chi tiền dự án ra. 'Capital owner' là người có số dư vốn giảm."
+      : "For capital return, choose who is paying the project money out. 'Capital owner' is whose capital balance decreases.";
+  }
+
   if (entryType === "reconciliation_adjustment") {
     return locale === "vi"
       ? "Chỉ dùng một bên. Chọn tăng tiền dự án kỳ vọng khi hệ thống cần cộng thêm tiền dự án cho một thành viên, hoặc chọn giảm khi cần trừ bớt sau đối chiếu."
@@ -493,6 +518,14 @@ export function LedgerEntryPlanner({
   const transferHelperCopy = memberTransferHelperCopy(watchedEntryType, locale);
   const currentEntryFamily = getEntryFamily(watchedEntryType);
   const availableEntryTypes = getPlannerEntryTypesForFamily(currentEntryFamily);
+  const showCashInField =
+    entryTypeNeedsCashIn(watchedEntryType) ||
+    entryTypeNeedsSingleCashSide(watchedEntryType);
+  const showCashOutField =
+    entryTypeNeedsCashOut(watchedEntryType) ||
+    entryTypeNeedsSingleCashSide(watchedEntryType);
+  const showCapitalOwnerField = entryTypeNeedsCapitalOwner(watchedEntryType);
+  const showAllocationField = entryTypeNeedsAllocation(watchedEntryType);
   const pendingAllocationHelper =
     locale === "vi"
       ? "Pending member co the duoc chia chi phi va gan phan von, nhung chua duoc chon o vai tro tra tien/nhan tien cho toi khi ho join."
@@ -638,42 +671,52 @@ export function LedgerEntryPlanner({
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="cashOutProjectMemberId">
-                  {cashOutLabel(watchedEntryType, locale)}
-                </Label>
-                <select
-                  id="cashOutProjectMemberId"
-                  className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
-                  {...form.register("cashOutProjectMemberId")}
-                >
-                  <option value="">{copy.noPayerSelected}</option>
-                  {cashMemberOptions.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {labelById.get(member.id) ?? member.name}
-                    </option>
-                  ))}
-                </select>
+            {showCashInField || showCashOutField ? (
+              <div
+                className={`grid gap-5 ${
+                  showCashInField && showCashOutField ? "sm:grid-cols-2" : ""
+                }`}
+              >
+                {showCashOutField ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="cashOutProjectMemberId">
+                      {cashOutLabel(watchedEntryType, locale)}
+                    </Label>
+                    <select
+                      id="cashOutProjectMemberId"
+                      className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
+                      {...form.register("cashOutProjectMemberId")}
+                    >
+                      <option value="">{copy.noPayerSelected}</option>
+                      {cashMemberOptions.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {labelById.get(member.id) ?? member.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                {showCashInField ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="cashInProjectMemberId">
+                      {cashInLabel(watchedEntryType, locale)}
+                    </Label>
+                    <select
+                      id="cashInProjectMemberId"
+                      className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
+                      {...form.register("cashInProjectMemberId")}
+                    >
+                      <option value="">{copy.noReceiverSelected}</option>
+                      {cashMemberOptions.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {labelById.get(member.id) ?? member.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="cashInProjectMemberId">
-                  {cashInLabel(watchedEntryType, locale)}
-                </Label>
-                <select
-                  id="cashInProjectMemberId"
-                  className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
-                  {...form.register("cashInProjectMemberId")}
-                >
-                  <option value="">{copy.noReceiverSelected}</option>
-                  {cashMemberOptions.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {labelById.get(member.id) ?? member.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            ) : null}
 
             {transferHelperCopy ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
@@ -681,7 +724,7 @@ export function LedgerEntryPlanner({
               </div>
             ) : null}
 
-            {isCapitalEntryType(watchedEntryType) ? (
+            {showCapitalOwnerField ? (
               <div className="space-y-2">
                 <Label htmlFor="capitalOwnerProjectMemberId">
                   {copy.capitalOwner}
@@ -704,7 +747,7 @@ export function LedgerEntryPlanner({
               </div>
             ) : null}
 
-            {isAllocationEntryType(watchedEntryType) ? (
+            {showAllocationField ? (
               <div className="space-y-3">
                 <div className="space-y-1">
                   <Label>Members sharing this amount</Label>
@@ -879,25 +922,39 @@ export function LedgerEntryPlanner({
                 {formatCurrency(currentAmount || 0, currencyCode, locale)}
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-sm text-slate-500">{copy.moneyOut}</p>
-                <p className="mt-2 font-medium text-slate-950">
-                  {watchedCashOutProjectMemberId
-                    ? labelById.get(watchedCashOutProjectMemberId)
-                    : copy.notSet}
-                </p>
+            {showCashInField || showCashOutField ? (
+              <div
+                className={`grid gap-3 ${
+                  showCashInField && showCashOutField ? "sm:grid-cols-2" : ""
+                }`}
+              >
+                {showCashOutField ? (
+                  <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                    <p className="text-sm text-slate-500">
+                      {cashOutLabel(watchedEntryType, locale)}
+                    </p>
+                    <p className="mt-2 font-medium text-slate-950">
+                      {watchedCashOutProjectMemberId
+                        ? labelById.get(watchedCashOutProjectMemberId)
+                        : copy.notSet}
+                    </p>
+                  </div>
+                ) : null}
+                {showCashInField ? (
+                  <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                    <p className="text-sm text-slate-500">
+                      {cashInLabel(watchedEntryType, locale)}
+                    </p>
+                    <p className="mt-2 font-medium text-slate-950">
+                      {watchedCashInProjectMemberId
+                        ? labelById.get(watchedCashInProjectMemberId)
+                        : copy.notSet}
+                    </p>
+                  </div>
+                ) : null}
               </div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-sm text-slate-500">{copy.moneyIn}</p>
-                <p className="mt-2 font-medium text-slate-950">
-                  {watchedCashInProjectMemberId
-                    ? labelById.get(watchedCashInProjectMemberId)
-                    : copy.notSet}
-                </p>
-              </div>
-            </div>
-            {isCapitalEntryType(watchedEntryType) ? (
+            ) : null}
+            {showCapitalOwnerField ? (
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-sm text-slate-500">{copy.capitalOwner}</p>
                 <p className="mt-2 font-medium text-slate-950">
@@ -907,7 +964,7 @@ export function LedgerEntryPlanner({
                 </p>
               </div>
             ) : null}
-            {isAllocationEntryType(watchedEntryType) ? (
+            {showAllocationField ? (
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-sm text-slate-500">{copy.selectedAllocationMembers}</p>
                 <p className="mt-2 font-medium text-slate-950">

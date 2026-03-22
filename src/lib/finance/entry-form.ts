@@ -85,6 +85,47 @@ export function getPlannerEntryTypesForFamily(entryFamily: EntryFamily) {
   return plannerEntryTypesByFamily[entryFamily];
 }
 
+export function entryTypeNeedsCashIn(entryType: PlannerEntryType) {
+  return (
+    entryType === "capital_contribution" ||
+    entryType === "operating_income" ||
+    entryType === "shared_loan_drawdown" ||
+    entryType === "cash_handover" ||
+    entryType === "expense_settlement_payment"
+  );
+}
+
+export function entryTypeNeedsCashOut(entryType: PlannerEntryType) {
+  return (
+    entryType === "capital_return" ||
+    entryType === "shared_loan_repayment_principal" ||
+    entryType === "shared_loan_interest_payment" ||
+    entryType === "operating_expense" ||
+    entryType === "cash_handover" ||
+    entryType === "expense_settlement_payment" ||
+    entryType === "profit_distribution"
+  );
+}
+
+export function entryTypeNeedsCapitalOwner(entryType: PlannerEntryType) {
+  return (
+    entryType === "capital_contribution" ||
+    entryType === "capital_return"
+  );
+}
+
+export function entryTypeNeedsAllocation(entryType: PlannerEntryType) {
+  return (
+    entryType === "operating_income" ||
+    entryType === "operating_expense" ||
+    entryType === "shared_loan_interest_payment"
+  );
+}
+
+export function entryTypeNeedsSingleCashSide(entryType: PlannerEntryType) {
+  return entryType === "reconciliation_adjustment";
+}
+
 export function getPlannerEntryLabel(
   entryType: PlannerEntryType,
   locale: AppLocale = defaultAppLocale
@@ -151,28 +192,11 @@ function createPlannerEntrySchemaForLocale(locale: AppLocale) {
     note: optionalString,
   })
   .superRefine((value, ctx) => {
-    const needsCashIn =
-      value.entryType === "capital_contribution" ||
-      value.entryType === "operating_income" ||
-      value.entryType === "shared_loan_drawdown" ||
-      value.entryType === "cash_handover" ||
-      value.entryType === "expense_settlement_payment";
-    const needsCashOut =
-      value.entryType === "capital_return" ||
-      value.entryType === "shared_loan_repayment_principal" ||
-      value.entryType === "shared_loan_interest_payment" ||
-      value.entryType === "operating_expense" ||
-      value.entryType === "cash_handover" ||
-      value.entryType === "expense_settlement_payment" ||
-      value.entryType === "profit_distribution";
-    const needsCapitalOwner =
-      value.entryType === "capital_contribution" ||
-      value.entryType === "capital_return";
-    const needsAllocation =
-      value.entryType === "operating_income" ||
-      value.entryType === "operating_expense" ||
-      value.entryType === "shared_loan_interest_payment";
-    const needsSingleCashSide = value.entryType === "reconciliation_adjustment";
+    const needsCashIn = entryTypeNeedsCashIn(value.entryType);
+    const needsCashOut = entryTypeNeedsCashOut(value.entryType);
+    const needsCapitalOwner = entryTypeNeedsCapitalOwner(value.entryType);
+    const needsAllocation = entryTypeNeedsAllocation(value.entryType);
+    const needsSingleCashSide = entryTypeNeedsSingleCashSide(value.entryType);
 
     if (needsCashIn && !value.cashInProjectMemberId) {
       ctx.addIssue({

@@ -126,4 +126,5 @@
 - Trimmed the dashboard action row one step further so tag browsing also stays in the main section nav instead of appearing as a second pseudo-tab.
 - Trimmed duplicate guide/tag CTAs from the ledger planner, left one support card above the form, and made the support + submit actions friendlier on mobile widths.
 - Added `docs/manual-qa/ledger-planner-ui-ux.md` so future planner UI work has one stable desktop/mobile regression checklist.
+- Tightened the planner so only relevant cash-leg fields show for each entry type, especially around capital contribution vs capital return.
 - Moved the remaining work to end-to-end real-user validation, richer member management, profit-distribution write flows, and deeper tag-reporting decisions.

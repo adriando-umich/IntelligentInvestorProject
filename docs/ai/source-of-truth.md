@@ -81,6 +81,7 @@ The transaction model now also exposes a second classification axis in code: `en
 The business-event shortcuts now include `shared_loan_interest_payment`, which behaves like a shared operating cost while staying distinct from shared-loan principal.
 The ledger planner now lets users choose the entry family first, then narrows the entry-type picker accordingly. The planner currently supports `reconciliation_adjustment` inside the `correction` family, while `reversal` still remains guide-only until a dedicated original-entry workflow exists.
 The ledger planner keeps guide/tag navigation in a single page-level support card above the form, instead of duplicating those actions inside the form body. On mobile, the support buttons and the bottom planner actions stretch full width for easier tapping.
+The ledger planner now only shows the cash-leg selectors that matter for the chosen entry type. For example, `capital_contribution` shows only the receiving custody field plus `capital owner`, while `capital_return` shows only the paying custody field plus `capital owner`.
 Project tags now have a dedicated management page for create, rename, and delete, rather than being attach-only from the planner.
 Primary table-heavy surfaces now use a shared toolbar pattern with search, filter, sort, and wider scroll-safe table shells. Search is accent-insensitive so Vietnamese users can search with or without diacritics.
 Reconciliation now has a real write workflow: managers can open a run, members can submit reported cash, managers can accept a variance or post an adjustment directly into the ledger, and managers can close the run once no pending or unresolved variance rows remain.
@@ -218,5 +219,6 @@ Only `.env.example` should be committed.
 - Trimmed the dashboard action row further so it now keeps only true actions (`Add transaction`, guide, invite members) and leaves tag/reconciliation/members browsing to the main section nav.
 - Trimmed the ledger planner so `Open transaction guide` and `Manage tags` now appear only once in a page-level support card, then made the support buttons and bottom planner actions stack full-width on mobile.
 - Added `docs/manual-qa/ledger-planner-ui-ux.md` as the manual desktop/tablet/phone validation flow for `/projects/[projectId]/ledger/new`.
+- Fixed a follow-up planner UX bug where capital contribution still showed both `Money out by` and `Money in to`; the planner now hides irrelevant cash-leg fields per entry type and adds clearer capital-specific helper copy.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.
