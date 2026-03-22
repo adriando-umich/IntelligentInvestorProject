@@ -4,9 +4,11 @@
 
 - Apply the new `20260322101500_project_bootstrap.sql` migration to the live Supabase project
 - Apply the new `20260322130000_tags_and_shared_loans.sql` migration to the live Supabase project
+- Enable the Google provider in Supabase Auth and add the Google OAuth client ID/secret plus redirect URLs
 - Validate the full live flow end-to-end:
   - sign up
   - sign in
+  - sign in with Google
   - create first project
   - create live transaction
   - create tagged transaction
@@ -53,4 +55,5 @@
 - Added proxy-based Supabase session refresh for production reliability.
 - Added tag creation/attachment in the ledger planner plus dashboard rollups for tagged inflows and expenses.
 - Added a shared-loan transaction type for borrowed funds that should not count as capital contribution.
+- Added a Google OAuth entry point on the sign-in screen plus the server callback route needed for Supabase SSR auth.
 - Moved the remaining work to live migration validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

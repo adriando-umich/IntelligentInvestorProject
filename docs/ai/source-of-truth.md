@@ -25,6 +25,8 @@ The app must keep those concepts separate in both data and UI.
   - Demo/sample mode still works without live auth
   - Supabase sign-in is wired
   - Supabase self-service sign-up is wired
+  - Google OAuth client flow is wired from the sign-in screen
+  - `/auth/callback` now exchanges the Supabase PKCE code into a cookie-backed session
   - Session refresh is now backed by a root `proxy.ts` plus `src/lib/supabase/proxy.ts`
 
 ## Current Architecture
@@ -74,6 +76,7 @@ The finance engine already derives:
 Implemented now and wired:
 
 - `/`
+- `/auth/callback`
 - `/sign-in`
 - `/projects`
 - `/projects/new`
@@ -135,4 +138,7 @@ Only `.env.example` should be committed.
 - Added Supabase SSR session refresh through `proxy.ts`.
 - Added project tags plus entry-tag joins so inflows and expenses can be aggregated by tag.
 - Added `shared_loan_drawdown` as a live transaction type for borrowed project cash that should not count as member capital.
+- Added Google OAuth on the sign-in screen, backed by a Supabase browser client helper and a PKCE callback route.
+- Added operator guidance in `README.md` for Google provider setup in Supabase and Google Cloud.
+- Current limitation: Google OAuth still depends on external provider setup in Supabase Auth and a Google OAuth client; no extra app env vars were added for that flow.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.

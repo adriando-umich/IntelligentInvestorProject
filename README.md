@@ -79,6 +79,24 @@ It includes:
 
 Apply it with your normal Supabase workflow, for example through the dashboard SQL editor or the CLI migration flow.
 
+## Google OAuth Setup
+
+The app now includes a `Continue with Google` flow on `/sign-in`.
+
+To make it work in Supabase:
+
+1. Create a Google OAuth client for a Web application in Google Cloud.
+2. Add your app origins under Authorized JavaScript origins:
+   - `http://localhost:3000`
+   - your production domain such as `https://intelligent-investor-project.vercel.app`
+3. In Supabase Auth, enable the Google provider and paste the Google client ID and client secret.
+4. Add your app callback route to Supabase redirect URLs:
+   - `http://localhost:3000/auth/callback`
+   - `https://intelligent-investor-project.vercel.app/auth/callback`
+5. Make sure `NEXT_PUBLIC_APP_URL` matches the live app URL in each deployment environment.
+
+If the provider is not configured yet, the button will still appear but Supabase will reject the Google sign-in attempt.
+
 ## Deploy Path
 
 1. Create a Supabase project.

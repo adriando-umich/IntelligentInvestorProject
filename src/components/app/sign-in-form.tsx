@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   LogIn,
+  LoaderCircle,
   ShieldCheck,
   UserPlus,
   WalletCards,
@@ -18,6 +20,7 @@ import {
 } from "@/app/actions/auth";
 import { APP_NAME, APP_TAGLINE } from "@/lib/app-config";
 import { isSupabaseConfigured } from "@/lib/env";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +28,33 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const initialState: AuthActionState = { status: "idle" };
+
+function GoogleMark({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M21.81 12.23c0-.72-.06-1.43-.2-2.12H12v4.02h5.5a4.71 4.71 0 0 1-2.04 3.08v2.55h3.29c1.93-1.78 3.06-4.39 3.06-7.53Z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 22c2.76 0 5.08-.92 6.77-2.5l-3.29-2.55c-.91.61-2.08.97-3.48.97-2.67 0-4.94-1.8-5.75-4.23H2.86v2.63A10.21 10.21 0 0 0 12 22Z"
+        fill="#34A853"
+      />
+      <path
+        d="M6.25 13.69A6.14 6.14 0 0 1 5.93 12c0-.58.11-1.14.31-1.69V7.68H2.86A10.2 10.2 0 0 0 1.78 12c0 1.63.39 3.18 1.08 4.32l3.39-2.63Z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 6.08c1.5 0 2.85.52 3.91 1.52l2.93-2.94C17.08 2.99 14.76 2 12 2a10.21 10.21 0 0 0-9.14 5.68l3.38 2.63c.82-2.44 3.09-4.23 5.76-4.23Z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
 
 function MessageBanner({
   state,
@@ -51,6 +81,7 @@ function MessageBanner({
 }
 
 export function SignInForm() {
+  const searchParams = useSearchParams();
   const [signInState, signInFormAction, signInPending] = useActionState(
     signInAction,
     initialState
@@ -59,6 +90,48 @@ export function SignInForm() {
     signUpAction,
     initialState
   );
+  const [oauthMessage, setOauthMessage] = useState<string | null>(null);
+  const [oauthPending, startOauthTransition] = useTransition();
+
+  const oauthErrorFromSearch = searchParams.get("error");
+  const safeNextPath = (() => {
+    const nextPath = searchParams.get("next");
+
+    if (!nextPath || !nextPath.startsWith("/")) {
+      return "/projects";
+    }
+
+    return nextPath;
+  })();
+
+  async function handleGoogleSignIn() {
+    if (!isSupabaseConfigured) {
+      setOauthMessage("Google sign-in is unavailable until Supabase auth is configured.");
+      return;
+    }
+
+    setOauthMessage(null);
+
+    startOauthTransition(async () => {
+      const supabase = createSupabaseBrowserClient();
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("next", safeNextPath);
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: callbackUrl.toString(),
+          queryParams: {
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (error) {
+        setOauthMessage(error.message);
+      }
+    });
+  }
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
@@ -126,6 +199,44 @@ export function SignInForm() {
                     : "This deployment is currently running without live Supabase auth, so the sample workspace is the available path."}
                 </p>
               </div>
+
+              {isSupabaseConfigured ? (
+                <div className="space-y-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 w-full rounded-2xl border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+                    onClick={handleGoogleSignIn}
+                    disabled={oauthPending}
+                  >
+                    {oauthPending ? (
+                      <LoaderCircle className="size-4 animate-spin" />
+                    ) : (
+                      <GoogleMark className="size-4" />
+                    )}
+                    {oauthPending
+                      ? "Redirecting to Google..."
+                      : "Continue with Google"}
+                  </Button>
+                  <p className="text-xs leading-5 text-slate-500">
+                    Use a Google account for a quicker first login. New members
+                    can still create a password-based account below if they
+                    prefer.
+                  </p>
+                  <MessageBanner
+                    state={{
+                      status:
+                        oauthMessage || oauthErrorFromSearch ? "error" : "idle",
+                      message: oauthMessage ?? oauthErrorFromSearch ?? undefined,
+                    }}
+                  />
+                  <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
+                    <span className="h-px flex-1 bg-slate-200" />
+                    Or continue with email
+                    <span className="h-px flex-1 bg-slate-200" />
+                  </div>
+                </div>
+              ) : null}
 
               <Tabs
                 defaultValue="sign-in"

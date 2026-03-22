@@ -5,6 +5,7 @@
 - The new `20260322101500_project_bootstrap.sql` migration has not yet been executed against the live Supabase database.
 - The new `20260322130000_tags_and_shared_loans.sql` migration has not yet been executed against the live Supabase database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
+- Google OAuth still requires external setup in Supabase Auth and Google Cloud before the new sign-in button can succeed in production.
 - Profit distribution still has no dedicated live post flow.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
 - GitHub-triggered auto deploy is not confirmed yet; the current working deployment path is Vercel CLI plus linked project
@@ -28,6 +29,7 @@
 - Supabase SSR session refresh was not following the current proxy-based guidance; resolved by adding `proxy.ts` and `src/lib/supabase/proxy.ts`.
 - The app had no structured way to aggregate inflows and expenses by tag; resolved by adding project tags, entry-tag joins, planner support, and dashboard rollups.
 - Borrowed project cash from a shared bank loan was being forced into the wrong mental bucket; resolved by adding `shared_loan_drawdown` as a non-capital cash-in transaction type.
+- Password auth was the only live sign-in path in the app UI; resolved by adding a Google OAuth button and PKCE callback route compatible with the current Supabase SSR setup.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -40,6 +42,7 @@
 - When deploying from local with the Vercel CLI, ensure `.vercelignore` excludes `.env*` so local tokens are not uploaded as source files.
 - Production UI should not surface deployment/env readiness details; keep setup guidance in docs and operator notes instead.
 - When adding new live ledger capabilities, prefer additive SQL migrations over rewriting the original base schema so already-deployed Supabase projects can upgrade safely.
+- For social auth on Supabase SSR, start OAuth from a browser client and finish the PKCE code exchange in a route handler that can persist auth cookies.
 
 ## Latest Session Delta
 
@@ -54,3 +57,4 @@
 - Added self-service sign-up, first-project creation, and proxy-based session refresh.
 - Removed the public env/setup card from the sign-in screen so the live app no longer communicates internal env expectations on the web UI.
 - Added a tag system for ledger entries and a shared-loan entry type that keeps borrowed money out of capital contribution.
+- Added Google OAuth UI plus a Supabase callback handler, while logging the remaining external provider setup needed outside the repo.
