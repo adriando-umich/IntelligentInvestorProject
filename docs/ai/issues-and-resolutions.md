@@ -76,6 +76,7 @@
 - When deploying from local with the Vercel CLI, ensure `.vercelignore` excludes `.env*` so local tokens are not uploaded as source files.
 - Production UI should not surface deployment/env readiness details; keep setup guidance in docs and operator notes instead.
 - When adding new live ledger capabilities, prefer additive SQL migrations over rewriting the original base schema so already-deployed Supabase projects can upgrade safely.
+- When using the Vercel uploaded-file deployment API from Windows, normalize deployment file paths to forward slashes before creating the deployment, or the build can miss nested directories like `src/app`.
 - For social auth on Supabase SSR, start OAuth from a browser client and finish the PKCE code exchange in a route handler that can persist auth cookies.
 - When the ledger model is still stored as one enum in SQL, add a shared classification helper in app code instead of forcing a breaking schema rewrite mid-project.
 - When social-auth metadata should survive beyond the current session, sync it into the app's profile table and gracefully tolerate older databases that have not received the new column yet.
@@ -137,3 +138,4 @@
 - Added a planner-specific manual QA flow in `docs/manual-qa/ledger-planner-ui-ux.md`, then tightened the planner layout so guide/tag support lives in one place and the primary actions become full-width on mobile.
 - Found a follow-up planner confusion on capital entries while validating the production link: `capital_contribution` was still rendering an unnecessary `Money out by` field. Fixed the UI to show only the relevant cash legs and kept the validation helpers shared between schema and planner.
 - Added and applied `20260323040000_cash_legs_by_project_member.sql`, then verified on a disposable live project that pending members can now be selected in every person-related field, including cash-holder fields, without losing the same `project_member_id` when the invite is accepted later.
+- Pushed `5c3950c` to `main` and `master`, then promoted a new production deployment from that commit after correcting the Windows path-separator packaging bug in the uploaded-file Vercel API flow.

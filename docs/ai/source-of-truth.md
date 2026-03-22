@@ -136,7 +136,7 @@ Only `.env.example` should be committed.
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
 - Live Supabase database: migrated through `20260323040000_cash_legs_by_project_member.sql`
-- Latest production deployment for commit `da42e48`: ready and promoted on Vercel
+- Latest production deployment for commit `5c3950c`: ready and promoted on Vercel
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
 - Live Supabase Auth redirect allow-list now includes:
@@ -223,5 +223,6 @@ Only `.env.example` should be committed.
 - Fixed a follow-up planner UX bug where capital contribution still showed both `Money out by` and `Money in to`; the planner now hides irrelevant cash-leg fields per entry type and adds clearer capital-specific helper copy.
 - Added and applied `supabase/migrations/20260323040000_cash_legs_by_project_member.sql`, so cash-holder fields now persist by `project_member_id` and can safely include pending members before they join.
 - Verified on a disposable live project that a pending member can be used in `capital owner`, `cash in`, and `cash out`, then accept the invite later without changing the stored `project_member_id` on those earlier entries.
+- Pushed commit `5c3950c` to both `main` and `master`, then promoted a new production Vercel deployment from that exact commit. The first uploaded-file attempt failed because Windows path separators were preserved in the API payload; the succeeding deployment normalized file paths to forward slashes before upload.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.
