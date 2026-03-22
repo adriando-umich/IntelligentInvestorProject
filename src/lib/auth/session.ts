@@ -23,12 +23,11 @@ export async function getSessionState(): Promise<SessionState> {
     };
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
 
   return {
-    isAuthenticated: Boolean(user) || demoMode,
-    demoMode: user ? false : demoMode,
+    isAuthenticated: Boolean(claims?.sub) || demoMode,
+    demoMode: claims?.sub ? false : demoMode,
   };
 }

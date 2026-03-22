@@ -1,9 +1,16 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, FolderKanban, HandCoins } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  FolderKanban,
+  FolderPlus,
+  HandCoins,
+} from "lucide-react";
 
 import { MetricCard } from "@/components/finance/metric-card";
 import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -36,11 +43,24 @@ export default async function ProjectsPage() {
         description="Open any project to see where project money sits, who owes whom for shared expenses, and what profit could be distributed today."
       />
 
+      <div className="flex justify-end">
+        <Link
+          href="/projects/new"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "lg" }),
+            "rounded-2xl border-teal-200 bg-teal-50 text-teal-900 hover:bg-teal-100"
+          )}
+        >
+          <FolderPlus className="size-4" />
+          Create project
+        </Link>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3">
         <MetricCard
           title="Tracked project cash"
           value={formatCurrency(totalCash, "VND")}
-          description="Combined project cash custody across all demo projects."
+          description="Combined project cash custody across the projects you can access."
           tone="teal"
           icon={<FolderKanban className="size-5" />}
         />
@@ -59,6 +79,36 @@ export default async function ProjectsPage() {
           icon={<AlertTriangle className="size-5" />}
         />
       </div>
+
+      {projects.length === 0 ? (
+        <Card className="rounded-[1.75rem] border-white/70 bg-white/90 shadow-[0_24px_80px_-45px_rgba(15,23,42,0.35)]">
+          <CardHeader className="space-y-3">
+            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">
+              Ready for live data
+            </span>
+            <CardTitle className="text-2xl text-slate-950">
+              No projects yet
+            </CardTitle>
+            <CardDescription className="max-w-2xl leading-7 text-slate-600">
+              Create your first project to start recording capital,
+              customer income, operating expenses, cash handovers, and
+              settlement payments in the live database.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href="/projects/new"
+              className={cn(
+                buttonVariants({ size: "lg" }),
+                "rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+              )}
+            >
+              <FolderPlus className="size-4" />
+              Create the first project
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-2">
         {projects.map((project) => (

@@ -46,7 +46,7 @@ export default async function NewLedgerEntryPage({
       <PageHeader
         eyebrow="Ledger planner"
         title={`Add a transaction for ${snapshot.dataset.project.name}`}
-        description="Use this planner to preview how a new transaction would affect cash custody, settlements, capital, or profit. Demo mode validates and previews the payload before persistence is wired."
+        description="Use this planner to record capital, customer income, operating expenses, cash handovers, or settlement payments. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase."
       />
       <LedgerEntryPlanner
         projectId={snapshot.dataset.project.id}

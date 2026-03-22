@@ -2,13 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartNoAxesColumn, FolderKanban, LogOut, Menu } from "lucide-react";
+import {
+  ChartNoAxesColumn,
+  FolderKanban,
+  FolderPlus,
+  LogOut,
+  Menu,
+} from "lucide-react";
 
 import { signOutAction } from "@/app/actions/auth";
 import { APP_NAME } from "@/lib/app-config";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -81,6 +87,17 @@ function NavContent({
             );
           })}
         </nav>
+
+        <Link
+          href="/projects/new"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "lg" }),
+            "w-full rounded-2xl border-teal-200 bg-teal-50 text-teal-900 hover:bg-teal-100"
+          )}
+        >
+          <FolderPlus className="size-4" />
+          New project
+        </Link>
       </div>
 
       <div className="space-y-3">
@@ -88,6 +105,11 @@ function NavContent({
           Active projects
         </p>
         <div className="space-y-2">
+          {projects.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
+              No live projects yet.
+            </div>
+          ) : null}
           {projects.map((project) => {
             const href = `/projects/${project.id}`;
             const active = pathname === href || pathname.startsWith(`${href}/`);

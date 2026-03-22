@@ -2,10 +2,14 @@
 
 ## Now
 
-- Validate the new SQL migration plus RPC against a live Supabase project
+- Apply the new `20260322101500_project_bootstrap.sql` migration to the live Supabase project
+- Validate the full live flow end-to-end:
+  - sign up
+  - sign in
+  - create first project
+  - create live transaction
 - Add real update/create flows for reconciliation submissions and profit distributions
-- Add seed data or onboarding flow for the first real workspace
-- Connect GitHub auto-deploy integration in Vercel if push-triggered deployments are desired
+- Add member-management flow after project creation so teams can collaborate beyond the owner account
 
 ## Next
 
@@ -13,11 +17,12 @@
 - Add reconciliation manager actions and member submission forms
 - Add profit distribution preview/post action backed by live balances
 - Add richer allocation editing for shared income and expense lines
+- Confirm GitHub-triggered auto-deploy integration in Vercel if push-triggered deployments are desired
 
 ## Blocked
 
 - No hard blocker right now
-- Live backend validation still depends on a real Supabase project and env configuration
+- End-to-end validation still depends on the latest SQL migration being applied in the live Supabase project
 
 ## Deferred
 
@@ -39,4 +44,7 @@
   - README
 - Added live Supabase reads in the repository layer.
 - Pushed code to GitHub and shipped a public Vercel production deployment.
-- Moved the remaining work to backend validation, reconciliation write flows, and profit-distribution write flows.
+- Added self-service sign-up and a real first-project creation flow.
+- Removed public env/setup details from the live web UI.
+- Added proxy-based Supabase session refresh for production reliability.
+- Moved the remaining work to live migration validation, member management, reconciliation write flows, and profit-distribution write flows.

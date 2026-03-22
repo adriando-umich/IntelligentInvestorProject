@@ -2,11 +2,12 @@
 
 ## Open Issues
 
-- The new SQL migration has not yet been executed against a live Supabase database.
+- The new `20260322101500_project_bootstrap.sql` migration has not yet been executed against the live Supabase database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
 - Profit distribution still has no dedicated live post flow.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
 - GitHub-triggered auto deploy is not confirmed yet; the current working deployment path is Vercel CLI plus linked project
+- Live sign-up/login behavior can still vary based on Supabase Auth settings such as email confirmation requirements.
 
 ## Resolved Issues
 
@@ -21,6 +22,9 @@
 - Initial Vercel deploy was unintentionally seeing local `.env` during build; resolved by adding `.vercelignore`.
 - Vercel returned `401` because project SSO protection was enabled; resolved by clearing `ssoProtection` through the Vercel API.
 - Vercel returned `404` on public routes while the project was treated as `Other`; resolved by forcing `framework: \"nextjs\"` in `vercel.json` and redeploying.
+- The public sign-in UI was exposing setup-oriented env/readiness information; resolved by replacing it with production-facing auth and product messaging.
+- Live users had no self-serve onboarding path after sign-in; resolved by adding sign-up plus first-project creation flow.
+- Supabase SSR session refresh was not following the current proxy-based guidance; resolved by adding `proxy.ts` and `src/lib/supabase/proxy.ts`.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -31,6 +35,7 @@
 - With `react-hook-form` plus `z.coerce`, keep input and output types explicit to satisfy production type checking.
 - For live Supabase writes that span ledger entries plus allocations, prefer one SQL RPC over multiple client-side inserts.
 - When deploying from local with the Vercel CLI, ensure `.vercelignore` excludes `.env*` so local tokens are not uploaded as source files.
+- Production UI should not surface deployment/env readiness details; keep setup guidance in docs and operator notes instead.
 
 ## Latest Session Delta
 
@@ -42,3 +47,5 @@
 - Added Supabase-backed repository reads with demo fallback.
 - Added `create_project_ledger_entry` RPC in the migration and wired the planner to call it for supported entry types.
 - Pushed the repo to GitHub, created the Vercel project, set production env vars, deployed production, and verified the public sign-in route responds correctly.
+- Added self-service sign-up, first-project creation, and proxy-based session refresh.
+- Removed the public env/setup card from the sign-in screen so the live app no longer communicates internal env expectations on the web UI.

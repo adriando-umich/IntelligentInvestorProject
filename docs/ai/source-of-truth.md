@@ -14,13 +14,18 @@ The app must keep those concepts separate in both data and UI.
 
 ## Current State
 
-- Status: demo-first vertical slice implemented
-- Runtime mode today: demo-first with mock datasets in repo, plus Supabase schema prepared
+- Status: live-ready onboarding plus database-backed transaction entry implemented
+- Runtime mode today: live Supabase when a real user signs in, with sample-workspace fallback through the demo cookie
 - Target stack: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui, Supabase
-- Current data source: local demo repository in `src/lib/data/`
+- Current data source:
+  - live Supabase reads for signed-in users
+  - live ledger-entry create on supported transaction types
+  - local sample datasets when demo mode is chosen
 - Current auth behavior:
-  - Demo mode works without Supabase env
-  - Supabase password auth is wired for later use
+  - Demo/sample mode still works without live auth
+  - Supabase sign-in is wired
+  - Supabase self-service sign-up is wired
+  - Session refresh is now backed by a root `proxy.ts` plus `src/lib/supabase/proxy.ts`
 
 ## Current Architecture
 
@@ -70,6 +75,7 @@ Implemented now and wired:
 - `/`
 - `/sign-in`
 - `/projects`
+- `/projects/new`
 - `/projects/[projectId]`
 - `/projects/[projectId]/ledger/new`
 - `/projects/[projectId]/members/[memberId]`
@@ -90,6 +96,7 @@ Only `.env.example` should be committed.
 - GitHub-safe env template: created
 - Supabase runtime wiring: partial but now supports live reads plus live create on main ledger entry types
 - Supabase SQL migration: created at `supabase/migrations/20260321153000_finance_app_schema.sql`
+- Additional live onboarding migration: `supabase/migrations/20260322101500_project_bootstrap.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
@@ -120,4 +127,8 @@ Only `.env.example` should be committed.
 - Pushed the repo to GitHub.
 - Created and linked a Vercel project, deployed production, set public envs, set `NEXT_PUBLIC_APP_URL`, and redeployed.
 - Fixed Vercel serving issues by disabling project SSO protection, adding `.vercelignore`, and forcing `framework: \"nextjs\"` in `vercel.json`.
+- Removed the public env/setup snapshot from the sign-in screen and replaced it with production-facing auth UX.
+- Added self-service sign-up on `/sign-in`.
+- Added live project onboarding through `/projects/new` plus the `create_project_with_owner` SQL function.
+- Added Supabase SSR session refresh through `proxy.ts`.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
