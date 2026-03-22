@@ -171,6 +171,7 @@ Only `.env.example` should be committed.
 - Moved the full transaction helper matrix off the planner onto its own `/ledger/guide` page and left compact references on the planner instead.
 - Added an explicit `Business event / Correction` family picker to the planner and exposed `reconciliation_adjustment` as the live correction path there.
 - Added a dedicated `/tags` page with create, rename, and delete tag management, plus a new additive migration for live delete-policy support.
+- Reworked the main cash chart so each movement bar now represents its own amount directly, while `Cash now` remains a separate total bar. The previous cumulative waterfall styling was visually misleading for smaller steps like shared loan principal.
 - Current limitation: Google OAuth still depends on external provider setup in Supabase Auth and a Google OAuth client; no extra app env vars were added for that flow.
 - Current limitation: persistent avatar storage for live users depends on applying the new avatar migration so `profiles.avatar_url` exists in the database.
 - Current limitation: live databases need the new shared-loan-interest migration before that shortcut can be saved from the planner.

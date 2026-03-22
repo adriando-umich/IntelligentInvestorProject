@@ -48,6 +48,7 @@
 - The helper matrix was taking too much vertical space inside the planner; resolved by moving it to a dedicated guide page and leaving only compact references in the planner.
 - Tags existed only as planner attachments without a real management surface; resolved by adding a dedicated tag CRUD page plus server actions.
 - The planner derived `business/correction` in code but did not let the user choose that axis first; resolved by adding a family picker and exposing `reconciliation_adjustment` directly from the planner.
+- The main cash chart used cumulative waterfall positioning that made smaller steps like shared loan principal look taller than much larger funding amounts; resolved by switching the chart to direct movement bars plus a separate `Cash now` total bar.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -67,6 +68,7 @@
 - When adding dashboard visuals, keep each chart tied to exactly one finance concept so the UI never collapses custody, reimbursement, capital, and profit into one ambiguous story.
 - When live auth behavior matters, probe the Supabase public `/auth/v1/settings` endpoint before assuming providers or email-confirmation behavior from code alone.
 - When a helper becomes reference-heavy, move it to its own route and leave just a clear link in the main workflow so the primary form stays spacious.
+- If a finance chart is meant for plain-language reading, the visible bar height should map directly to the labeled amount unless the UI makes cumulative positioning unmistakably obvious.
 
 ## Latest Session Delta
 
@@ -97,3 +99,4 @@
 - Moved the planner helper matrix to a dedicated `/ledger/guide` route and kept only compact guide/tag references on the planner page.
 - Added an explicit `Business event / Correction` picker to the planner and exposed `reconciliation_adjustment` as the current live correction option there.
 - Added a dedicated `/tags` CRUD page, live tag-management server actions, and a new additive Supabase migration for project-tag delete policy.
+- Reworked the main cash chart after user review showed the cumulative waterfall styling was visually misleading for shared loan vs capital.

@@ -80,4 +80,5 @@
 - Moved the bulky planner helper matrix to its own `/ledger/guide` page and left compact references in the planner so the form has more working room.
 - Added a true family picker on the planner and surfaced `reconciliation_adjustment` as the current correction-type option there.
 - Added a dedicated `/tags` management page and live server actions for create, rename, and delete, plus an additive delete-policy migration for Supabase.
+- Reworked the main cash chart so each bar now maps to its own amount instead of a cumulative waterfall height that made smaller movements look larger than capital.
 - Moved the remaining work to live migration validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

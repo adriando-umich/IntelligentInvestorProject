@@ -470,27 +470,25 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
     });
   }
 
-  let running = 0;
-  const chartData = steps.map((step) => {
-    const start = running;
-    const end = roundMoney(running + step.value);
-    running = end;
-
+  const chartData: Array<{
+    label: string;
+    amount: number;
+    fill: string;
+    kind: "movement" | "total";
+  }> = steps.map((step) => {
     return {
       label: step.label,
-      offset: Math.min(start, end),
-      size: Math.abs(step.value),
-      stepValue: step.value,
+      amount: step.value,
       fill: step.fill,
+      kind: "movement" as const,
     };
   });
 
   chartData.push({
     label: "Cash now",
-    offset: Math.min(0, snapshot.totalProjectCash),
-    size: Math.abs(snapshot.totalProjectCash),
-    stepValue: snapshot.totalProjectCash,
+    amount: snapshot.totalProjectCash,
     fill: "#0f172a",
+    kind: "total" as const,
   });
 
   return (
@@ -511,7 +509,7 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
             <ReferenceLine y={0} stroke="#94a3b8" />
             <RechartsTooltip
               content={({ active, payload, label }) => {
-                const row = payload?.[1]?.payload ?? payload?.[0]?.payload;
+                const row = payload?.[0]?.payload;
 
                 if (!active || !row) {
                   return null;
@@ -524,29 +522,51 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
                     </p>
                     <p className="mt-2 text-sm text-slate-600">
                       {formatSignedCurrency(
-                        Number(row.stepValue ?? 0),
+                        Number(row.amount ?? 0),
                         snapshot.dataset.project.currencyCode
                       )}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {row.kind === "total"
+                        ? "Current project cash after all recorded movements."
+                        : "This bar shows only this step's own amount, not a cumulative height."}
                     </p>
                   </div>
                 );
               }}
             />
-            <Bar dataKey="offset" stackId="bridge" fill="transparent" />
-            <Bar dataKey="size" stackId="bridge" radius={[8, 8, 0, 0]}>
+            <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
               {chartData.map((entry) => (
                 <Cell key={entry.label} fill={entry.fill} />
               ))}
               <LabelList
-                dataKey="stepValue"
-                position="top"
-                formatter={(value) =>
-                  formatCompactCurrency(
-                    Number(value ?? 0),
-                    snapshot.dataset.project.currencyCode
-                  )
-                }
-                className="fill-slate-500 text-[11px]"
+                dataKey="amount"
+                content={(props) => {
+                  const {
+                    x = 0,
+                    y = 0,
+                    width = 0,
+                    height = 0,
+                    value,
+                  } = props;
+                  const numericValue = Number(value ?? 0);
+                  const labelY =
+                    numericValue >= 0 ? Number(y) - 8 : Number(y) + Number(height) + 16;
+
+                  return (
+                    <text
+                      x={Number(x) + Number(width) / 2}
+                      y={labelY}
+                      textAnchor="middle"
+                      className="fill-slate-500 text-[11px]"
+                    >
+                      {formatCompactCurrency(
+                        numericValue,
+                        snapshot.dataset.project.currencyCode
+                      )}
+                    </text>
+                  );
+                }}
               />
             </Bar>
           </BarChart>
@@ -554,8 +574,10 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
       </div>
 
       <div className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-600">
-        This bridge explains cash only. It does not merge reimbursement,
-        capital weights, or profit payout logic into one number.
+        Each movement bar shows its own amount only. The final Cash now bar is
+        the current total after those movements. This keeps cash readable
+        without merging reimbursement, capital weights, or profit payout logic
+        into one number.
       </div>
     </div>
   );
