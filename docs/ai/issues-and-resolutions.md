@@ -123,3 +123,4 @@
 - Verified on a local production `next start` build that transactions filtering/sorting, guide filtering/sorting, members search, and settlement/reconciliation toolbar searches all update the rendered rows as expected.
 - Found a cross-locale search gap on the live transaction guide where an English UI would not match a Vietnamese query like `lai vay`; fixed it by indexing both EN and VI matrix copy in the search parts rather than only the active locale.
 - Found that reconciliation still stopped at read-only status cards and tables; fixed by shipping a new live reconciliation workflow migration, server actions, and page-level flow UI, then applying the migration to the real Supabase database.
+- The dashboard header still had one remaining pseudo-navigation CTA (`Manage tags`) after the larger nav cleanup; fixed by removing it so the secondary row now contains only true actions.

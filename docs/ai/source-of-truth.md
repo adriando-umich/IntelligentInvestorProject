@@ -206,5 +206,6 @@ Only `.env.example` should be committed.
 - Added a dedicated reconciliation workflow migration plus server actions/UI for opening runs, member submissions, manager variance resolution, automatic adjustment posting, and run closing.
 - Applied `supabase/migrations/20260323013000_reconciliation_workflow.sql` to the live Supabase project and confirmed a follow-up dry run reports the remote database is up to date.
 - Simplified the dashboard action row so it no longer acts like a second section-tab navigation strip.
+- Trimmed the dashboard action row further so it now keeps only true actions (`Add transaction`, guide, invite members) and leaves tag/reconciliation/members browsing to the main section nav.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

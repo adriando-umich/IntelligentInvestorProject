@@ -113,4 +113,5 @@
   - close run
 - Applied the new reconciliation workflow migration to the live Supabase project and confirmed a dry run shows the remote database is up to date.
 - Simplified the dashboard header actions so they no longer duplicate the section navigation tabs.
+- Trimmed the dashboard action row one step further so tag browsing also stays in the main section nav instead of appearing as a second pseudo-tab.
 - Moved the remaining work to end-to-end real-user validation, richer member management, profit-distribution write flows, and deeper tag-reporting decisions.

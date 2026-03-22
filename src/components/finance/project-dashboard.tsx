@@ -339,12 +339,6 @@ export function ProjectDashboard({
           >
             {copy.inviteMembers}
           </Link>
-          <Link
-            href={`/projects/${snapshot.dataset.project.id}/tags`}
-            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl px-4")}
-          >
-            {copy.manageTags}
-          </Link>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
