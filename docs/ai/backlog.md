@@ -7,7 +7,7 @@
   - sign in
   - sign in with Google
   - verify Google avatar appears in the shell after callback/login
-  - create first project
+  - re-test create first project after the `create_project_with_owner` RLS fix
   - create live transaction
   - create tagged transaction
   - create shared loan drawdown
@@ -75,4 +75,5 @@
 - Fixed the base migration ordering bug, then applied the entire live migration stack successfully to the real Supabase database.
 - Added `SUPABASE_ACCESS_TOKEN`, enabled Google in live Supabase Auth, switched the auth `site_url` to production, and added the production/local callback allow-list.
 - Confirmed through the public auth settings endpoint and the live sign-in page that Google auth is now exposed correctly in production.
+- Fixed the live `create_project_with_owner` RPC by switching it to `security definer` in an additive migration after the UI hit `new row violates row-level security policy for table "projects"` during project creation.
 - Moved the remaining work to end-to-end real-user validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

@@ -5,6 +5,7 @@
 - The local and production app had been pointed at a mistyped Supabase hostname until the March 22 fix; auth should now use the correct project URL, but pending live flows still need revalidation against the real database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
 - A full manual Google sign-in round-trip with a real user account has not yet been completed from this workspace after enabling the provider.
+- The create-project flow needs one live UI re-test after the new RPC privilege fix.
 - Profit distribution still has no dedicated live post flow.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
 - GitHub-triggered auto deploy is not confirmed yet; the current working deployment path is Vercel CLI plus linked project
@@ -45,6 +46,7 @@
 - The base finance migration created helper functions before the tables they referenced, so the first live `db push` failed on `public.project_members`; resolved by moving the core table definitions earlier in `20260321153000_finance_app_schema.sql` and re-running the migration stack successfully.
 - The live Supabase database had been missing all additive migrations for onboarding, tags, shared loans, entry families, avatars, shared loan interest, and tag delete policies; resolved by applying the full migration stack through `20260322234500_project_tag_delete_policy.sql`.
 - Google OAuth had been wired in app code but disabled in the live Supabase project and still pointed at localhost for auth site URL; resolved by using the Supabase management API to enable Google, set `site_url` to production, and add the production/local callback allow-list.
+- Creating the first project could fail live with `new row violates row-level security policy for table "projects"` because `create_project_with_owner` still ran as `security invoker`; resolved by shipping `20260322235500_project_creation_security_definer.sql` to replace the function as `security definer` and applying it to the live database.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -101,3 +103,4 @@
 - Applied the full migration stack to the live Supabase database and verified a follow-up `supabase db push --dry-run` now reports the remote database is up to date.
 - Added `SUPABASE_ACCESS_TOKEN`, patched the live Supabase auth config, and verified that the public auth settings endpoint now reports Google enabled.
 - Verified that the live production sign-in page now renders the `Continue with Google` button after the provider was enabled upstream.
+- Investigated the live create-project failure from the UI screenshot, traced it to RLS being enforced inside `create_project_with_owner`, and applied a new live migration that changes the function to `security definer`.

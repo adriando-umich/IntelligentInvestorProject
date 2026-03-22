@@ -116,6 +116,7 @@ Only `.env.example` should be committed.
 - Additional profile-avatar migration: `supabase/migrations/20260322213000_profile_avatars.sql`
 - Additional shared-loan-interest migration: `supabase/migrations/20260322233000_shared_loan_interest_payment.sql`
 - Additional project-tag delete-policy migration: `supabase/migrations/20260322234500_project_tag_delete_policy.sql`
+- Additional project-creation-RLS migration: `supabase/migrations/20260322235500_project_creation_security_definer.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
@@ -181,5 +182,7 @@ Only `.env.example` should be committed.
 - Fixed the ordering bug in `20260321153000_finance_app_schema.sql` by creating the core tables before helper functions that reference them, then successfully applied the full migration stack to the live Supabase database.
 - Enabled Google OAuth in the live Supabase project using the Supabase management API, updated the auth `site_url`, and added the production/local callback allow-list.
 - Verified from the public auth settings endpoint that Google is enabled and from the production sign-in page that the `Continue with Google` button now renders live.
+- Fixed the live first-project RPC so `create_project_with_owner` now runs as `security definer`, and applied an additive migration to update the real Supabase project.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.
+- Current limitation: the create-project flow should be re-tested in the live UI after the new RLS fix, although the database function has been updated successfully.
