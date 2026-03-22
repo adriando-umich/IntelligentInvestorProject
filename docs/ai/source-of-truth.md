@@ -80,6 +80,7 @@ Project members can now exist as `active` or `pending_invite`. Pending members g
 The transaction model now also exposes a second classification axis in code: `entryFamily = business | correction`. The persisted DB column is still `entry_type`, but the app now derives family labels and uses them in planner guidance and the transaction helper matrix.
 The business-event shortcuts now include `shared_loan_interest_payment`, which behaves like a shared operating cost while staying distinct from shared-loan principal.
 The ledger planner now lets users choose the entry family first, then narrows the entry-type picker accordingly. The planner currently supports `reconciliation_adjustment` inside the `correction` family, while `reversal` still remains guide-only until a dedicated original-entry workflow exists.
+The ledger planner keeps guide/tag navigation in a single page-level support card above the form, instead of duplicating those actions inside the form body. On mobile, the support buttons and the bottom planner actions stretch full width for easier tapping.
 Project tags now have a dedicated management page for create, rename, and delete, rather than being attach-only from the planner.
 Primary table-heavy surfaces now use a shared toolbar pattern with search, filter, sort, and wider scroll-safe table shells. Search is accent-insensitive so Vietnamese users can search with or without diacritics.
 Reconciliation now has a real write workflow: managers can open a run, members can submit reported cash, managers can accept a variance or post an adjustment directly into the ledger, and managers can close the run once no pending or unresolved variance rows remain.
@@ -215,5 +216,7 @@ Only `.env.example` should be committed.
 - Applied `supabase/migrations/20260323013000_reconciliation_workflow.sql` to the live Supabase project and confirmed a follow-up dry run reports the remote database is up to date.
 - Simplified the dashboard action row so it no longer acts like a second section-tab navigation strip.
 - Trimmed the dashboard action row further so it now keeps only true actions (`Add transaction`, guide, invite members) and leaves tag/reconciliation/members browsing to the main section nav.
+- Trimmed the ledger planner so `Open transaction guide` and `Manage tags` now appear only once in a page-level support card, then made the support buttons and bottom planner actions stack full-width on mobile.
+- Added `docs/manual-qa/ledger-planner-ui-ux.md` as the manual desktop/tablet/phone validation flow for `/projects/[projectId]/ledger/new`.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

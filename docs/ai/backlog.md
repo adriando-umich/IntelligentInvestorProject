@@ -40,6 +40,10 @@
   - members and invites search/filter/sort
   - tags search/filter/sort
   - settlements and reconciliation table search/filter/sort
+- Run one browser/device QA pass on the updated ledger planner using `docs/manual-qa/ledger-planner-ui-ux.md`:
+  - desktop web
+  - tablet
+  - mobile phone
 
 ## Next
 
@@ -120,4 +124,6 @@
 - Applied the new reconciliation workflow migration to the live Supabase project and confirmed a dry run shows the remote database is up to date.
 - Simplified the dashboard header actions so they no longer duplicate the section navigation tabs.
 - Trimmed the dashboard action row one step further so tag browsing also stays in the main section nav instead of appearing as a second pseudo-tab.
+- Trimmed duplicate guide/tag CTAs from the ledger planner, left one support card above the form, and made the support + submit actions friendlier on mobile widths.
+- Added `docs/manual-qa/ledger-planner-ui-ux.md` so future planner UI work has one stable desktop/mobile regression checklist.
 - Moved the remaining work to end-to-end real-user validation, richer member management, profit-distribution write flows, and deeper tag-reporting decisions.

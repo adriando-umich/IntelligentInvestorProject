@@ -7,7 +7,6 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeftRight,
-  BookOpen,
   CircleAlert,
   FolderTree,
   Landmark,
@@ -412,6 +411,10 @@ export function LedgerEntryPlanner({
     locale === "vi"
       ? `Bắt đầu bằng việc chọn đây là nghiệp vụ thật hay điều chỉnh sổ cho ${projectName}. Các dòng tiền vào và chi phí chung sẽ được chia đều cho những thành viên bạn chọn, còn tag sẽ giúp tổng hợp báo cáo về sau.`
       : `Start by choosing whether you are recording a real business event or a ledger correction for ${projectName}. Shared income and expense lines are split equally across the selected members, and tags can be attached for later aggregation.`;
+  const plannerSummary =
+    locale === "vi"
+      ? `Chọn nhóm giao dịch, điền luồng tiền, rồi preview hoặc lưu live cho ${projectName}.`
+      : `Choose the entry family, fill in the money movement, then preview or save the ledger entry for ${projectName}.`;
   const plannerSchema = useMemo(() => getPlannerEntrySchema(locale), [locale]);
 
   const form = useForm<PlannerEntryFormValues, undefined, PlannerEntryValues>({
@@ -540,35 +543,10 @@ export function LedgerEntryPlanner({
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
           <CardTitle>{copy.plannerTitle}</CardTitle>
-          <CardDescription>{plannerDescription}</CardDescription>
+          <CardDescription>{plannerSummary}</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-5">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-slate-950">{copy.fullGuide}</p>
-                  <p className="text-sm leading-6 text-slate-600">{copy.guideHint}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={`/projects/${projectId}/ledger/guide`}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    <BookOpen className="size-4" />
-                    {copy.openGuide}
-                  </Link>
-                  <Link
-                    href={`/projects/${projectId}/tags`}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    <FolderTree className="size-4" />
-                    {copy.manageTags}
-                  </Link>
-                </div>
-              </div>
-            </div>
-
             <div className="space-y-3">
               <div className="space-y-1">
                 <Label>{copy.entryFamily}</Label>
@@ -853,10 +831,10 @@ export function LedgerEntryPlanner({
               </div>
             ) : null}
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <Button
                 type="button"
-                className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+                className="w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-800 sm:w-auto"
                 onClick={form.handleSubmit(handlePreview)}
               >
                 {copy.savePreview}
@@ -864,7 +842,7 @@ export function LedgerEntryPlanner({
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-2xl border-teal-200 bg-teal-50 text-teal-900 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-2xl border-teal-200 bg-teal-50 text-teal-900 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 disabled={!liveSupported || isSavingLive}
                 onClick={form.handleSubmit(handleLiveCreate)}
               >

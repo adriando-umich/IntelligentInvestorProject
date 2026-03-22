@@ -12,6 +12,7 @@
 - Live sign-up/login behavior can still vary based on Supabase Auth settings such as email confirmation requirements.
 - The EN/VI rollout still needs one live QA pass to catch any remaining English-only strings in secondary dashboard/chart states.
 - The new table-toolbar rollout still needs one production pass with real signed-in data, not just the sample workspace and local production build.
+- The updated ledger planner layout still needs one real browser/device pass on desktop and mobile; this session added the manual checklist and passed `next build`, but it did not complete a hands-on phone test.
 - If the same real person somehow becomes active in a project through a different path before using an older targeted invite link, the system does not yet run an automatic merge of two competing `project_members` rows; the main supported path is now stable pending-member activation through the linked invite.
 
 ## Resolved Issues
@@ -60,6 +61,7 @@
 - Vietnamese searches initially matched only exact accented text; resolved by adding shared accent-insensitive search normalization across the new table toolbars.
 - Reconciliation had only a reporting table and no real operating workflow for managers or members; resolved by adding SQL RPCs plus UI for opening a run, member submission, manager acceptance/adjustment, and closing the run.
 - The dashboard header looked like it had two competing tab/navigation systems; resolved by keeping the section nav as the only navigation layer and reducing the dashboard row to real actions only.
+- The ledger planner was showing `Open transaction guide` and `Manage tags` in two stacked places close together, which made the form feel repetitive and especially crowded on mobile; resolved by keeping one page-level support card above the planner and removing the duplicate CTA block from inside the form.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -130,3 +132,4 @@
 - Found a cross-locale search gap on the live transaction guide where an English UI would not match a Vietnamese query like `lai vay`; fixed it by indexing both EN and VI matrix copy in the search parts rather than only the active locale.
 - Found that reconciliation still stopped at read-only status cards and tables; fixed by shipping a new live reconciliation workflow migration, server actions, and page-level flow UI, then applying the migration to the real Supabase database.
 - The dashboard header still had one remaining pseudo-navigation CTA (`Manage tags`) after the larger nav cleanup; fixed by removing it so the secondary row now contains only true actions.
+- Added a planner-specific manual QA flow in `docs/manual-qa/ledger-planner-ui-ux.md`, then tightened the planner layout so guide/tag support lives in one place and the primary actions become full-width on mobile.

@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { BookOpen, FolderTree } from "lucide-react";
 
 import { PageHeader } from "@/components/app/page-header";
 import { LedgerEntryPlanner } from "@/components/finance/ledger-entry-planner";
@@ -79,21 +80,23 @@ export default async function NewLedgerEntryPage({
           </CardTitle>
           <CardDescription>
             {locale === "vi"
-              ? "Bảng helper đầy đủ đã được chuyển sang một trang riêng để form này gọn hơn. Mở hướng dẫn nếu bạn muốn xem toàn bộ ma trận nghiệp vụ thật và điều chỉnh, hoặc mở quản lý tag nếu cần dọn nhóm báo cáo trước."
-              : "The full helper matrix now lives on its own page so this planner stays focused. Open the guide for the full business-versus-correction reference, or open tag management if you need to clean up reporting categories first."}
+              ? "Form này giữ tập trung vào việc nhập liệu. Mở hướng dẫn nếu bạn chưa chắc nên ghi loại giao dịch nào, hoặc sang trang tag nếu cần dọn nhóm báo cáo trước."
+              : "Keep the planner focused here. Open the guide if you are unsure which transaction type to record, or jump to tag management before posting if the reporting labels need cleanup."}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
+        <CardContent className="grid gap-3 sm:flex sm:flex-wrap">
           <Link
             href={`/projects/${snapshot.dataset.project.id}/ledger/guide`}
-            className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
-        >
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 sm:w-auto"
+          >
+            <BookOpen className="size-4" />
             {locale === "vi" ? "Mở hướng dẫn giao dịch" : "Open transaction guide"}
           </Link>
           <Link
             href={`/projects/${snapshot.dataset.project.id}/tags`}
-            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto"
+          >
+            <FolderTree className="size-4" />
             {locale === "vi" ? "Quản lý tag" : "Manage tags"}
           </Link>
         </CardContent>
