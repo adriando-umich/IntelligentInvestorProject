@@ -51,6 +51,7 @@ export const plannerEntryTypes = [
   "capital_return",
   "operating_income",
   "shared_loan_drawdown",
+  "shared_loan_repayment_principal",
   "operating_expense",
   "cash_handover",
   "expense_settlement_payment",
@@ -84,6 +85,7 @@ export const plannerEntrySchema = z
       value.entryType === "expense_settlement_payment";
     const needsCashOut =
       value.entryType === "capital_return" ||
+      value.entryType === "shared_loan_repayment_principal" ||
       value.entryType === "operating_expense" ||
       value.entryType === "cash_handover" ||
       value.entryType === "expense_settlement_payment" ||

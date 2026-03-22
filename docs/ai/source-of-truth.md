@@ -72,6 +72,7 @@ The finance engine already derives:
 - Live dataset loading from Supabase rows when env/session are available
 
 The live ledger model already supports member-to-member repayment for shared expenses through the `expense_settlement_payment` entry type. The current UI now presents this in plain language as `Member repayment`, with explicit A-paid-for-B / B-pays-A-back guidance in the planner and settlements flow.
+The transaction model now also exposes a second classification axis in code: `entryFamily = business | correction`. The persisted DB column is still `entry_type`, but the app now derives family labels and uses them in planner guidance and the transaction helper matrix.
 
 ## Current Routes
 
@@ -104,6 +105,7 @@ Only `.env.example` should be committed.
 - Supabase SQL migration: created at `supabase/migrations/20260321153000_finance_app_schema.sql`
 - Additional live onboarding migration: `supabase/migrations/20260322101500_project_bootstrap.sql`
 - Additional tags and shared-loan migration: `supabase/migrations/20260322130000_tags_and_shared_loans.sql`
+- Additional entry-family and loan-principal migration: `supabase/migrations/20260322190000_entry_families_and_loan_principal.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
@@ -143,5 +145,7 @@ Only `.env.example` should be committed.
 - Added Google OAuth on the sign-in screen, backed by a Supabase browser client helper and a PKCE callback route.
 - Added operator guidance in `README.md` for Google provider setup in Supabase and Google Cloud.
 - Clarified the existing member-to-member repayment transaction in the UI by renaming `expense_settlement_payment` to `Member repayment` in user-facing copy and adding explicit reimbursement examples.
+- Added `shared_loan_repayment_principal` as a non-P&L financing outflow for repaying shared loan principal.
+- Added a transaction helper matrix on the ledger planner page so users can see, in one place, which cases are business events versus corrections and what each type affects.
 - Current limitation: Google OAuth still depends on external provider setup in Supabase Auth and a Google OAuth client; no extra app env vars were added for that flow.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.

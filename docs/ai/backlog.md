@@ -4,6 +4,7 @@
 
 - Apply the new `20260322101500_project_bootstrap.sql` migration to the live Supabase project
 - Apply the new `20260322130000_tags_and_shared_loans.sql` migration to the live Supabase project
+- Apply the new `20260322190000_entry_families_and_loan_principal.sql` migration to the live Supabase project
 - Enable the Google provider in Supabase Auth and add the Google OAuth client ID/secret plus redirect URLs
 - Validate the full live flow end-to-end:
   - sign up
@@ -13,6 +14,7 @@
   - create live transaction
   - create tagged transaction
   - create shared loan drawdown
+  - create shared loan principal repayment
 - Add real update/create flows for reconciliation submissions and profit distributions
 - Add member-management flow after project creation so teams can collaborate beyond the owner account
 
@@ -57,4 +59,6 @@
 - Added a shared-loan transaction type for borrowed funds that should not count as capital contribution.
 - Added a Google OAuth entry point on the sign-in screen plus the server callback route needed for Supabase SSR auth.
 - Clarified that member-to-member reimbursement already exists in the ledger through the live `expense_settlement_payment` path, now presented as `Member repayment` in the UI.
+- Added a second transaction-classification axis in code (`business` vs `correction`) and surfaced it through a helper matrix on the ledger planner page.
+- Added `shared_loan_repayment_principal` for repaying bank principal without treating it as operating expense or capital return.
 - Moved the remaining work to live migration validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

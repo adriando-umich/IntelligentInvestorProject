@@ -4,6 +4,7 @@
 
 - The new `20260322101500_project_bootstrap.sql` migration has not yet been executed against the live Supabase database.
 - The new `20260322130000_tags_and_shared_loans.sql` migration has not yet been executed against the live Supabase database.
+- The new `20260322190000_entry_families_and_loan_principal.sql` migration has not yet been executed against the live Supabase database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
 - Google OAuth still requires external setup in Supabase Auth and Google Cloud before the new sign-in button can succeed in production.
 - Profit distribution still has no dedicated live post flow.
@@ -31,6 +32,8 @@
 - Borrowed project cash from a shared bank loan was being forced into the wrong mental bucket; resolved by adding `shared_loan_drawdown` as a non-capital cash-in transaction type.
 - Password auth was the only live sign-in path in the app UI; resolved by adding a Google OAuth button and PKCE callback route compatible with the current Supabase SSR setup.
 - The reimbursement payment flow existed but was hidden behind overly technical wording; resolved by renaming the user-facing transaction copy to `Member repayment` and adding A/B payback examples in the planner and settlements page.
+- The transaction enum was too flat to explain clearly to users; resolved in app code by adding a shared family classification (`business` vs `correction`) and a helper matrix on the planner page.
+- Shared loan drawdown existed without an equally explicit principal-paydown type; resolved by adding `shared_loan_repayment_principal`.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -44,6 +47,7 @@
 - Production UI should not surface deployment/env readiness details; keep setup guidance in docs and operator notes instead.
 - When adding new live ledger capabilities, prefer additive SQL migrations over rewriting the original base schema so already-deployed Supabase projects can upgrade safely.
 - For social auth on Supabase SSR, start OAuth from a browser client and finish the PKCE code exchange in a route handler that can persist auth cookies.
+- When the ledger model is still stored as one enum in SQL, add a shared classification helper in app code instead of forcing a breaking schema rewrite mid-project.
 
 ## Latest Session Delta
 
@@ -60,3 +64,4 @@
 - Added a tag system for ledger entries and a shared-loan entry type that keeps borrowed money out of capital contribution.
 - Added Google OAuth UI plus a Supabase callback handler, while logging the remaining external provider setup needed outside the repo.
 - Clarified the existing member-to-member repayment flow so users can more easily record one teammate paying another teammate back.
+- Added `shared_loan_repayment_principal`, a derived `business/correction` transaction family, and a planner helper matrix that explains which type to use and what each type affects.

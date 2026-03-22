@@ -7,11 +7,15 @@ export type MemberRole = (typeof memberRoles)[number];
 export const entryStatuses = ["posted", "voided"] as const;
 export type EntryStatus = (typeof entryStatuses)[number];
 
+export const entryFamilies = ["business", "correction"] as const;
+export type EntryFamily = (typeof entryFamilies)[number];
+
 export const entryTypeLabels = {
   capital_contribution: "Capital contribution",
   capital_return: "Capital return",
   operating_income: "Operating income",
   shared_loan_drawdown: "Shared loan drawdown",
+  shared_loan_repayment_principal: "Shared loan principal repayment",
   operating_expense: "Operating expense",
   cash_handover: "Cash handover",
   expense_settlement_payment: "Member repayment",
@@ -21,6 +25,62 @@ export const entryTypeLabels = {
 } as const;
 
 export type EntryType = keyof typeof entryTypeLabels;
+
+export const businessEntryTypes = [
+  "capital_contribution",
+  "capital_return",
+  "operating_income",
+  "shared_loan_drawdown",
+  "shared_loan_repayment_principal",
+  "operating_expense",
+  "cash_handover",
+  "expense_settlement_payment",
+  "profit_distribution",
+] as const satisfies readonly EntryType[];
+
+export type BusinessEntryType = (typeof businessEntryTypes)[number];
+
+export const correctionEntryTypes = [
+  "reconciliation_adjustment",
+  "reversal",
+] as const satisfies readonly EntryType[];
+
+export type CorrectionEntryType = (typeof correctionEntryTypes)[number];
+
+export const entryFamilyLabels = {
+  business: "Business event",
+  correction: "Correction",
+} as const satisfies Record<EntryFamily, string>;
+
+export const entryFamilyByType = {
+  capital_contribution: "business",
+  capital_return: "business",
+  operating_income: "business",
+  shared_loan_drawdown: "business",
+  shared_loan_repayment_principal: "business",
+  operating_expense: "business",
+  cash_handover: "business",
+  expense_settlement_payment: "business",
+  profit_distribution: "business",
+  reconciliation_adjustment: "correction",
+  reversal: "correction",
+} as const satisfies Record<EntryType, EntryFamily>;
+
+export function getEntryFamily(entryType: EntryType): EntryFamily {
+  return entryFamilyByType[entryType];
+}
+
+export function getBusinessEntryType(entryType: EntryType) {
+  return getEntryFamily(entryType) === "business"
+    ? (entryType as BusinessEntryType)
+    : null;
+}
+
+export function getCorrectionType(entryType: EntryType) {
+  return getEntryFamily(entryType) === "correction"
+    ? (entryType as CorrectionEntryType)
+    : null;
+}
 
 export const allocationTypeLabels = {
   capital_owner: "Capital owner",

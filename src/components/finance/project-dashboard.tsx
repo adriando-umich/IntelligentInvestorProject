@@ -65,7 +65,10 @@ function entryTone(entryType: keyof typeof entryTypeLabels) {
   if (entryType === "operating_income") {
     return "bg-emerald-100 text-emerald-800";
   }
-  if (entryType === "shared_loan_drawdown") {
+  if (
+    entryType === "shared_loan_drawdown" ||
+    entryType === "shared_loan_repayment_principal"
+  ) {
     return "bg-sky-100 text-sky-800";
   }
   if (entryType === "operating_expense") {

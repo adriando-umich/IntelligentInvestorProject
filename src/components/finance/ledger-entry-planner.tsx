@@ -39,6 +39,7 @@ import {
   type PlannerEntryType,
   type PlannerEntryValues,
 } from "@/lib/finance/entry-form";
+import { entryFamilyLabels, getEntryFamily } from "@/lib/finance/types";
 import { formatCurrency } from "@/lib/format";
 
 type MemberOption = {
@@ -113,6 +114,14 @@ function effectCopy(entryType: PlannerEntryType) {
       title: "Borrowed money comes into the project",
       description:
         "This brings project cash in from a lender without giving capital credit to any member. Record bank interest separately as operating expense.",
+    };
+  }
+  if (entryType === "shared_loan_repayment_principal") {
+    return {
+      icon: <Landmark className="size-4" />,
+      title: "Borrowed principal goes back out",
+      description:
+        "Use this when the project repays loan principal. It reduces project cash, but it does not count as operating expense, capital return, or profit distribution. Record loan interest separately as operating expense.",
     };
   }
   if (entryType === "operating_expense") {
@@ -230,6 +239,7 @@ export function LedgerEntryPlanner({
   const selectedTagNames = parseTagNames(watchedTagNamesText);
   const liveSupported = liveModeEnabled && supportsLiveCreate(watchedEntryType);
   const transferHelperCopy = memberTransferHelperCopy(watchedEntryType);
+  const currentEntryFamily = getEntryFamily(watchedEntryType);
 
   function handlePreview(values: PlannerEntryValues) {
     setPreview(values);
@@ -266,12 +276,23 @@ export function LedgerEntryPlanner({
           <CardDescription>
             This form now collects enough information for live create on the
             main transaction types for {projectName}. Shared income and expense
-            lines are split equally across the selected members, and tags can
-            be attached for later aggregation.
+            lines are split equally across the selected members, and tags can be
+            attached for later aggregation. Shared loan drawdown and shared loan
+            principal repayment stay separate from normal operating P&amp;L.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <Badge className="rounded-full bg-slate-900 text-white">
+                {entryFamilyLabels[currentEntryFamily]}
+              </Badge>
+              <span>
+                The family tells you whether this is a real business event or a
+                correction-only entry.
+              </span>
+            </div>
+
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="entryType">Entry type</Label>
@@ -284,6 +305,9 @@ export function LedgerEntryPlanner({
                   <option value="capital_return">Capital return</option>
                   <option value="operating_income">Operating income</option>
                   <option value="shared_loan_drawdown">Shared loan drawdown</option>
+                  <option value="shared_loan_repayment_principal">
+                    Shared loan principal repayment
+                  </option>
                   <option value="operating_expense">Operating expense</option>
                   <option value="cash_handover">Cash handover</option>
                   <option value="expense_settlement_payment">

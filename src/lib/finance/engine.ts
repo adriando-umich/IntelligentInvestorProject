@@ -240,6 +240,7 @@ function applyEntryEffects(
       return;
     }
     case "shared_loan_drawdown":
+    case "shared_loan_repayment_principal":
       return;
     case "expense_settlement_payment": {
       if (entry.cashOutMemberId) {

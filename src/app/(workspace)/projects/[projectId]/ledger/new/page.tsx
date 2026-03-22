@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/app/page-header";
 import { LedgerEntryPlanner } from "@/components/finance/ledger-entry-planner";
+import { TransactionTypeMatrix } from "@/components/finance/transaction-type-matrix";
 import { getSessionState } from "@/lib/auth/session";
 import { getProjectSnapshot } from "@/lib/data/repository";
 import { type PlannerEntryType } from "@/lib/finance/entry-form";
@@ -12,6 +13,7 @@ function isEntryType(value: string | undefined): value is PlannerEntryType {
     value === "capital_return" ||
     value === "operating_income" ||
     value === "shared_loan_drawdown" ||
+    value === "shared_loan_repayment_principal" ||
     value === "operating_expense" ||
     value === "cash_handover" ||
     value === "expense_settlement_payment" ||
@@ -47,8 +49,9 @@ export default async function NewLedgerEntryPage({
       <PageHeader
         eyebrow="Ledger planner"
         title={`Add a transaction for ${snapshot.dataset.project.name}`}
-        description="Use this planner to record capital, tagged inflows, shared loan drawdowns, operating expenses, project cash handovers, or member repayments. Example: if A paid for B earlier and B returns the money to A, record that here as a member repayment. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase."
+        description="Use this planner to record capital, tagged inflows, shared loan drawdowns, shared loan principal repayments, operating expenses, project cash handovers, or member repayments. Example: if A paid for B earlier and B returns the money to A, record that here as a member repayment. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase."
       />
+      <TransactionTypeMatrix />
       <LedgerEntryPlanner
         projectId={snapshot.dataset.project.id}
         projectName={snapshot.dataset.project.name}

@@ -98,7 +98,10 @@ export async function createLedgerEntryAction(
       error.code === "PGRST202" ||
       error.message.toLowerCase().includes("project_tags") ||
       error.message.toLowerCase().includes("ledger_entry_tags") ||
-      error.message.toLowerCase().includes("shared_loan_drawdown");
+      error.message.toLowerCase().includes("shared_loan_drawdown") ||
+      error.message
+        .toLowerCase()
+        .includes("shared_loan_repayment_principal");
 
     return {
       status: "error",
