@@ -199,6 +199,7 @@ Only `.env.example` should be committed.
 - Added route- and component-level bilingual copy for the main signed-in workflows so English and Vietnamese can be toggled across the current UI.
 - Added a shared finance table toolbar/shell pattern and applied it to transactions, transaction guide, members, invites, tags, settlements, and reconciliation tables.
 - Added accent-insensitive search normalization so Vietnamese users can search naturally with or without diacritics across the new table toolbars.
+- Updated the transaction-guide search index to include both English and Vietnamese labels/examples/effects at the same time, so users can search across languages without first toggling locale.
 - Replaced the dashboard's old recent-activity cards with a sortable/filterable transactions table and tightened table min-width handling so horizontal scroll is explicit on denser views.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

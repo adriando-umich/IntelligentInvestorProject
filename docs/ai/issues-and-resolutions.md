@@ -119,3 +119,4 @@
 - Added a reusable table toolbar/shell across transactions, transaction guide, members, invites, tags, settlements, and reconciliation, including per-table search, filter, and sort controls.
 - Added accent-insensitive Vietnamese search matching so queries like `lai vay`, `doi tru`, and `thanh vien` still hit the intended rows.
 - Verified on a local production `next start` build that transactions filtering/sorting, guide filtering/sorting, members search, and settlement/reconciliation toolbar searches all update the rendered rows as expected.
+- Found a cross-locale search gap on the live transaction guide where an English UI would not match a Vietnamese query like `lai vay`; fixed it by indexing both EN and VI matrix copy in the search parts rather than only the active locale.

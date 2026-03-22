@@ -411,15 +411,30 @@ export function TransactionTypeMatrix() {
         }
 
         const searchParts = [
+          row.entryType,
           getEntryTypeLabel(row.entryType, locale),
+          getEntryTypeLabel(row.entryType, "en"),
+          getEntryTypeLabel(row.entryType, "vi"),
+          row.useWhenEn,
           locale === "vi" ? row.useWhenVi : row.useWhenEn,
+          row.useWhenVi,
+          row.exampleEn,
           locale === "vi" ? row.exampleVi : row.exampleEn,
+          row.exampleVi,
+          row.cashEffectEn,
           locale === "vi" ? row.cashEffectVi : row.cashEffectEn,
+          row.cashEffectVi,
+          row.reimbursementEffectEn,
           locale === "vi"
             ? row.reimbursementEffectVi
             : row.reimbursementEffectEn,
+          row.reimbursementEffectVi,
+          row.capitalEffectEn,
           locale === "vi" ? row.capitalEffectVi : row.capitalEffectEn,
+          row.capitalEffectVi,
+          row.pnlEffectEn,
           locale === "vi" ? row.pnlEffectVi : row.pnlEffectEn,
+          row.pnlEffectVi,
         ];
 
         return searchParts.some((value) =>

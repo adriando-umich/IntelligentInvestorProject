@@ -98,4 +98,5 @@
 - Localized the main route headers plus key finance surfaces including sign-in, projects, create-project, member statements, tags, invite acceptance, ledger guide/planner, settlements, reconciliation, and much of the dashboard/chart storytelling.
 - Added reusable table search/filter/sort toolbars and wider table shells across the main finance tables, then QAed them locally on a production `next start` build.
 - Added accent-insensitive search normalization for the new toolbar pattern so Vietnamese queries without diacritics still match intended rows.
+- Kept follow-up bilingual UX polish on the backlog by extending the transaction-guide search index across both EN/VI copy at once, reducing the chance that a user must change locale before search works.
 - Moved the remaining work to end-to-end real-user validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.
