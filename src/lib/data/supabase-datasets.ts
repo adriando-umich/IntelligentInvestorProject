@@ -43,11 +43,14 @@ type DbProjectRow = {
 type DbProjectMemberRow = {
   id: string;
   project_id: string;
-  user_id: string;
+  user_id: string | null;
   role: ProjectMember["role"];
   is_active: boolean;
   joined_at: string;
   left_at: string | null;
+  membership_status: "active" | "pending_invite";
+  pending_email: string | null;
+  display_name: string | null;
 };
 
 type DbLedgerEntryRow = {
@@ -178,14 +181,19 @@ function mapProject(row: DbProjectRow): Project {
 }
 
 function mapProjectMember(row: DbProjectMemberRow): ProjectMember {
+  const fallbackUserId = `pending:${row.id}`;
+
   return {
     id: row.id,
     projectId: row.project_id,
-    userId: row.user_id,
+    userId: row.user_id ?? fallbackUserId,
     role: row.role,
     isActive: row.is_active,
     joinedAt: row.joined_at,
     leftAt: row.left_at,
+    membershipStatus: row.membership_status,
+    pendingEmail: row.pending_email,
+    displayName: row.display_name,
   };
 }
 
@@ -466,7 +474,13 @@ export async function getLiveProjectDataset(projectId: string) {
   const runs = runResult.data ?? [];
   const reconciliationRuns = reconciliationRunResult.data ?? [];
 
-  const userIds = [...new Set(members.map((member) => member.user_id))];
+  const userIds = [
+    ...new Set(
+      members
+        .map((member) => member.user_id)
+        .filter((userId): userId is string => typeof userId === "string")
+    ),
+  ];
   const entryIds = entries.map((entry) => entry.id);
   const runIds = runs.map((run) => run.id);
   const reconciliationRunIds = reconciliationRuns.map((run) => run.id);
@@ -551,9 +565,25 @@ export async function getLiveProjectDataset(projectId: string) {
     return null;
   }
 
+  const actualProfiles = (profilesResult.data ?? []).map(mapProfile);
+  const syntheticPendingProfiles = members
+    .filter((member) => member.membership_status === "pending_invite")
+    .map((member) => ({
+      userId: `pending:${member.id}`,
+      displayName:
+        member.display_name ??
+        member.pending_email?.split("@")[0]?.trim() ??
+        "Pending member",
+      email: member.pending_email ?? "",
+      avatarUrl: null,
+      isActive: member.is_active,
+      createdAt: member.joined_at,
+      updatedAt: member.joined_at,
+    }));
+
   return {
     project: mapProject(projectResult.data),
-    profiles: (profilesResult.data ?? []).map(mapProfile),
+    profiles: [...actualProfiles, ...syntheticPendingProfiles],
     members: members.map(mapProjectMember),
     entries: entries.map(mapLedgerEntry),
     allocations: (allocationsResult.data ?? []).map(mapLedgerAllocation),

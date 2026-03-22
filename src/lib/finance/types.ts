@@ -6,6 +6,9 @@ export type ProjectStatus = (typeof projectStatuses)[number];
 export const memberRoles = ["owner", "manager", "member"] as const;
 export type MemberRole = (typeof memberRoles)[number];
 
+export const membershipStatuses = ["active", "pending_invite"] as const;
+export type MembershipStatus = (typeof membershipStatuses)[number];
+
 export const entryStatuses = ["posted", "voided"] as const;
 export type EntryStatus = (typeof entryStatuses)[number];
 
@@ -220,6 +223,9 @@ export interface ProjectMember {
   isActive: boolean;
   joinedAt: string;
   leftAt?: string | null;
+  membershipStatus?: MembershipStatus;
+  pendingEmail?: string | null;
+  displayName?: string | null;
 }
 
 export interface LedgerEntry {

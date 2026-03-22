@@ -147,8 +147,8 @@ export async function createProjectInviteAction(
     status: "success",
     message: invite.email
       ? locale === "vi"
-        ? `Link moi da san sang cho ${invite.email}. Chi email nay moi co the chap nhan.`
-        : `Invite link ready for ${invite.email}. Only that email can accept it.`
+        ? `Link moi da san sang cho ${invite.email}. Da tao san pending member de ban co the chia chi phi truoc khi ho tham gia.`
+        : `Invite link ready for ${invite.email}. A pending member was created now so you can split costs before they join.`
       : copy.reusableInviteReady,
     inviteLink,
   };

@@ -40,6 +40,7 @@ type MemberSummary = {
   avatarUrl?: string | null;
   role: "owner" | "manager" | "member";
   joinedAt: string;
+  membershipStatus: "active" | "pending_invite";
 };
 
 type InviteSummary = {
@@ -70,6 +71,28 @@ function RoleBadge({
   return (
     <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${className}`}>
       {getMemberRoleLabel(role, locale)}
+    </span>
+  );
+}
+
+function MembershipBadge({
+  status,
+}: {
+  status: MemberSummary["membershipStatus"];
+}) {
+  const { locale } = useLocale();
+
+  if (status === "active") {
+    return (
+      <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
+        {locale === "vi" ? "Dang hoat dong" : "Active"}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+      {locale === "vi" ? "Cho chap nhan" : "Pending invite"}
     </span>
   );
 }
@@ -255,6 +278,12 @@ export function ProjectMemberManager({
     locale === "vi" ? "Không thể thu hồi lời mời." : "Unable to revoke invite.";
   const revokedMessage = locale === "vi" ? "Đã thu hồi lời mời." : "Invite revoked.";
   const memberLabel = locale === "vi" ? "Thành viên" : "Member";
+
+  const memberStatusLabel = locale === "vi" ? "Tráº¡ng thÃ¡i" : "Status";
+  const pendingInviteHelper =
+    locale === "vi"
+      ? "Invite cÃ³ email sáº½ táº¡o sáºµn má»™t pending member Ä‘á»ƒ báº¡n chia chi phÃ­ trÆ°á»›c khi há» tham gia."
+      : "Targeted email invites create a pending member immediately, so you can split shared costs before that person joins.";
 
   const displayedMembers = useMemo(() => {
     const normalizedSearch = normalizeSearchText(memberSearch);
@@ -448,6 +477,7 @@ export function ProjectMemberManager({
                   <TableHead className="min-w-[240px]">{memberLabel}</TableHead>
                   <TableHead className="min-w-[220px]">{copy.email}</TableHead>
                   <TableHead className="w-[160px]">{copy.role}</TableHead>
+                  <TableHead className="w-[160px]">{memberStatusLabel}</TableHead>
                   <TableHead className="w-[150px]">{copy.joined}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -455,7 +485,7 @@ export function ProjectMemberManager({
                 {displayedMembers.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={5}
                       className="py-10 text-center whitespace-normal text-slate-500"
                     >
                       {copy.noMembersMatch}
@@ -482,6 +512,9 @@ export function ProjectMemberManager({
                       </TableCell>
                       <TableCell>
                         <RoleBadge role={member.role} />
+                      </TableCell>
+                      <TableCell>
+                        <MembershipBadge status={member.membershipStatus} />
                       </TableCell>
                       <TableCell>{formatDateLabel(member.joinedAt, locale)}</TableCell>
                     </TableRow>
@@ -539,6 +572,9 @@ export function ProjectMemberManager({
                     autoComplete="email"
                     placeholder="bao@example.com"
                   />
+                  <p className="text-sm leading-6 text-slate-500">
+                    {pendingInviteHelper}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="invite-role">{copy.roleAfterJoining}</Label>

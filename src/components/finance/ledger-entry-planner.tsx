@@ -55,6 +55,7 @@ import { formatCurrency } from "@/lib/format";
 type MemberOption = {
   id: string;
   name: string;
+  membershipStatus: "active" | "pending_invite";
 };
 
 function cashOutLabel(entryType: PlannerEntryType, locale: "en" | "vi") {
@@ -461,18 +462,38 @@ export function LedgerEntryPlanner({
   const selectedAllocationIds = Array.isArray(watched.allocationProjectMemberIds)
     ? watched.allocationProjectMemberIds
     : [];
-  const nameById = useMemo(
-    () => new Map(memberOptions.map((member) => [member.id, member.name])),
+  const cashMemberOptions = useMemo(
+    () =>
+      memberOptions.filter(
+        (member) => member.membershipStatus === "active"
+      ),
     [memberOptions]
   );
+  const pendingMemberSuffix = locale === "vi" ? " (cho chap nhan)" : " (pending)";
+  const labelById = useMemo(
+    () =>
+      new Map(
+        memberOptions.map((member) => [
+          member.id,
+          member.membershipStatus === "pending_invite"
+            ? `${member.name}${pendingMemberSuffix}`
+            : member.name,
+        ])
+      ),
+    [memberOptions, pendingMemberSuffix]
+  );
   const selectedAllocationNames = selectedAllocationIds
-    .map((memberId) => nameById.get(memberId))
+    .map((memberId) => labelById.get(memberId))
     .filter((value): value is string => Boolean(value));
   const selectedTagNames = parseTagNames(watchedTagNamesText);
   const liveSupported = liveModeEnabled && supportsLiveCreate(watchedEntryType);
   const transferHelperCopy = memberTransferHelperCopy(watchedEntryType, locale);
   const currentEntryFamily = getEntryFamily(watchedEntryType);
   const availableEntryTypes = getPlannerEntryTypesForFamily(currentEntryFamily);
+  const pendingAllocationHelper =
+    locale === "vi"
+      ? "Pending member co the duoc chia chi phi va gan phan von, nhung chua duoc chon o vai tro tra tien/nhan tien cho toi khi ho join."
+      : "Pending members can receive cost allocations and capital ownership now, but they cannot be selected as the payer or receiver until they join.";
 
   function changeEntryFamily(nextFamily: EntryFamily) {
     const nextType = getPlannerEntryTypesForFamily(nextFamily)[0];
@@ -650,9 +671,9 @@ export function LedgerEntryPlanner({
                   {...form.register("cashOutProjectMemberId")}
                 >
                   <option value="">{copy.noPayerSelected}</option>
-                  {memberOptions.map((member) => (
+                  {cashMemberOptions.map((member) => (
                     <option key={member.id} value={member.id}>
-                      {member.name}
+                      {labelById.get(member.id) ?? member.name}
                     </option>
                   ))}
                 </select>
@@ -667,9 +688,9 @@ export function LedgerEntryPlanner({
                   {...form.register("cashInProjectMemberId")}
                 >
                   <option value="">{copy.noReceiverSelected}</option>
-                  {memberOptions.map((member) => (
+                  {cashMemberOptions.map((member) => (
                     <option key={member.id} value={member.id}>
-                      {member.name}
+                      {labelById.get(member.id) ?? member.name}
                     </option>
                   ))}
                 </select>
@@ -695,10 +716,13 @@ export function LedgerEntryPlanner({
                   <option value="">{copy.chooseCapitalOwner}</option>
                   {memberOptions.map((member) => (
                     <option key={member.id} value={member.id}>
-                      {member.name}
+                      {labelById.get(member.id) ?? member.name}
                     </option>
                   ))}
                 </select>
+                <p className="text-sm leading-6 text-slate-500">
+                  {pendingAllocationHelper}
+                </p>
               </div>
             ) : null}
 
@@ -706,7 +730,12 @@ export function LedgerEntryPlanner({
               <div className="space-y-3">
                 <div className="space-y-1">
                   <Label>Members sharing this amount</Label>
-                  <p className="text-sm text-slate-500">{copy.allocationHint}</p>
+                  <p className="text-sm text-slate-500">
+                    {copy.allocationHint}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    {pendingAllocationHelper}
+                  </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {memberOptions.map((member) => {
@@ -726,7 +755,7 @@ export function LedgerEntryPlanner({
                           className="size-4 rounded border-slate-300"
                           {...form.register("allocationProjectMemberIds")}
                         />
-                        <span>{member.name}</span>
+                        <span>{labelById.get(member.id) ?? member.name}</span>
                       </label>
                     );
                   })}
@@ -877,7 +906,7 @@ export function LedgerEntryPlanner({
                 <p className="text-sm text-slate-500">{copy.moneyOut}</p>
                 <p className="mt-2 font-medium text-slate-950">
                   {watchedCashOutProjectMemberId
-                    ? nameById.get(watchedCashOutProjectMemberId)
+                    ? labelById.get(watchedCashOutProjectMemberId)
                     : copy.notSet}
                 </p>
               </div>
@@ -885,7 +914,7 @@ export function LedgerEntryPlanner({
                 <p className="text-sm text-slate-500">{copy.moneyIn}</p>
                 <p className="mt-2 font-medium text-slate-950">
                   {watchedCashInProjectMemberId
-                    ? nameById.get(watchedCashInProjectMemberId)
+                    ? labelById.get(watchedCashInProjectMemberId)
                     : copy.notSet}
                 </p>
               </div>
@@ -895,7 +924,7 @@ export function LedgerEntryPlanner({
                 <p className="text-sm text-slate-500">{copy.capitalOwner}</p>
                 <p className="mt-2 font-medium text-slate-950">
                   {watchedCapitalOwnerProjectMemberId
-                    ? nameById.get(watchedCapitalOwnerProjectMemberId)
+                    ? labelById.get(watchedCapitalOwnerProjectMemberId)
                     : copy.notSet}
                 </p>
               </div>

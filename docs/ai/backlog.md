@@ -8,8 +8,10 @@
   - sign in with Google
   - verify Google avatar appears in the shell after callback/login
   - re-test create first project after the `create_project_with_owner` RLS fix
-  - create an invite link from `/members`
-  - accept an invite from `/join/[inviteToken]`
+  - regression-test reusable invites versus targeted pending-member invites from `/members`
+  - confirm pending-member UI rules in live data:
+    pending members can receive allocations before join
+    pending members cannot be chosen as cash payer/receiver until after join
   - create live transaction
   - create tagged transaction
   - create shared loan drawdown
@@ -99,6 +101,9 @@
 - Fixed the live `create_project_with_owner` RPC by switching it to `security definer` in an additive migration after the UI hit `new row violates row-level security policy for table "projects"` during project creation.
 - Added a persistent project-section nav layout and a new `/members` route so project navigation no longer disappears when opening subpages like reconciliation.
 - Added live invite-link creation, revoke, and self-join acceptance flow backed by the new `project_invites` table and RPCs.
+- Added a stable pending-member flow for targeted invites so cost allocations can be assigned before acceptance and still land on the same `project_member_id` after join.
+- Applied the pending-member migration to the live Supabase project, backfilled existing targeted invites, and verified the real `Vinh Truong` plus `Nha Trang 02` projects now link old invite tokens to the correct per-project pending member rows.
+- Verified on the live database with a disposable test project that a pending member can receive an expense allocation before join and then accept the invite later without changing the allocation's `project_member_id`.
 - Updated auth forms so email sign-in/sign-up preserve `next` redirects for invite acceptance and other deep links.
 - Added a first-pass EN/VI localization layer with a global language switcher, locale cookie, and locale-aware formatting helpers.
 - Localized the main route headers plus key finance surfaces including sign-in, projects, create-project, member statements, tags, invite acceptance, ledger guide/planner, settlements, reconciliation, and much of the dashboard/chart storytelling.

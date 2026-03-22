@@ -91,6 +91,8 @@ export default async function ProjectMembersPage({
             avatarUrl: summary.profile.avatarUrl,
             role: summary.projectMember.role,
             joinedAt: summary.projectMember.joinedAt,
+            membershipStatus:
+              summary.projectMember.membershipStatus ?? "active",
           }))
           .sort((left, right) => left.displayName.localeCompare(right.displayName))}
         invites={invites.map((invite) => ({

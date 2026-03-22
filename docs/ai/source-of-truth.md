@@ -76,6 +76,7 @@ The finance engine already derives:
 - Live dataset loading from Supabase rows when env/session are available
 
 The live ledger model already supports member-to-member repayment for shared expenses through the `expense_settlement_payment` entry type. The current UI now presents this in plain language as `Member repayment`, with explicit A-paid-for-B / B-pays-A-back guidance in the planner and settlements flow.
+Project members can now exist as `active` or `pending_invite`. Pending members get a stable `project_member_id` before account acceptance so expenses can be allocated to them before they join, then keep the same history after invite acceptance.
 The transaction model now also exposes a second classification axis in code: `entryFamily = business | correction`. The persisted DB column is still `entry_type`, but the app now derives family labels and uses them in planner guidance and the transaction helper matrix.
 The business-event shortcuts now include `shared_loan_interest_payment`, which behaves like a shared operating cost while staying distinct from shared-loan principal.
 The ledger planner now lets users choose the entry family first, then narrows the entry-type picker accordingly. The planner currently supports `reconciliation_adjustment` inside the `correction` family, while `reversal` still remains guide-only until a dedicated original-entry workflow exists.
@@ -125,12 +126,13 @@ Only `.env.example` should be committed.
 - Additional project-tag delete-policy migration: `supabase/migrations/20260322234500_project_tag_delete_policy.sql`
 - Additional project-creation-RLS migration: `supabase/migrations/20260322235500_project_creation_security_definer.sql`
 - Additional project-invite migration: `supabase/migrations/20260323003000_project_invites.sql`
+- Additional pending-project-member migration: `supabase/migrations/20260323023000_pending_project_members.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
-- Live Supabase database: migrated through `20260323003000_project_invites.sql`
+- Live Supabase database: migrated through `20260323023000_pending_project_members.sql`
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
 - Live Supabase Auth redirect allow-list now includes:
@@ -195,6 +197,10 @@ Only `.env.example` should be committed.
 - Fixed the live first-project RPC so `create_project_with_owner` now runs as `security definer`, and applied an additive migration to update the real Supabase project.
 - Added a persistent project-section navigation layout so the same overview/settlements/tags/members/capital/reconciliation/advanced nav stays visible across project subpages.
 - Added live project invites with `/projects/[projectId]/members` plus a public `/join/[inviteToken]` acceptance route.
+- Added stable pending project members so targeted invite links can create a member row before acceptance, shared expenses can be assigned before join, and invite acceptance later activates the same `project_member_id` instead of creating a second row.
+- Applied `supabase/migrations/20260323023000_pending_project_members.sql` to the live Supabase project and backfilled existing targeted invites so old invite links now map to the correct pending member rows.
+- Verified live on `Vinh Truong` and `Nha Trang 02` that the same email invited into two different projects now maps to two different pending `project_member` rows, one per project, with each old invite linked to the correct row.
+- Verified end-to-end on the live database with a disposable test project that an expense allocated to a pending member before invite acceptance still points to the exact same `project_member_id` after the invite is accepted.
 - Updated email/password auth forms to preserve `next` redirects, so invite links can return users to the accept page after sign-in.
 - Added a cookie-backed EN/VI locale layer with a global language switcher and flag buttons in the root layout.
 - Made currency/date/percent formatting locale-aware and started threading locale through dashboard, planner, statements, invites, tags, settlements, reconciliation, and project-management screens.

@@ -105,6 +105,7 @@ export default async function NewLedgerEntryPage({
         memberOptions={snapshot.memberSummaries.map((summary) => ({
           id: summary.projectMember.id,
           name: summary.profile.displayName,
+          membershipStatus: summary.projectMember.membershipStatus ?? "active",
         }))}
         tagOptions={snapshot.dataset.tags.map((tag) => tag.name)}
         initialValues={{

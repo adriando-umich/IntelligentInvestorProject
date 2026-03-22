@@ -5,13 +5,14 @@
 - The local and production app had been pointed at a mistyped Supabase hostname until the March 22 fix; auth should now use the correct project URL, but pending live flows still need revalidation against the real database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
 - A full manual Google sign-in round-trip with a real user account has not yet been completed from this workspace after enabling the provider.
-- The new invite flow still needs one live end-to-end pass covering create invite, sign in from deep link, and accept invite.
+- The invite flow now has database-level live verification, but it still needs one full browser-level pass covering create invite, sign in from deep link, and accept invite through the production UI.
 - Profit distribution still has no dedicated live post flow.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
 - GitHub-triggered auto deploy is not confirmed yet; the current working deployment path is Vercel CLI plus linked project
 - Live sign-up/login behavior can still vary based on Supabase Auth settings such as email confirmation requirements.
 - The EN/VI rollout still needs one live QA pass to catch any remaining English-only strings in secondary dashboard/chart states.
 - The new table-toolbar rollout still needs one production pass with real signed-in data, not just the sample workspace and local production build.
+- If the same real person somehow becomes active in a project through a different path before using an older targeted invite link, the system does not yet run an automatic merge of two competing `project_members` rows; the main supported path is now stable pending-member activation through the linked invite.
 
 ## Resolved Issues
 
@@ -51,6 +52,7 @@
 - Creating the first project could fail live with `new row violates row-level security policy for table "projects"` because `create_project_with_owner` still ran as `security invoker`; resolved by shipping `20260322235500_project_creation_security_definer.sql` to replace the function as `security definer` and applying it to the live database.
 - Project navigation tabs disappeared when users left the main dashboard for routes like `/reconciliation`; resolved by moving the project-section nav into a shared `[projectId]/layout.tsx` wrapper.
 - There was no real way to add members after creating a project; resolved by adding `project_invites`, manager-created share links, email-restricted invites, revoke support, and a public `/join/[inviteToken]` accept page.
+- Targeted invites could only create a `project_member` on acceptance, which meant pre-join expense allocations would either be impossible or would risk remapping history later; resolved by adding stable pending project members linked from invite rows, then activating that same row on acceptance.
 - Deep links like invite accept could lose their destination after email/password auth because server actions always redirected to `/projects`; resolved by adding hidden `nextPath` propagation through sign-in and sign-up actions.
 - The product started requiring English and Vietnamese across the UI while the app was still mostly English-only; resolved by adding a locale cookie, a global language switcher with flags, locale-aware formatters, and bilingual copy across the main routes and finance components.
 - Table-heavy workflows were hard to scan and hard to query because most finance tables had no shared search/filter/sort pattern and some columns collapsed too tightly; resolved by adding a reusable finance table toolbar/shell, applying it across the main tables, and widening dense tables so horizontal scroll is explicit.
@@ -117,6 +119,8 @@
 - Verified that the live production sign-in page now renders the `Continue with Google` button after the provider was enabled upstream.
 - Investigated the live create-project failure from the UI screenshot, traced it to RLS being enforced inside `create_project_with_owner`, and applied a new live migration that changes the function to `security definer`.
 - Added a shared project layout with persistent section navigation, then introduced a `/members` page and invite-backed self-join flow with a new live Supabase migration.
+- Added and applied a new pending-member migration that lets targeted invites create stable pre-join `project_members`, backfilled existing invite links in the live database, and verified on the real `Vinh Truong` plus `Nha Trang 02` projects that old invite tokens now point at the correct per-project member rows.
+- Verified with a disposable live test project that assigning an expense to a pending member before acceptance still keeps the same `project_member_id` after invite acceptance, so allocations do not need any history rewrite.
 - Added the first full EN/VI localization pass, including a root language switcher, locale-aware number/date formatting, and bilingual copy across sign-in, projects, planner, guide, tags, invites, member statements, settlements, reconciliation, and major dashboard/chart surfaces.
 - Added a reusable table toolbar/shell across transactions, transaction guide, members, invites, tags, settlements, and reconciliation, including per-table search, filter, and sort controls.
 - Added accent-insensitive Vietnamese search matching so queries like `lai vay`, `doi tru`, and `thanh vien` still hit the intended rows.

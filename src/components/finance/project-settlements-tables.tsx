@@ -49,6 +49,8 @@ export function ProjectSettlementsTables({
           noMembersMatch: "Không có dòng nào khớp với tìm kiếm hiện tại.",
           noSettlementsMatch: "Không có gợi ý nào khớp với tìm kiếm hiện tại.",
           recordRepayment: "Ghi nhận đã trả",
+          pendingJoinRequired:
+            "Cho ngÆ°á»i nÃ y tham gia trÆ°á»›c khi ghi nháº­n giao dá»‹ch tráº£ tiá»n.",
         }
       : {
           searchLabel: "Search",
@@ -65,6 +67,8 @@ export function ProjectSettlementsTables({
           noMembersMatch: "No member rows match the current search.",
           noSettlementsMatch: "No settlement suggestions match the current search.",
           recordRepayment: "Record repayment",
+          pendingJoinRequired:
+            "Wait until this person joins before recording a repayment entry.",
         };
 
   const displayedMembers = useMemo(() => {
@@ -289,6 +293,9 @@ export function ProjectSettlementsTables({
                   const to = snapshot.memberSummaries.find(
                     (item) => item.projectMember.id === suggestion.toProjectMemberId
                   );
+                  const pendingMemberInvolved =
+                    from?.projectMember.membershipStatus === "pending_invite" ||
+                    to?.projectMember.membershipStatus === "pending_invite";
 
                   return (
                     <TableRow
@@ -304,12 +311,18 @@ export function ProjectSettlementsTables({
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Link
-                          href={`/projects/${snapshot.dataset.project.id}/ledger/new?type=expense_settlement_payment&from=${suggestion.fromProjectMemberId}&to=${suggestion.toProjectMemberId}&amount=${suggestion.amount}`}
-                          className="inline-flex h-8 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
-                        >
-                          {copy.recordRepayment}
-                        </Link>
+                        {pendingMemberInvolved ? (
+                          <span className="inline-flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+                            {copy.pendingJoinRequired}
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/projects/${snapshot.dataset.project.id}/ledger/new?type=expense_settlement_payment&from=${suggestion.fromProjectMemberId}&to=${suggestion.toProjectMemberId}&amount=${suggestion.amount}`}
+                            className="inline-flex h-8 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
+                          >
+                            {copy.recordRepayment}
+                          </Link>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
