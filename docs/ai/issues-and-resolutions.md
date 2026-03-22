@@ -4,8 +4,7 @@
 
 - The local and production app had been pointed at a mistyped Supabase hostname until the March 22 fix; auth should now use the correct project URL, but pending live flows still need revalidation against the real database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
-- Google OAuth still requires external setup in Supabase Auth and Google Cloud before the new sign-in button can succeed in production.
-- The current workspace does not have `SUPABASE_ACCESS_TOKEN`, so Supabase management APIs and provider configuration still cannot be executed programmatically from here.
+- A full manual Google sign-in round-trip with a real user account has not yet been completed from this workspace after enabling the provider.
 - Profit distribution still has no dedicated live post flow.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
 - GitHub-triggered auto deploy is not confirmed yet; the current working deployment path is Vercel CLI plus linked project
@@ -45,6 +44,7 @@
 - The main cash chart used cumulative waterfall positioning that made smaller steps like shared loan principal look taller than much larger funding amounts; resolved by switching the chart to direct movement bars plus a separate `Cash now` total bar.
 - The base finance migration created helper functions before the tables they referenced, so the first live `db push` failed on `public.project_members`; resolved by moving the core table definitions earlier in `20260321153000_finance_app_schema.sql` and re-running the migration stack successfully.
 - The live Supabase database had been missing all additive migrations for onboarding, tags, shared loans, entry families, avatars, shared loan interest, and tag delete policies; resolved by applying the full migration stack through `20260322234500_project_tag_delete_policy.sql`.
+- Google OAuth had been wired in app code but disabled in the live Supabase project and still pointed at localhost for auth site URL; resolved by using the Supabase management API to enable Google, set `site_url` to production, and add the production/local callback allow-list.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -66,6 +66,7 @@
 - When a helper becomes reference-heavy, move it to its own route and leave just a clear link in the main workflow so the primary form stays spacious.
 - If a finance chart is meant for plain-language reading, the visible bar height should map directly to the labeled amount unless the UI makes cumulative positioning unmistakably obvious.
 - For first-time remote bootstrap migrations, sanity-check function/table ordering before assuming the CLI failure is an environment problem.
+- When Supabase social auth looks wired in code but absent in production, check both the public `/auth/v1/settings` endpoint and the project-level auth config (`site_url`, provider enabled flag, callback allow-list).
 
 ## Latest Session Delta
 
@@ -97,6 +98,6 @@
 - Added an explicit `Business event / Correction` picker to the planner and exposed `reconciliation_adjustment` as the current live correction option there.
 - Added a dedicated `/tags` CRUD page, live tag-management server actions, and a new additive Supabase migration for project-tag delete policy.
 - Reworked the main cash chart after user review showed the cumulative waterfall styling was visually misleading for shared loan vs capital.
-- Confirmed the local workspace now has DB credentials and Google client credentials, but not `SUPABASE_ACCESS_TOKEN`.
 - Applied the full migration stack to the live Supabase database and verified a follow-up `supabase db push --dry-run` now reports the remote database is up to date.
-- Re-checked the public auth settings endpoint after the DB migration and confirmed Google is still disabled upstream, so the remaining auth blocker is provider configuration rather than schema.
+- Added `SUPABASE_ACCESS_TOKEN`, patched the live Supabase auth config, and verified that the public auth settings endpoint now reports Google enabled.
+- Verified that the live production sign-in page now renders the `Continue with Google` button after the provider was enabled upstream.

@@ -2,8 +2,6 @@
 
 ## Now
 
-- Add `SUPABASE_ACCESS_TOKEN` so project-level auth/provider config can be pushed from this workspace
-- Enable the Google provider in Supabase Auth and add the Google OAuth client ID/secret plus redirect URLs
 - Validate the full live flow end-to-end:
   - sign up
   - sign in
@@ -32,8 +30,7 @@
 
 ## Blocked
 
-- Supabase management auth is still missing locally, so provider configuration cannot yet be executed from this workspace
-- End-to-end Google sign-in validation still depends on the provider being enabled upstream in Supabase Auth
+- End-to-end Google sign-in validation still depends on completing one real consent/login round-trip with a live Google account
 
 ## Deferred
 
@@ -76,5 +73,6 @@
 - Added a dedicated `/tags` management page and live server actions for create, rename, and delete, plus an additive delete-policy migration for Supabase.
 - Reworked the main cash chart so each bar now maps to its own amount instead of a cumulative waterfall height that made smaller movements look larger than capital.
 - Fixed the base migration ordering bug, then applied the entire live migration stack successfully to the real Supabase database.
-- Confirmed after migration that the remote database is now up to date, while Google auth remains blocked only on the missing `SUPABASE_ACCESS_TOKEN`.
-- Moved the remaining work to live auth-provider enablement, end-to-end real-user validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.
+- Added `SUPABASE_ACCESS_TOKEN`, enabled Google in live Supabase Auth, switched the auth `site_url` to production, and added the production/local callback allow-list.
+- Confirmed through the public auth settings endpoint and the live sign-in page that Google auth is now exposed correctly in production.
+- Moved the remaining work to end-to-end real-user validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.
