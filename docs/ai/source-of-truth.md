@@ -66,6 +66,7 @@ The finance engine already derives:
 - `profitReceivedTotal`
 - `undistributedProfit`
 - Splitwise-style settlement suggestions
+- Tagged inflow and expense rollups
 - Live dataset loading from Supabase rows when env/session are available
 
 ## Current Routes
@@ -97,6 +98,7 @@ Only `.env.example` should be committed.
 - Supabase runtime wiring: partial but now supports live reads plus live create on main ledger entry types
 - Supabase SQL migration: created at `supabase/migrations/20260321153000_finance_app_schema.sql`
 - Additional live onboarding migration: `supabase/migrations/20260322101500_project_bootstrap.sql`
+- Additional tags and shared-loan migration: `supabase/migrations/20260322130000_tags_and_shared_loans.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
@@ -131,4 +133,6 @@ Only `.env.example` should be committed.
 - Added self-service sign-up on `/sign-in`.
 - Added live project onboarding through `/projects/new` plus the `create_project_with_owner` SQL function.
 - Added Supabase SSR session refresh through `proxy.ts`.
+- Added project tags plus entry-tag joins so inflows and expenses can be aggregated by tag.
+- Added `shared_loan_drawdown` as a live transaction type for borrowed project cash that should not count as member capital.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.

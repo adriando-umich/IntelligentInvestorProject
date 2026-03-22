@@ -271,6 +271,20 @@ export const demoProjectDatasets: ProjectDataset[] = [
       { id: "alloc-sunrise-20", ledgerEntryId: "entry-sunrise-11", projectMemberId: "pm-trang-sunrise", allocationType: "income_share", amount: 1_000_000 },
       { id: "alloc-sunrise-21", ledgerEntryId: "entry-sunrise-11", projectMemberId: "pm-bao-sunrise", allocationType: "income_share", amount: 500_000 },
     ],
+    tags: [
+      { id: "tag-sunrise-legal", projectId: "project-sunrise", name: "Legal", slug: "legal", createdAt, updatedAt: createdAt },
+      { id: "tag-sunrise-marketing", projectId: "project-sunrise", name: "Marketing", slug: "marketing", createdAt, updatedAt: createdAt },
+      { id: "tag-sunrise-contractor", projectId: "project-sunrise", name: "Contractor", slug: "contractor", createdAt, updatedAt: createdAt },
+      { id: "tag-sunrise-buyer-deposit", projectId: "project-sunrise", name: "Buyer deposit", slug: "buyer-deposit", createdAt, updatedAt: createdAt },
+      { id: "tag-sunrise-buyer-top-up", projectId: "project-sunrise", name: "Buyer top-up", slug: "buyer-top-up", createdAt, updatedAt: createdAt },
+    ],
+    entryTags: [
+      { ledgerEntryId: "entry-sunrise-3", projectTagId: "tag-sunrise-legal" },
+      { ledgerEntryId: "entry-sunrise-4", projectTagId: "tag-sunrise-marketing" },
+      { ledgerEntryId: "entry-sunrise-5", projectTagId: "tag-sunrise-contractor" },
+      { ledgerEntryId: "entry-sunrise-8", projectTagId: "tag-sunrise-buyer-deposit" },
+      { ledgerEntryId: "entry-sunrise-11", projectTagId: "tag-sunrise-buyer-top-up" },
+    ],
     profitDistributionRuns: [
       {
         id: "run-sunrise-1",
@@ -340,6 +354,14 @@ export const demoProjectDatasets: ProjectDataset[] = [
       { id: "alloc-canal-4", ledgerEntryId: "entry-canal-3", projectMemberId: "pm-bao-canal", allocationType: "expense_share", amount: 3_000_000 },
       { id: "alloc-canal-5", ledgerEntryId: "entry-canal-4", projectMemberId: "pm-linh-canal", allocationType: "income_share", amount: 9_000_000 },
       { id: "alloc-canal-6", ledgerEntryId: "entry-canal-4", projectMemberId: "pm-bao-canal", allocationType: "income_share", amount: 6_000_000 },
+    ],
+    tags: [
+      { id: "tag-canal-survey", projectId: "project-canal", name: "Survey", slug: "survey", createdAt, updatedAt: createdAt },
+      { id: "tag-canal-option-premium", projectId: "project-canal", name: "Option premium", slug: "option-premium", createdAt, updatedAt: createdAt },
+    ],
+    entryTags: [
+      { ledgerEntryId: "entry-canal-3", projectTagId: "tag-canal-survey" },
+      { ledgerEntryId: "entry-canal-4", projectTagId: "tag-canal-option-premium" },
     ],
     profitDistributionRuns: [],
     profitDistributionLines: [],

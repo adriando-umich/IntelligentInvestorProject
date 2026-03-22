@@ -5,12 +5,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   type LedgerAllocation,
   type LedgerEntry,
+  type LedgerEntryTag,
   type ProfitDistributionLine,
   type ProfitDistributionRun,
   type Profile,
   type Project,
   type ProjectDataset,
   type ProjectMember,
+  type ProjectTag,
   type ReconciliationCheck,
   type ReconciliationRun,
 } from "@/lib/finance/types";
@@ -73,6 +75,20 @@ type DbLedgerAllocationRow = {
   amount: number | string;
   weight_percent: number | string | null;
   note: string | null;
+};
+
+type DbProjectTagRow = {
+  id: string;
+  project_id: string;
+  name: string;
+  slug: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type DbLedgerEntryTagRow = {
+  ledger_entry_id: string;
+  project_tag_id: string;
 };
 
 type DbProfitDistributionRunRow = {
@@ -204,6 +220,24 @@ function mapLedgerAllocation(row: DbLedgerAllocationRow): LedgerAllocation {
   };
 }
 
+function mapProjectTag(row: DbProjectTagRow): ProjectTag {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    name: row.name,
+    slug: row.slug,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapLedgerEntryTag(row: DbLedgerEntryTagRow): LedgerEntryTag {
+  return {
+    ledgerEntryId: row.ledger_entry_id,
+    projectTagId: row.project_tag_id,
+  };
+}
+
 function mapProfitDistributionRun(
   row: DbProfitDistributionRunRow
 ): ProfitDistributionRun {
@@ -268,6 +302,18 @@ function mapReconciliationCheck(
     reviewedBy: row.reviewed_by,
     reviewedAt: row.reviewed_at,
   };
+}
+
+function isMissingRelationError(error: { code?: string; message?: string } | null) {
+  if (!error) {
+    return false;
+  }
+
+  return (
+    error.code === "PGRST205" ||
+    error.message?.toLowerCase().includes("relation") === true ||
+    error.message?.toLowerCase().includes("does not exist") === true
+  );
 }
 
 export async function shouldUseDemoData() {
@@ -422,7 +468,13 @@ export async function getLiveProjectDataset(projectId: string) {
   const runIds = runs.map((run) => run.id);
   const reconciliationRunIds = reconciliationRuns.map((run) => run.id);
 
-  const [profilesResult, allocationsResult, linesResult, checksResult] =
+  const [
+    profilesResult,
+    allocationsResult,
+    projectTagsResult,
+    linesResult,
+    checksResult,
+  ] =
     await Promise.all([
       userIds.length > 0
         ? supabase
@@ -438,6 +490,12 @@ export async function getLiveProjectDataset(projectId: string) {
             .in("ledger_entry_id", entryIds)
             .returns<DbLedgerAllocationRow[]>()
         : Promise.resolve({ data: [], error: null }),
+      supabase
+        .from("project_tags")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("name", { ascending: true })
+        .returns<DbProjectTagRow[]>(),
       runIds.length > 0
         ? supabase
             .from("profit_distribution_lines")
@@ -457,15 +515,36 @@ export async function getLiveProjectDataset(projectId: string) {
   if (
     profilesResult.error ||
     allocationsResult.error ||
+    (!isMissingRelationError(projectTagsResult.error) && projectTagsResult.error) ||
     linesResult.error ||
     checksResult.error
   ) {
     console.error("Unable to load live project related tables", {
       profilesError: profilesResult.error,
       allocationsError: allocationsResult.error,
+      projectTagsError: projectTagsResult.error,
       linesError: linesResult.error,
       checksError: checksResult.error,
     });
+    return null;
+  }
+
+  const projectTags = isMissingRelationError(projectTagsResult.error)
+    ? []
+    : projectTagsResult.data ?? [];
+  const projectTagIds = projectTags.map((tag) => tag.id);
+
+  const entryTagsResult =
+    projectTagIds.length > 0
+      ? await supabase
+          .from("ledger_entry_tags")
+          .select("*")
+          .in("project_tag_id", projectTagIds)
+          .returns<DbLedgerEntryTagRow[]>()
+      : { data: [], error: null };
+
+  if (entryTagsResult.error && !isMissingRelationError(entryTagsResult.error)) {
+    console.error("Unable to load live entry tags", entryTagsResult.error);
     return null;
   }
 
@@ -475,6 +554,8 @@ export async function getLiveProjectDataset(projectId: string) {
     members: members.map(mapProjectMember),
     entries: entries.map(mapLedgerEntry),
     allocations: (allocationsResult.data ?? []).map(mapLedgerAllocation),
+    tags: projectTags.map(mapProjectTag),
+    entryTags: (entryTagsResult.data ?? []).map(mapLedgerEntryTag),
     profitDistributionRuns: runs.map(mapProfitDistributionRun),
     profitDistributionLines: (linesResult.data ?? []).map(
       mapProfitDistributionLine

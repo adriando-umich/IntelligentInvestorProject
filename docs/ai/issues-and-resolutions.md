@@ -3,6 +3,7 @@
 ## Open Issues
 
 - The new `20260322101500_project_bootstrap.sql` migration has not yet been executed against the live Supabase database.
+- The new `20260322130000_tags_and_shared_loans.sql` migration has not yet been executed against the live Supabase database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
 - Profit distribution still has no dedicated live post flow.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
@@ -25,6 +26,8 @@
 - The public sign-in UI was exposing setup-oriented env/readiness information; resolved by replacing it with production-facing auth and product messaging.
 - Live users had no self-serve onboarding path after sign-in; resolved by adding sign-up plus first-project creation flow.
 - Supabase SSR session refresh was not following the current proxy-based guidance; resolved by adding `proxy.ts` and `src/lib/supabase/proxy.ts`.
+- The app had no structured way to aggregate inflows and expenses by tag; resolved by adding project tags, entry-tag joins, planner support, and dashboard rollups.
+- Borrowed project cash from a shared bank loan was being forced into the wrong mental bucket; resolved by adding `shared_loan_drawdown` as a non-capital cash-in transaction type.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -36,6 +39,7 @@
 - For live Supabase writes that span ledger entries plus allocations, prefer one SQL RPC over multiple client-side inserts.
 - When deploying from local with the Vercel CLI, ensure `.vercelignore` excludes `.env*` so local tokens are not uploaded as source files.
 - Production UI should not surface deployment/env readiness details; keep setup guidance in docs and operator notes instead.
+- When adding new live ledger capabilities, prefer additive SQL migrations over rewriting the original base schema so already-deployed Supabase projects can upgrade safely.
 
 ## Latest Session Delta
 
@@ -49,3 +53,4 @@
 - Pushed the repo to GitHub, created the Vercel project, set production env vars, deployed production, and verified the public sign-in route responds correctly.
 - Added self-service sign-up, first-project creation, and proxy-based session refresh.
 - Removed the public env/setup card from the sign-in screen so the live app no longer communicates internal env expectations on the web UI.
+- Added a tag system for ledger entries and a shared-loan entry type that keeps borrowed money out of capital contribution.

@@ -23,10 +23,34 @@ const stringArray = z.preprocess((value) => {
   return [];
 }, z.array(z.string()).default([]));
 
+export function parseTagNames(value: string | undefined | null) {
+  if (!value) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .filter((item) => {
+      const normalized = item.toLowerCase();
+
+      if (seen.has(normalized)) {
+        return false;
+      }
+
+      seen.add(normalized);
+      return true;
+    });
+}
+
 export const plannerEntryTypes = [
   "capital_contribution",
   "capital_return",
   "operating_income",
+  "shared_loan_drawdown",
   "operating_expense",
   "cash_handover",
   "expense_settlement_payment",
@@ -47,6 +71,7 @@ export const plannerEntrySchema = z
     cashOutProjectMemberId: optionalString,
     capitalOwnerProjectMemberId: optionalString,
     allocationProjectMemberIds: stringArray,
+    tagNamesText: optionalString,
     externalCounterparty: optionalString,
     note: optionalString,
   })
@@ -54,6 +79,7 @@ export const plannerEntrySchema = z
     const needsCashIn =
       value.entryType === "capital_contribution" ||
       value.entryType === "operating_income" ||
+      value.entryType === "shared_loan_drawdown" ||
       value.entryType === "cash_handover" ||
       value.entryType === "expense_settlement_payment";
     const needsCashOut =

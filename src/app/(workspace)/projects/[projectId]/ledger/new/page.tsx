@@ -11,6 +11,7 @@ function isEntryType(value: string | undefined): value is PlannerEntryType {
     value === "capital_contribution" ||
     value === "capital_return" ||
     value === "operating_income" ||
+    value === "shared_loan_drawdown" ||
     value === "operating_expense" ||
     value === "cash_handover" ||
     value === "expense_settlement_payment" ||
@@ -46,7 +47,7 @@ export default async function NewLedgerEntryPage({
       <PageHeader
         eyebrow="Ledger planner"
         title={`Add a transaction for ${snapshot.dataset.project.name}`}
-        description="Use this planner to record capital, customer income, operating expenses, cash handovers, or settlement payments. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase."
+        description="Use this planner to record capital, tagged inflows, shared loan drawdowns, operating expenses, cash handovers, or settlement payments. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase."
       />
       <LedgerEntryPlanner
         projectId={snapshot.dataset.project.id}
@@ -56,6 +57,7 @@ export default async function NewLedgerEntryPage({
           id: summary.projectMember.id,
           name: summary.profile.displayName,
         }))}
+        tagOptions={snapshot.dataset.tags.map((tag) => tag.name)}
         initialValues={{
           projectId: snapshot.dataset.project.id,
           currencyCode: snapshot.dataset.project.currencyCode,

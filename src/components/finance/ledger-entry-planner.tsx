@@ -4,7 +4,14 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeftRight, CircleAlert, PiggyBank, Wallet } from "lucide-react";
+import {
+  ArrowLeftRight,
+  CircleAlert,
+  Landmark,
+  PiggyBank,
+  Tags,
+  Wallet,
+} from "lucide-react";
 
 import {
   createLedgerEntryAction,
@@ -25,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   isAllocationEntryType,
   isCapitalEntryType,
+  parseTagNames,
   plannerEntrySchema,
   supportsLiveCreate,
   type PlannerEntryFormValues,
@@ -61,6 +69,14 @@ function effectCopy(entryType: PlannerEntryType) {
       title: "Project cash and operating profit will go up",
       description:
         "Customer money or other operating inflow increases project cash custody and project P&L, not reimbursement.",
+    };
+  }
+  if (entryType === "shared_loan_drawdown") {
+    return {
+      icon: <Landmark className="size-4" />,
+      title: "Borrowed money comes into the project",
+      description:
+        "This brings project cash in from a lender without giving capital credit to any member. Record bank interest separately as operating expense.",
     };
   }
   if (entryType === "operating_expense") {
@@ -100,6 +116,7 @@ export function LedgerEntryPlanner({
   projectName,
   currencyCode,
   memberOptions,
+  tagOptions,
   initialValues,
   liveModeEnabled,
 }: {
@@ -107,6 +124,7 @@ export function LedgerEntryPlanner({
   projectName: string;
   currencyCode: string;
   memberOptions: MemberOption[];
+  tagOptions: string[];
   initialValues: Partial<PlannerEntryFormValues>;
   liveModeEnabled: boolean;
 }) {
@@ -132,6 +150,7 @@ export function LedgerEntryPlanner({
       capitalOwnerProjectMemberId:
         initialValues.capitalOwnerProjectMemberId ?? "",
       allocationProjectMemberIds: initialValues.allocationProjectMemberIds ?? [],
+      tagNamesText: initialValues.tagNamesText ?? "",
       externalCounterparty: initialValues.externalCounterparty ?? "",
       note: initialValues.note ?? "",
     },
@@ -160,6 +179,8 @@ export function LedgerEntryPlanner({
     typeof watched.capitalOwnerProjectMemberId === "string"
       ? watched.capitalOwnerProjectMemberId
       : "";
+  const watchedTagNamesText =
+    typeof watched.tagNamesText === "string" ? watched.tagNamesText : "";
   const selectedAllocationIds = Array.isArray(watched.allocationProjectMemberIds)
     ? watched.allocationProjectMemberIds
     : [];
@@ -170,11 +191,22 @@ export function LedgerEntryPlanner({
   const selectedAllocationNames = selectedAllocationIds
     .map((memberId) => nameById.get(memberId))
     .filter((value): value is string => Boolean(value));
+  const selectedTagNames = parseTagNames(watchedTagNamesText);
   const liveSupported = liveModeEnabled && supportsLiveCreate(watchedEntryType);
 
   function handlePreview(values: PlannerEntryValues) {
     setPreview(values);
     setLiveState({ status: "idle" });
+  }
+
+  function addSuggestedTag(tagName: string) {
+    const nextTags = parseTagNames(
+      [watchedTagNamesText, tagName].filter(Boolean).join(", ")
+    );
+    form.setValue("tagNamesText", nextTags.join(", "), {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
   }
 
   function handleLiveCreate(values: PlannerEntryValues) {
@@ -197,7 +229,8 @@ export function LedgerEntryPlanner({
           <CardDescription>
             This form now collects enough information for live create on the
             main transaction types for {projectName}. Shared income and expense
-            lines are split equally across the selected members.
+            lines are split equally across the selected members, and tags can
+            be attached for later aggregation.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -213,6 +246,7 @@ export function LedgerEntryPlanner({
                   <option value="capital_contribution">Capital contribution</option>
                   <option value="capital_return">Capital return</option>
                   <option value="operating_income">Operating income</option>
+                  <option value="shared_loan_drawdown">Shared loan drawdown</option>
                   <option value="operating_expense">Operating expense</option>
                   <option value="cash_handover">Cash handover</option>
                   <option value="expense_settlement_payment">
@@ -340,6 +374,37 @@ export function LedgerEntryPlanner({
               </div>
             ) : null}
 
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="tagNamesText">Tags</Label>
+                <p className="text-sm text-slate-500">
+                  Use comma-separated tags like <span className="font-medium text-slate-700">legal, deposit, bank-loan</span> so you can group inflows and expenses later.
+                </p>
+              </div>
+              <Input
+                id="tagNamesText"
+                placeholder="legal, marketing, buyer-deposit"
+                {...form.register("tagNamesText")}
+              />
+              {tagOptions.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {tagOptions.map((tagName) => (
+                    <Button
+                      key={tagName}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      onClick={() => addSuggestedTag(tagName)}
+                    >
+                      <Tags className="size-3.5" />
+                      {tagName}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="externalCounterparty">External counterparty</Label>
@@ -466,6 +531,14 @@ export function LedgerEntryPlanner({
                 </p>
               </div>
             ) : null}
+            <div className="rounded-2xl bg-slate-50 px-4 py-4">
+              <p className="text-sm text-slate-500">Tags</p>
+              <p className="mt-2 font-medium text-slate-950">
+                {selectedTagNames.length > 0
+                  ? selectedTagNames.join(", ")
+                  : "No tags added yet"}
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -510,6 +583,12 @@ export function LedgerEntryPlanner({
                 <p>
                   <span className="font-medium text-slate-950">Amount:</span>{" "}
                   {formatCurrency(preview.amount, currencyCode)}
+                </p>
+                <p>
+                  <span className="font-medium text-slate-950">Tags:</span>{" "}
+                  {parseTagNames(preview.tagNamesText).length > 0
+                    ? parseTagNames(preview.tagNamesText).join(", ")
+                    : "No tags"}
                 </p>
               </div>
             ) : (

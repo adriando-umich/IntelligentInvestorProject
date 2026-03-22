@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getSessionState } from "@/lib/auth/session";
 import {
+  parseTagNames,
   plannerEntrySchema,
   supportsLiveCreate,
   type PlannerEntryValues,
@@ -70,6 +71,7 @@ export async function createLedgerEntryAction(
   }
 
   const effectiveAt = new Date(parsed.data.effectiveDate).toISOString();
+  const tagNames = parseTagNames(parsed.data.tagNamesText);
 
   const { data, error } = await supabase.rpc("create_project_ledger_entry", {
     p_project_id: parsed.data.projectId,
@@ -86,14 +88,23 @@ export async function createLedgerEntryAction(
       parsed.data.allocationProjectMemberIds.length > 0
         ? parsed.data.allocationProjectMemberIds
         : null,
+    p_tag_names: tagNames.length > 0 ? tagNames : null,
     p_note: parsed.data.note ?? null,
     p_external_counterparty: parsed.data.externalCounterparty ?? null,
   });
 
   if (error) {
+    const missingLedgerUpgrade =
+      error.code === "PGRST202" ||
+      error.message.toLowerCase().includes("project_tags") ||
+      error.message.toLowerCase().includes("ledger_entry_tags") ||
+      error.message.toLowerCase().includes("shared_loan_drawdown");
+
     return {
       status: "error",
-      message: error.message,
+      message: missingLedgerUpgrade
+        ? "The live database is missing the latest tags-and-loan migration. Apply the newest Supabase migration, then try again."
+        : error.message,
     };
   }
 

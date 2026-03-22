@@ -3,11 +3,14 @@
 ## Now
 
 - Apply the new `20260322101500_project_bootstrap.sql` migration to the live Supabase project
+- Apply the new `20260322130000_tags_and_shared_loans.sql` migration to the live Supabase project
 - Validate the full live flow end-to-end:
   - sign up
   - sign in
   - create first project
   - create live transaction
+  - create tagged transaction
+  - create shared loan drawdown
 - Add real update/create flows for reconciliation submissions and profit distributions
 - Add member-management flow after project creation so teams can collaborate beyond the owner account
 
@@ -17,6 +20,7 @@
 - Add reconciliation manager actions and member submission forms
 - Add profit distribution preview/post action backed by live balances
 - Add richer allocation editing for shared income and expense lines
+- Decide whether tag analytics should support multi-tag faceting only or one strict reporting category plus optional tags
 - Confirm GitHub-triggered auto-deploy integration in Vercel if push-triggered deployments are desired
 
 ## Blocked
@@ -47,4 +51,6 @@
 - Added self-service sign-up and a real first-project creation flow.
 - Removed public env/setup details from the live web UI.
 - Added proxy-based Supabase session refresh for production reliability.
-- Moved the remaining work to live migration validation, member management, reconciliation write flows, and profit-distribution write flows.
+- Added tag creation/attachment in the ledger planner plus dashboard rollups for tagged inflows and expenses.
+- Added a shared-loan transaction type for borrowed funds that should not count as capital contribution.
+- Moved the remaining work to live migration validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

@@ -7,7 +7,9 @@ import {
   BanknoteArrowUp,
   CircleAlert,
   HandCoins,
+  Landmark,
   PiggyBank,
+  Tags,
   Wallet,
 } from "lucide-react";
 
@@ -63,6 +65,9 @@ function entryTone(entryType: keyof typeof entryTypeLabels) {
   if (entryType === "operating_income") {
     return "bg-emerald-100 text-emerald-800";
   }
+  if (entryType === "shared_loan_drawdown") {
+    return "bg-sky-100 text-sky-800";
+  }
   if (entryType === "operating_expense") {
     return "bg-rose-100 text-rose-800";
   }
@@ -82,6 +87,20 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
       summary.profile.displayName,
     ])
   );
+  const tagNameById = new Map(
+    snapshot.dataset.tags.map((tag) => [tag.id, tag.name])
+  );
+  const tagNamesByEntryId = new Map<string, string[]>();
+
+  for (const entryTag of snapshot.dataset.entryTags) {
+    const current = tagNamesByEntryId.get(entryTag.ledgerEntryId) ?? [];
+    const tagName = tagNameById.get(entryTag.projectTagId);
+
+    if (tagName) {
+      current.push(tagName);
+      tagNamesByEntryId.set(entryTag.ledgerEntryId, current);
+    }
+  }
 
   return (
     <TooltipProvider>
@@ -168,6 +187,7 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
           <TabsList className="rounded-2xl bg-slate-100 p-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="settlements">Settlements</TabsTrigger>
+            <TabsTrigger value="tags">Tags</TabsTrigger>
             <TabsTrigger value="capital">Capital</TabsTrigger>
             <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
             <TabsTrigger value="advanced">Advanced view</TabsTrigger>
@@ -246,6 +266,18 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
                               {entry.cashInMemberId ? `In: ${profileNames.get(entry.cashInMemberId)}` : "No receiving member"}
                               {entry.cashOutMemberId ? ` • Out: ${profileNames.get(entry.cashOutMemberId)}` : ""}
                             </p>
+                            {tagNamesByEntryId.get(entry.id)?.length ? (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {tagNamesByEntryId.get(entry.id)?.map((tagName) => (
+                                  <Badge
+                                    key={`${entry.id}-${tagName}`}
+                                    className="rounded-full bg-slate-100 text-slate-700"
+                                  >
+                                    {tagName}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                         <p className="text-right text-lg font-semibold text-slate-950">
@@ -383,6 +415,103 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="tags">
+            <div className="grid gap-6 xl:grid-cols-2">
+              <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Tags className="size-4 text-teal-700" />
+                    Tagged money in
+                  </CardTitle>
+                  <CardDescription>
+                    This rolls up tagged inflows, including operating income and
+                    shared loan drawdowns. Loan drawdowns raise project cash,
+                    but they do not count as profit.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {snapshot.inflowTagRollups.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
+                      No inflow tags yet.
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tag</TableHead>
+                          <TableHead>Tagged amount</TableHead>
+                          <TableHead>Entries</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {snapshot.inflowTagRollups.map((row) => (
+                          <TableRow key={row.projectTagId}>
+                            <TableCell className="font-medium text-slate-950">
+                              {row.name}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(
+                                row.amount,
+                                snapshot.dataset.project.currencyCode
+                              )}
+                            </TableCell>
+                            <TableCell>{row.entryCount}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Landmark className="size-4 text-rose-700" />
+                    Tagged expense
+                  </CardTitle>
+                  <CardDescription>
+                    Use tags like legal, bank-interest, survey, or marketing to
+                    see which kinds of cost are accumulating across the project.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {snapshot.expenseTagRollups.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
+                      No expense tags yet.
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tag</TableHead>
+                          <TableHead>Tagged amount</TableHead>
+                          <TableHead>Entries</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {snapshot.expenseTagRollups.map((row) => (
+                          <TableRow key={row.projectTagId}>
+                            <TableCell className="font-medium text-slate-950">
+                              {row.name}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(
+                                row.amount,
+                                snapshot.dataset.project.currencyCode
+                              )}
+                            </TableCell>
+                            <TableCell>{row.entryCount}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="capital">

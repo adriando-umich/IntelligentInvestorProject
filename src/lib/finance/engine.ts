@@ -9,6 +9,7 @@ import {
   type ProjectSnapshot,
   type ReconciliationCheckView,
   type SettlementSuggestion,
+  type TagRollupRow,
 } from "@/lib/finance/types";
 import { roundMoney } from "@/lib/format";
 
@@ -41,6 +42,54 @@ function getAllocationsForEntry(
       allocation.ledgerEntryId === entryId &&
       (!allocationType || allocation.allocationType === allocationType)
   );
+}
+
+function buildTagRollups(
+  dataset: ProjectDataset,
+  postedEntries: LedgerEntry[],
+  entryTypes: LedgerEntry["entryType"][]
+) {
+  const includedTypes = new Set(entryTypes);
+  const tagById = new Map(dataset.tags.map((tag) => [tag.id, tag]));
+  const tagIdsByEntryId = new Map<string, string[]>();
+
+  for (const entryTag of dataset.entryTags) {
+    const current = tagIdsByEntryId.get(entryTag.ledgerEntryId) ?? [];
+    current.push(entryTag.projectTagId);
+    tagIdsByEntryId.set(entryTag.ledgerEntryId, current);
+  }
+
+  const rollups = new Map<string, TagRollupRow>();
+
+  for (const entry of postedEntries) {
+    if (!includedTypes.has(entry.entryType)) {
+      continue;
+    }
+
+    const projectTagIds = [...new Set(tagIdsByEntryId.get(entry.id) ?? [])];
+
+    for (const projectTagId of projectTagIds) {
+      const tag = tagById.get(projectTagId);
+
+      if (!tag) {
+        continue;
+      }
+
+      const current = rollups.get(projectTagId) ?? {
+        projectTagId,
+        name: tag.name,
+        slug: tag.slug,
+        amount: 0,
+        entryCount: 0,
+      };
+
+      current.amount = roundMoney(current.amount + entry.amount);
+      current.entryCount += 1;
+      rollups.set(projectTagId, current);
+    }
+  }
+
+  return [...rollups.values()].sort((left, right) => right.amount - left.amount);
 }
 
 function applyCashMovement(
@@ -190,6 +239,8 @@ function applyEntryEffects(
       }
       return;
     }
+    case "shared_loan_drawdown":
+      return;
     case "expense_settlement_payment": {
       if (entry.cashOutMemberId) {
         const debtor = summariesByUserId.get(entry.cashOutMemberId);
@@ -416,6 +467,14 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
     })
     .sort((left, right) => right.capitalBalance - left.capitalBalance);
 
+  const inflowTagRollups = buildTagRollups(dataset, postedEntries, [
+    "operating_income",
+    "shared_loan_drawdown",
+  ]);
+  const expenseTagRollups = buildTagRollups(dataset, postedEntries, [
+    "operating_expense",
+  ]);
+
   const creditors = memberSummaries
     .filter((summary) => summary.expenseReimbursementBalance > EPSILON)
     .map((summary) => ({
@@ -523,6 +582,8 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
     settlementSuggestions,
     openReconciliation,
     capitalWeights,
+    inflowTagRollups,
+    expenseTagRollups,
     recentEntries: [...postedEntries].sort(byDateDesc).slice(0, 8),
   };
 }

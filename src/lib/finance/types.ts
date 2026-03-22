@@ -11,6 +11,7 @@ export const entryTypeLabels = {
   capital_contribution: "Capital contribution",
   capital_return: "Capital return",
   operating_income: "Operating income",
+  shared_loan_drawdown: "Shared loan drawdown",
   operating_expense: "Operating expense",
   cash_handover: "Cash handover",
   expense_settlement_payment: "Expense settlement payment",
@@ -97,6 +98,20 @@ export interface LedgerAllocation {
   note?: string | null;
 }
 
+export interface ProjectTag {
+  id: string;
+  projectId: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LedgerEntryTag {
+  ledgerEntryId: string;
+  projectTagId: string;
+}
+
 export interface ProfitDistributionRun {
   id: string;
   projectId: string;
@@ -153,6 +168,8 @@ export interface ProjectDataset {
   members: ProjectMember[];
   entries: LedgerEntry[];
   allocations: LedgerAllocation[];
+  tags: ProjectTag[];
+  entryTags: LedgerEntryTag[];
   profitDistributionRuns: ProfitDistributionRun[];
   profitDistributionLines: ProfitDistributionLine[];
   reconciliationRuns: ReconciliationRun[];
@@ -194,6 +211,14 @@ export interface CapitalWeightRow {
   estimatedProfitShare: number;
 }
 
+export interface TagRollupRow {
+  projectTagId: string;
+  name: string;
+  slug: string;
+  amount: number;
+  entryCount: number;
+}
+
 export interface ProjectSnapshot {
   dataset: ProjectDataset;
   memberSummaries: MemberFinanceSummary[];
@@ -215,6 +240,8 @@ export interface ProjectSnapshot {
     pendingCount: number;
   } | null;
   capitalWeights: CapitalWeightRow[];
+  inflowTagRollups: TagRollupRow[];
+  expenseTagRollups: TagRollupRow[];
   recentEntries: LedgerEntry[];
 }
 
