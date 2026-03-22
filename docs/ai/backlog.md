@@ -5,11 +5,13 @@
 - Apply the new `20260322101500_project_bootstrap.sql` migration to the live Supabase project
 - Apply the new `20260322130000_tags_and_shared_loans.sql` migration to the live Supabase project
 - Apply the new `20260322190000_entry_families_and_loan_principal.sql` migration to the live Supabase project
+- Apply the new `20260322213000_profile_avatars.sql` migration to the live Supabase project
 - Enable the Google provider in Supabase Auth and add the Google OAuth client ID/secret plus redirect URLs
 - Validate the full live flow end-to-end:
   - sign up
   - sign in
   - sign in with Google
+  - verify Google avatar appears in the shell after callback/login
   - create first project
   - create live transaction
   - create tagged transaction
@@ -61,4 +63,5 @@
 - Clarified that member-to-member reimbursement already exists in the ledger through the live `expense_settlement_payment` path, now presented as `Member repayment` in the UI.
 - Added a second transaction-classification axis in code (`business` vs `correction`) and surfaced it through a helper matrix on the ledger planner page.
 - Added `shared_loan_repayment_principal` for repaying bank principal without treating it as operating expense or capital return.
+- Added avatar sync from Google metadata into profiles plus avatar rendering in the shell and member-facing UI.
 - Moved the remaining work to live migration validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

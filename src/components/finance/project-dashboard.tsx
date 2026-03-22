@@ -13,6 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 
+import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { MetricCard } from "@/components/finance/metric-card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -222,9 +223,15 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
                         <TableCell className="font-medium text-slate-950">
                           <Link
                             href={`/projects/${snapshot.dataset.project.id}/members/${summary.projectMember.id}`}
-                            className="hover:text-teal-700"
+                            className="flex items-center gap-3 hover:text-teal-700"
                           >
-                            {summary.profile.displayName}
+                            <ProfileAvatar
+                              name={summary.profile.displayName}
+                              avatarUrl={summary.profile.avatarUrl}
+                              size="sm"
+                              className="after:hidden"
+                            />
+                            <span>{summary.profile.displayName}</span>
                           </Link>
                         </TableCell>
                         <TableCell>{formatSignedCurrency(summary.projectCashCustody, snapshot.dataset.project.currencyCode)}</TableCell>

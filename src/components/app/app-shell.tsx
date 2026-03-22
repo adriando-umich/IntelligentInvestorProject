@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { signOutAction } from "@/app/actions/auth";
+import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { APP_NAME } from "@/lib/app-config";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -34,11 +35,13 @@ function NavContent({
   pathname,
   projects,
   viewerName,
+  viewerAvatarUrl,
   demoMode,
 }: {
   pathname: string;
   projects: ProjectLink[];
   viewerName: string;
+  viewerAvatarUrl?: string | null;
   demoMode: boolean;
 }) {
   const navItems = [{ href: "/projects", label: "Projects", icon: FolderKanban }];
@@ -136,9 +139,17 @@ function NavContent({
       </div>
 
       <div className="mt-auto space-y-4 rounded-3xl bg-slate-950 px-5 py-5 text-white shadow-[0_24px_80px_-40px_rgba(15,23,42,0.8)]">
-        <div>
-          <p className="text-sm text-slate-300">Signed in as</p>
-          <p className="font-medium">{viewerName}</p>
+        <div className="flex items-center gap-3">
+          <ProfileAvatar
+            name={viewerName}
+            avatarUrl={viewerAvatarUrl}
+            size="lg"
+            className="ring-2 ring-white/15 after:hidden"
+          />
+          <div>
+            <p className="text-sm text-slate-300">Signed in as</p>
+            <p className="font-medium">{viewerName}</p>
+          </div>
         </div>
         <form action={signOutAction}>
           <Button
@@ -159,11 +170,13 @@ export function AppShell({
   children,
   projects,
   viewerName,
+  viewerAvatarUrl,
   demoMode,
 }: {
   children: React.ReactNode;
   projects: ProjectLink[];
   viewerName: string;
+  viewerAvatarUrl?: string | null;
   demoMode: boolean;
 }) {
   const pathname = usePathname();
@@ -176,17 +189,25 @@ export function AppShell({
             pathname={pathname}
             projects={projects}
             viewerName={viewerName}
+            viewerAvatarUrl={viewerAvatarUrl}
             demoMode={demoMode}
           />
         </aside>
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-30 mb-4 flex items-center justify-between rounded-[1.75rem] border border-white/70 bg-white/85 px-4 py-3 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.45)] backdrop-blur lg:hidden">
-            <div>
-              <p className="font-heading text-lg font-semibold text-slate-950">
-                {APP_NAME}
-              </p>
-              <p className="text-sm text-slate-500">{viewerName}</p>
+            <div className="flex items-center gap-3">
+              <ProfileAvatar
+                name={viewerName}
+                avatarUrl={viewerAvatarUrl}
+                className="after:hidden"
+              />
+              <div>
+                <p className="font-heading text-lg font-semibold text-slate-950">
+                  {APP_NAME}
+                </p>
+                <p className="text-sm text-slate-500">{viewerName}</p>
+              </div>
             </div>
             <Sheet>
               <SheetTrigger render={<Button size="icon" variant="outline" />}>
@@ -204,6 +225,7 @@ export function AppShell({
                     pathname={pathname}
                     projects={projects}
                     viewerName={viewerName}
+                    viewerAvatarUrl={viewerAvatarUrl}
                     demoMode={demoMode}
                   />
                 </div>

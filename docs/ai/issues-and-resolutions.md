@@ -5,6 +5,7 @@
 - The new `20260322101500_project_bootstrap.sql` migration has not yet been executed against the live Supabase database.
 - The new `20260322130000_tags_and_shared_loans.sql` migration has not yet been executed against the live Supabase database.
 - The new `20260322190000_entry_families_and_loan_principal.sql` migration has not yet been executed against the live Supabase database.
+- The new `20260322213000_profile_avatars.sql` migration has not yet been executed against the live Supabase database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
 - Google OAuth still requires external setup in Supabase Auth and Google Cloud before the new sign-in button can succeed in production.
 - Profit distribution still has no dedicated live post flow.
@@ -34,6 +35,7 @@
 - The reimbursement payment flow existed but was hidden behind overly technical wording; resolved by renaming the user-facing transaction copy to `Member repayment` and adding A/B payback examples in the planner and settlements page.
 - The transaction enum was too flat to explain clearly to users; resolved in app code by adding a shared family classification (`business` vs `correction`) and a helper matrix on the planner page.
 - Shared loan drawdown existed without an equally explicit principal-paydown type; resolved by adding `shared_loan_repayment_principal`.
+- Google sign-in could succeed without the app persisting profile photos into workspace profiles; resolved in code by syncing avatar metadata and rendering avatars with a fallback.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -48,6 +50,7 @@
 - When adding new live ledger capabilities, prefer additive SQL migrations over rewriting the original base schema so already-deployed Supabase projects can upgrade safely.
 - For social auth on Supabase SSR, start OAuth from a browser client and finish the PKCE code exchange in a route handler that can persist auth cookies.
 - When the ledger model is still stored as one enum in SQL, add a shared classification helper in app code instead of forcing a breaking schema rewrite mid-project.
+- When social-auth metadata should survive beyond the current session, sync it into the app's profile table and gracefully tolerate older databases that have not received the new column yet.
 
 ## Latest Session Delta
 
@@ -65,3 +68,4 @@
 - Added Google OAuth UI plus a Supabase callback handler, while logging the remaining external provider setup needed outside the repo.
 - Clarified the existing member-to-member repayment flow so users can more easily record one teammate paying another teammate back.
 - Added `shared_loan_repayment_principal`, a derived `business/correction` transaction family, and a planner helper matrix that explains which type to use and what each type affects.
+- Added Google-avatar sync and UI rendering while logging that the new `profiles.avatar_url` column still needs its live migration applied.

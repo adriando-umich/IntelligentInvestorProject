@@ -102,6 +102,7 @@ export interface Profile {
   userId: string;
   displayName: string;
   email: string;
+  avatarUrl?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

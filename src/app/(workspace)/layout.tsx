@@ -22,6 +22,7 @@ export default async function WorkspaceLayout({
     <AppShell
       projects={projects}
       viewerName={viewer?.displayName ?? "Project member"}
+      viewerAvatarUrl={viewer?.avatarUrl}
       demoMode={session.demoMode}
     >
       {children}

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSessionState } from "@/lib/auth/session";
+import { getUserAvatarUrl, getUserDisplayName } from "@/lib/profiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   type LedgerAllocation,
@@ -21,6 +22,7 @@ type DbProfileRow = {
   user_id: string;
   display_name: string;
   email: string;
+  avatar_url?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -154,6 +156,7 @@ function mapProfile(row: DbProfileRow): Profile {
     userId: row.user_id,
     displayName: row.display_name,
     email: row.email,
+    avatarUrl: row.avatar_url ?? null,
     isActive: row.is_active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -351,19 +354,19 @@ export async function getLiveViewerProfile() {
   if (error || !data) {
     return {
       userId: user.id,
-      displayName:
-        user.user_metadata.display_name ??
-        user.user_metadata.name ??
-        user.email?.split("@")[0] ??
-        "Project member",
+      displayName: getUserDisplayName(user.user_metadata, user.email),
       email: user.email ?? "",
+      avatarUrl: getUserAvatarUrl(user.user_metadata),
       isActive: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } satisfies Profile;
   }
 
-  return mapProfile(data);
+  return {
+    ...mapProfile(data),
+    avatarUrl: data.avatar_url ?? getUserAvatarUrl(user.user_metadata),
+  } satisfies Profile;
 }
 
 export async function listLiveProjectIds() {

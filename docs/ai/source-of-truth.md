@@ -27,6 +27,7 @@ The app must keep those concepts separate in both data and UI.
   - Supabase self-service sign-up is wired
   - Google OAuth client flow is wired from the sign-in screen
   - `/auth/callback` now exchanges the Supabase PKCE code into a cookie-backed session
+  - Auth/profile sync now pulls `avatar_url` or `picture` from Google user metadata when available
   - Session refresh is now backed by a root `proxy.ts` plus `src/lib/supabase/proxy.ts`
 
 ## Current Architecture
@@ -42,7 +43,7 @@ The app must keep those concepts separate in both data and UI.
 - `src/lib/data/`
   - Demo datasets, repository layer, and Supabase-backed dataset loader
 - `src/lib/supabase/`
-  - Server client factory
+  - Server client factory plus auth-profile sync helper
 - `supabase/migrations/`
   - SQL schema for live backend bootstrap
 - `vercel.json`
@@ -106,6 +107,7 @@ Only `.env.example` should be committed.
 - Additional live onboarding migration: `supabase/migrations/20260322101500_project_bootstrap.sql`
 - Additional tags and shared-loan migration: `supabase/migrations/20260322130000_tags_and_shared_loans.sql`
 - Additional entry-family and loan-principal migration: `supabase/migrations/20260322190000_entry_families_and_loan_principal.sql`
+- Additional profile-avatar migration: `supabase/migrations/20260322213000_profile_avatars.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
@@ -147,5 +149,7 @@ Only `.env.example` should be committed.
 - Clarified the existing member-to-member repayment transaction in the UI by renaming `expense_settlement_payment` to `Member repayment` in user-facing copy and adding explicit reimbursement examples.
 - Added `shared_loan_repayment_principal` as a non-P&L financing outflow for repaying shared loan principal.
 - Added a transaction helper matrix on the ledger planner page so users can see, in one place, which cases are business events versus corrections and what each type affects.
+- Added avatar sync from Supabase auth metadata and started rendering avatars in the workspace shell plus member-facing project UI.
 - Current limitation: Google OAuth still depends on external provider setup in Supabase Auth and a Google OAuth client; no extra app env vars were added for that flow.
+- Current limitation: persistent avatar storage for live users depends on applying the new avatar migration so `profiles.avatar_url` exists in the database.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.

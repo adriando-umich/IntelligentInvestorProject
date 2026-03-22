@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { DEMO_COOKIE_NAME } from "@/lib/app-config";
 import { isSupabaseConfigured } from "@/lib/env";
+import { syncProfileFromAuthUser } from "@/lib/supabase/profile-sync";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const signInSchema = z.object({
@@ -65,13 +66,17 @@ export async function signInAction(
     };
   }
 
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
     return {
       status: "error",
       message: error.message,
     };
+  }
+
+  if (data.user) {
+    await syncProfileFromAuthUser(supabase, data.user);
   }
 
   cookieStore.delete(DEMO_COOKIE_NAME);
@@ -135,6 +140,10 @@ export async function signUpAction(
   cookieStore.delete(DEMO_COOKIE_NAME);
 
   if (data.session) {
+    if (data.user) {
+      await syncProfileFromAuthUser(supabase, data.user);
+    }
+
     redirect("/projects");
   }
 

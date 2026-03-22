@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CircleAlert, PiggyBank, ReceiptText, Wallet } from "lucide-react";
 
+import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { MetricCard } from "@/components/finance/metric-card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -117,7 +118,15 @@ export function MemberStatement({
 
       <Card className="rounded-[1.75rem] border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(240,249,255,0.95))]">
         <CardHeader>
-          <CardTitle>{`${statement.summary.profile.displayName}'s statement`}</CardTitle>
+          <CardTitle className="flex items-center gap-3">
+            <ProfileAvatar
+              name={statement.summary.profile.displayName}
+              avatarUrl={statement.summary.profile.avatarUrl}
+              size="lg"
+              className="after:hidden"
+            />
+            <span>{`${statement.summary.profile.displayName}'s statement`}</span>
+          </CardTitle>
           <CardDescription>
             Friendly-first view for this member. Shared-expense reimbursement, project cash custody, capital, and profit stay separated on purpose.
           </CardDescription>

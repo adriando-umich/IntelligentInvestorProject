@@ -121,6 +121,7 @@ export function SignInForm() {
         provider: "google",
         options: {
           redirectTo: callbackUrl.toString(),
+          scopes: "email profile",
           queryParams: {
             prompt: "select_account",
           },
