@@ -284,6 +284,7 @@ export function SignInForm({
                 <TabsContent value="sign-in" className="space-y-4">
                   {isSupabaseConfigured && emailAuthAvailable ? (
                     <form action={signInFormAction} className="space-y-4">
+                      <input type="hidden" name="nextPath" value={safeNextPath} />
                       <div className="space-y-2">
                         <Label htmlFor="sign-in-email">Email</Label>
                         <Input
@@ -326,6 +327,7 @@ export function SignInForm({
                 <TabsContent value="sign-up" className="space-y-4">
                   {isSupabaseConfigured && emailAuthAvailable ? (
                     <form action={signUpFormAction} className="space-y-4">
+                      <input type="hidden" name="nextPath" value={safeNextPath} />
                       <div className="space-y-2">
                         <Label htmlFor="display-name">Display name</Label>
                         <Input

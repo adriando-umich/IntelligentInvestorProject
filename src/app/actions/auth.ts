@@ -9,9 +9,18 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { syncProfileFromAuthUser } from "@/lib/supabase/profile-sync";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+function normalizeNextPath(nextPath: FormDataEntryValue | null) {
+  if (typeof nextPath !== "string" || !nextPath.startsWith("/")) {
+    return "/projects";
+  }
+
+  return nextPath;
+}
+
 const signInSchema = z.object({
   email: z.string().email("Use a valid email address."),
   password: z.string().min(8, "Password must be at least 8 characters."),
+  nextPath: z.string().optional(),
 });
 
 const signUpSchema = z.object({
@@ -23,6 +32,7 @@ const signUpSchema = z.object({
   password: z
     .string()
     .min(8, "Password must be at least 8 characters."),
+  nextPath: z.string().optional(),
 });
 
 export type AuthActionState = {
@@ -39,6 +49,7 @@ export async function signInAction(
   const parsed = signInSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
+    nextPath: formData.get("nextPath"),
   });
 
   if (!parsed.success) {
@@ -54,7 +65,7 @@ export async function signInAction(
       path: "/",
       sameSite: "lax",
     });
-    redirect("/projects");
+    redirect(normalizeNextPath(formData.get("nextPath")));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -80,7 +91,7 @@ export async function signInAction(
   }
 
   cookieStore.delete(DEMO_COOKIE_NAME);
-  redirect("/projects");
+  redirect(normalizeNextPath(formData.get("nextPath")));
 }
 
 export async function signUpAction(
@@ -93,6 +104,7 @@ export async function signUpAction(
     displayName: formData.get("displayName"),
     email: formData.get("email"),
     password: formData.get("password"),
+    nextPath: formData.get("nextPath"),
   });
 
   if (!parsed.success) {
@@ -144,7 +156,7 @@ export async function signUpAction(
       await syncProfileFromAuthUser(supabase, data.user);
     }
 
-    redirect("/projects");
+    redirect(normalizeNextPath(formData.get("nextPath")));
   }
 
   return {

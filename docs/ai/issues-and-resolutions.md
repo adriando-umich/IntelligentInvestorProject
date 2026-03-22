@@ -5,7 +5,7 @@
 - The local and production app had been pointed at a mistyped Supabase hostname until the March 22 fix; auth should now use the correct project URL, but pending live flows still need revalidation against the real database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
 - A full manual Google sign-in round-trip with a real user account has not yet been completed from this workspace after enabling the provider.
-- The create-project flow needs one live UI re-test after the new RPC privilege fix.
+- The new invite flow still needs one live end-to-end pass covering create invite, sign in from deep link, and accept invite.
 - Profit distribution still has no dedicated live post flow.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
 - GitHub-triggered auto deploy is not confirmed yet; the current working deployment path is Vercel CLI plus linked project
@@ -47,6 +47,9 @@
 - The live Supabase database had been missing all additive migrations for onboarding, tags, shared loans, entry families, avatars, shared loan interest, and tag delete policies; resolved by applying the full migration stack through `20260322234500_project_tag_delete_policy.sql`.
 - Google OAuth had been wired in app code but disabled in the live Supabase project and still pointed at localhost for auth site URL; resolved by using the Supabase management API to enable Google, set `site_url` to production, and add the production/local callback allow-list.
 - Creating the first project could fail live with `new row violates row-level security policy for table "projects"` because `create_project_with_owner` still ran as `security invoker`; resolved by shipping `20260322235500_project_creation_security_definer.sql` to replace the function as `security definer` and applying it to the live database.
+- Project navigation tabs disappeared when users left the main dashboard for routes like `/reconciliation`; resolved by moving the project-section nav into a shared `[projectId]/layout.tsx` wrapper.
+- There was no real way to add members after creating a project; resolved by adding `project_invites`, manager-created share links, email-restricted invites, revoke support, and a public `/join/[inviteToken]` accept page.
+- Deep links like invite accept could lose their destination after email/password auth because server actions always redirected to `/projects`; resolved by adding hidden `nextPath` propagation through sign-in and sign-up actions.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -69,6 +72,7 @@
 - If a finance chart is meant for plain-language reading, the visible bar height should map directly to the labeled amount unless the UI makes cumulative positioning unmistakably obvious.
 - For first-time remote bootstrap migrations, sanity-check function/table ordering before assuming the CLI failure is an environment problem.
 - When Supabase social auth looks wired in code but absent in production, check both the public `/auth/v1/settings` endpoint and the project-level auth config (`site_url`, provider enabled flag, callback allow-list).
+- When a workflow depends on returning to a deep link after auth, preserve the `next` path consistently across OAuth, password sign-in, and sign-up.
 
 ## Latest Session Delta
 
@@ -104,3 +108,4 @@
 - Added `SUPABASE_ACCESS_TOKEN`, patched the live Supabase auth config, and verified that the public auth settings endpoint now reports Google enabled.
 - Verified that the live production sign-in page now renders the `Continue with Google` button after the provider was enabled upstream.
 - Investigated the live create-project failure from the UI screenshot, traced it to RLS being enforced inside `create_project_with_owner`, and applied a new live migration that changes the function to `security definer`.
+- Added a shared project layout with persistent section navigation, then introduced a `/members` page and invite-backed self-join flow with a new live Supabase migration.

@@ -39,7 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -61,6 +61,14 @@ import {
   formatPercent,
   formatSignedCurrency,
 } from "@/lib/format";
+
+type DashboardView =
+  | "overview"
+  | "settlements"
+  | "tags"
+  | "capital"
+  | "reconciliation"
+  | "advanced";
 
 function reconciliationTone(status: string) {
   if (status === "matched") {
@@ -100,7 +108,13 @@ function entryTone(entryType: keyof typeof entryTypeLabels) {
   return "bg-slate-100 text-slate-700";
 }
 
-export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
+export function ProjectDashboard({
+  snapshot,
+  activeView = "overview",
+}: {
+  snapshot: ProjectSnapshot;
+  activeView?: DashboardView;
+}) {
   const [activityFamilyFilter, setActivityFamilyFilter] = useState<
     "all" | EntryFamily
   >("all");
@@ -162,6 +176,12 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl px-4")}
           >
             Reconciliation
+          </Link>
+          <Link
+            href={`/projects/${snapshot.dataset.project.id}/members`}
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl px-4")}
+          >
+            Members
           </Link>
           <Link
             href={`/projects/${snapshot.dataset.project.id}/tags`}
@@ -228,15 +248,7 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
           </CardHeader>
         </Card>
 
-        <Tabs defaultValue="overview" className="gap-6">
-          <TabsList className="rounded-2xl bg-slate-100 p-1">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="settlements">Settlements</TabsTrigger>
-            <TabsTrigger value="tags">Tags</TabsTrigger>
-            <TabsTrigger value="capital">Capital</TabsTrigger>
-            <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
-            <TabsTrigger value="advanced">Advanced view</TabsTrigger>
-          </TabsList>
+        <Tabs value={activeView} className="gap-6">
 
           <TabsContent value="overview" className="space-y-6">
             <ProjectOverviewVisuals snapshot={snapshot} />

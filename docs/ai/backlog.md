@@ -8,6 +8,8 @@
   - sign in with Google
   - verify Google avatar appears in the shell after callback/login
   - re-test create first project after the `create_project_with_owner` RLS fix
+  - create an invite link from `/members`
+  - accept an invite from `/join/[inviteToken]`
   - create live transaction
   - create tagged transaction
   - create shared loan drawdown
@@ -16,7 +18,10 @@
   - create, rename, and delete tags from the new tag manager page
   - verify the new dashboard charts and family filters with live data
 - Add real update/create flows for reconciliation submissions and profit distributions
-- Add member-management flow after project creation so teams can collaborate beyond the owner account
+- Add richer member management after invite acceptance:
+  - role changes
+  - member removal / deactivation
+  - invite resend UX
 
 ## Next
 
@@ -76,4 +81,7 @@
 - Added `SUPABASE_ACCESS_TOKEN`, enabled Google in live Supabase Auth, switched the auth `site_url` to production, and added the production/local callback allow-list.
 - Confirmed through the public auth settings endpoint and the live sign-in page that Google auth is now exposed correctly in production.
 - Fixed the live `create_project_with_owner` RPC by switching it to `security definer` in an additive migration after the UI hit `new row violates row-level security policy for table "projects"` during project creation.
+- Added a persistent project-section nav layout and a new `/members` route so project navigation no longer disappears when opening subpages like reconciliation.
+- Added live invite-link creation, revoke, and self-join acceptance flow backed by the new `project_invites` table and RPCs.
+- Updated auth forms so email sign-in/sign-up preserve `next` redirects for invite acceptance and other deep links.
 - Moved the remaining work to end-to-end real-user validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

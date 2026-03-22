@@ -85,12 +85,14 @@ Implemented now and wired:
 
 - `/`
 - `/auth/callback`
+- `/join/[inviteToken]`
 - `/sign-in`
 - `/projects`
 - `/projects/new`
 - `/projects/[projectId]`
 - `/projects/[projectId]/ledger/guide`
 - `/projects/[projectId]/ledger/new`
+- `/projects/[projectId]/members`
 - `/projects/[projectId]/members/[memberId]`
 - `/projects/[projectId]/settlements`
 - `/projects/[projectId]/reconciliation`
@@ -117,12 +119,13 @@ Only `.env.example` should be committed.
 - Additional shared-loan-interest migration: `supabase/migrations/20260322233000_shared_loan_interest_payment.sql`
 - Additional project-tag delete-policy migration: `supabase/migrations/20260322234500_project_tag_delete_policy.sql`
 - Additional project-creation-RLS migration: `supabase/migrations/20260322235500_project_creation_security_definer.sql`
+- Additional project-invite migration: `supabase/migrations/20260323003000_project_invites.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
-- Live Supabase database: migrated through `20260322234500_project_tag_delete_policy.sql`
+- Live Supabase database: migrated through `20260323003000_project_invites.sql`
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
 - Live Supabase Auth redirect allow-list now includes:
@@ -183,6 +186,8 @@ Only `.env.example` should be committed.
 - Enabled Google OAuth in the live Supabase project using the Supabase management API, updated the auth `site_url`, and added the production/local callback allow-list.
 - Verified from the public auth settings endpoint that Google is enabled and from the production sign-in page that the `Continue with Google` button now renders live.
 - Fixed the live first-project RPC so `create_project_with_owner` now runs as `security definer`, and applied an additive migration to update the real Supabase project.
+- Added a persistent project-section navigation layout so the same overview/settlements/tags/members/capital/reconciliation/advanced nav stays visible across project subpages.
+- Added live project invites with `/projects/[projectId]/members` plus a public `/join/[inviteToken]` acceptance route.
+- Updated email/password auth forms to preserve `next` redirects, so invite links can return users to the accept page after sign-in.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.
-- Current limitation: the create-project flow should be re-tested in the live UI after the new RLS fix, although the database function has been updated successfully.
