@@ -21,6 +21,7 @@ import {
 import { APP_NAME, APP_TAGLINE } from "@/lib/app-config";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { PublicAuthSettings } from "@/lib/supabase/public-auth-settings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -80,7 +81,11 @@ function MessageBanner({
   return null;
 }
 
-export function SignInForm() {
+export function SignInForm({
+  authSettings,
+}: {
+  authSettings: PublicAuthSettings;
+}) {
   const searchParams = useSearchParams();
   const [signInState, signInFormAction, signInPending] = useActionState(
     signInAction,
@@ -94,6 +99,10 @@ export function SignInForm() {
   const [oauthPending, startOauthTransition] = useTransition();
 
   const oauthErrorFromSearch = searchParams.get("error");
+  const googleSignInAvailable =
+    isSupabaseConfigured && authSettings.isAvailable && authSettings.googleEnabled;
+  const emailAuthAvailable =
+    !isSupabaseConfigured || !authSettings.isAvailable || authSettings.emailEnabled;
   const safeNextPath = (() => {
     const nextPath = searchParams.get("next");
 
@@ -203,27 +212,36 @@ export function SignInForm() {
 
               {isSupabaseConfigured ? (
                 <div className="space-y-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-12 w-full rounded-2xl border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
-                    onClick={handleGoogleSignIn}
-                    disabled={oauthPending}
-                  >
-                    {oauthPending ? (
-                      <LoaderCircle className="size-4 animate-spin" />
-                    ) : (
-                      <GoogleMark className="size-4" />
-                    )}
-                    {oauthPending
-                      ? "Redirecting to Google..."
-                      : "Continue with Google"}
-                  </Button>
-                  <p className="text-xs leading-5 text-slate-500">
-                    Use a Google account for a quicker first login. New members
-                    can still create a password-based account below if they
-                    prefer.
-                  </p>
+                  {googleSignInAvailable ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-12 w-full rounded-2xl border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+                        onClick={handleGoogleSignIn}
+                        disabled={oauthPending}
+                      >
+                        {oauthPending ? (
+                          <LoaderCircle className="size-4 animate-spin" />
+                        ) : (
+                          <GoogleMark className="size-4" />
+                        )}
+                        {oauthPending
+                          ? "Redirecting to Google..."
+                          : "Continue with Google"}
+                      </Button>
+                      <p className="text-xs leading-5 text-slate-500">
+                        Use a Google account for a quicker first login. New members
+                        can still create a password-based account below if they
+                        prefer.
+                      </p>
+                    </>
+                  ) : (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                      Google sign-in is not enabled for this workspace yet. Use
+                      email below for now.
+                    </div>
+                  )}
                   <MessageBanner
                     state={{
                       status:
@@ -231,11 +249,13 @@ export function SignInForm() {
                       message: oauthMessage ?? oauthErrorFromSearch ?? undefined,
                     }}
                   />
-                  <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
-                    <span className="h-px flex-1 bg-slate-200" />
-                    Or continue with email
-                    <span className="h-px flex-1 bg-slate-200" />
-                  </div>
+                  {emailAuthAvailable ? (
+                    <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
+                      <span className="h-px flex-1 bg-slate-200" />
+                      Or continue with email
+                      <span className="h-px flex-1 bg-slate-200" />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -262,7 +282,7 @@ export function SignInForm() {
                 </TabsList>
 
                 <TabsContent value="sign-in" className="space-y-4">
-                  {isSupabaseConfigured ? (
+                  {isSupabaseConfigured && emailAuthAvailable ? (
                     <form action={signInFormAction} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="sign-in-email">Email</Label>
@@ -296,14 +316,15 @@ export function SignInForm() {
                     </form>
                   ) : (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-                      Live sign-in is disabled until Supabase is configured for
-                      this environment.
+                      {isSupabaseConfigured
+                        ? "Email sign-in is currently disabled for this workspace."
+                        : "Live sign-in is disabled until Supabase is configured for this environment."}
                     </div>
                   )}
                 </TabsContent>
 
                 <TabsContent value="sign-up" className="space-y-4">
-                  {isSupabaseConfigured ? (
+                  {isSupabaseConfigured && emailAuthAvailable ? (
                     <form action={signUpFormAction} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="display-name">Display name</Label>
@@ -335,6 +356,12 @@ export function SignInForm() {
                         />
                       </div>
                       <MessageBanner state={signUpState} />
+                      {authSettings.emailConfirmationRequired ? (
+                        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+                          New accounts need email confirmation before the first
+                          live sign-in.
+                        </div>
+                      ) : null}
                       <Button
                         type="submit"
                         className="w-full rounded-2xl bg-teal-700 text-white hover:bg-teal-600"
@@ -346,8 +373,9 @@ export function SignInForm() {
                     </form>
                   ) : (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-                      Account creation will be available once Supabase auth is
-                      enabled for this deployment.
+                      {isSupabaseConfigured
+                        ? "Email account creation is currently disabled for this workspace."
+                        : "Account creation will be available once Supabase auth is enabled for this deployment."}
                     </div>
                   )}
                 </TabsContent>

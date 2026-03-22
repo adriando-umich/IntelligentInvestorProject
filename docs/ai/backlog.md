@@ -2,6 +2,7 @@
 
 ## Now
 
+- Add Supabase admin credentials outside the public app env so pending SQL migrations can be applied from the repo
 - Apply the new `20260322101500_project_bootstrap.sql` migration to the live Supabase project
 - Apply the new `20260322130000_tags_and_shared_loans.sql` migration to the live Supabase project
 - Apply the new `20260322190000_entry_families_and_loan_principal.sql` migration to the live Supabase project
@@ -34,7 +35,7 @@
 
 ## Blocked
 
-- No hard blocker right now
+- Supabase admin credentials are still missing locally, so remote SQL migrations and provider configuration cannot yet be executed from this workspace
 - End-to-end validation still depends on the latest SQL migration being applied in the live Supabase project
 
 ## Deferred
@@ -70,4 +71,7 @@
 - Fixed the `/projects` demo-mode crash after the avatar work by removing a client-only `buttonVariants()` call from the server page.
 - Added dashboard visualizations for cash bridge, funding stack, custody, reimbursements, tag mix, profit outlook, and entry-family reporting.
 - Added `shared_loan_interest_payment` as a dedicated shortcut and refreshed the sample workspace so those charts have meaningful financing data.
+- Fixed the live Supabase URL typo in local + Vercel config and redeployed production so auth points at the real Supabase project.
+- Updated the sign-in screen to read live Supabase public settings, hide Google when the provider is disabled, and warn that new accounts currently require email confirmation.
+- Confirmed via the public auth settings endpoint that email auth is enabled, email confirmation is required, and Google auth is still disabled upstream in Supabase.
 - Moved the remaining work to live migration validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

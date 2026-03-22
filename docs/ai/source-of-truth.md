@@ -26,6 +26,7 @@ The app must keep those concepts separate in both data and UI.
   - Supabase sign-in is wired
   - Supabase self-service sign-up is wired
   - Google OAuth client flow is wired from the sign-in screen
+  - The sign-in screen now fetches Supabase public auth settings to reflect live provider availability
   - `/auth/callback` now exchanges the Supabase PKCE code into a cookie-backed session
   - Auth/profile sync now pulls `avatar_url` or `picture` from Google user metadata when available
   - Session refresh is now backed by a root `proxy.ts` plus `src/lib/supabase/proxy.ts`
@@ -115,10 +116,15 @@ Only `.env.example` should be committed.
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
+- Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Vercel project access protection: disabled so the production deployment is public
 - Verification status:
   - `npm run lint` passed
   - `npm run build` passed
+- Public Supabase auth settings verified live:
+  - email/password enabled
+  - email confirmation required for new accounts (`mailer_autoconfirm = false`)
+  - Google provider currently disabled
 
 ## Product Guardrails
 
@@ -155,7 +161,10 @@ Only `.env.example` should be committed.
 - Fixed a follow-up regression where `/projects` crashed in demo mode because the server page was calling `buttonVariants()` from the client-only button module; the page now uses server-safe classes there and the avatar UI remains intact.
 - Added chart-driven dashboard storytelling with plain-language visuals for cash bridge, capital ownership, cash custody, reimbursement balances, tag mix, profit outlook, and entry-family reporting.
 - Added `shared_loan_interest_payment` as a dedicated transaction shortcut plus demo data that exercises shared loan drawdown, interest, and principal repayment.
+- Fixed the live Supabase project URL typo in local and Vercel env so auth flows now point at the real project instead of a non-resolving hostname.
+- Updated the sign-in screen to read live Supabase public auth settings so Google only appears when enabled and the create-account tab can warn when email confirmation is required.
 - Current limitation: Google OAuth still depends on external provider setup in Supabase Auth and a Google OAuth client; no extra app env vars were added for that flow.
 - Current limitation: persistent avatar storage for live users depends on applying the new avatar migration so `profiles.avatar_url` exists in the database.
 - Current limitation: live databases need the new shared-loan-interest migration before that shortcut can be saved from the planner.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
+- Current limitation: applying the pending Supabase migrations and enabling the Google provider still requires admin-side Supabase credentials that are not present in the repo-local `.env`.

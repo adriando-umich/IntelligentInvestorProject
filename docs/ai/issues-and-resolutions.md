@@ -2,6 +2,7 @@
 
 ## Open Issues
 
+- The local and production app had been pointed at a mistyped Supabase hostname until the March 22 fix; auth should now use the correct project URL, but pending live flows still need revalidation against the real database.
 - The new `20260322101500_project_bootstrap.sql` migration has not yet been executed against the live Supabase database.
 - The new `20260322130000_tags_and_shared_loans.sql` migration has not yet been executed against the live Supabase database.
 - The new `20260322190000_entry_families_and_loan_principal.sql` migration has not yet been executed against the live Supabase database.
@@ -9,6 +10,7 @@
 - The new `20260322233000_shared_loan_interest_payment.sql` migration has not yet been executed against the live Supabase database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
 - Google OAuth still requires external setup in Supabase Auth and Google Cloud before the new sign-in button can succeed in production.
+- The current workspace does not have Supabase admin credentials, so migrations and provider configuration cannot be executed programmatically from here yet.
 - Profit distribution still has no dedicated live post flow.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
 - GitHub-triggered auto deploy is not confirmed yet; the current working deployment path is Vercel CLI plus linked project
@@ -40,6 +42,8 @@
 - `/projects` started returning `500` in demo mode after the avatar rollout; resolved by removing a server-side call to `buttonVariants()` from the client-only button module.
 - The dashboard was still table-heavy and hard to scan at a glance; resolved by adding plain-language charts for cash bridge, capital share, custody, reimbursements, tags, profit outlook, and entry-family reporting.
 - Shared loan interest had to be forced through generic operating expense wording; resolved by adding `shared_loan_interest_payment` as its own business-event shortcut.
+- The public sign-in screen could promise Google login even when the provider was disabled upstream; resolved by reading the Supabase public auth settings endpoint and only showing Google when it is actually enabled.
+- The app had been configured with a Supabase project-ref typo that pointed auth at a non-resolving hostname; resolved by correcting `NEXT_PUBLIC_SUPABASE_URL` locally and in Vercel, then redeploying production.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -57,6 +61,7 @@
 - When social-auth metadata should survive beyond the current session, sync it into the app's profile table and gracefully tolerate older databases that have not received the new column yet.
 - If a route is a server page, do not call styling helpers exported from client components; keep shared class builders server-safe or inline the classes on that page.
 - When adding dashboard visuals, keep each chart tied to exactly one finance concept so the UI never collapses custody, reimbursement, capital, and profit into one ambiguous story.
+- When live auth behavior matters, probe the Supabase public `/auth/v1/settings` endpoint before assuming providers or email-confirmation behavior from code alone.
 
 ## Latest Session Delta
 
@@ -77,3 +82,10 @@
 - Added Google-avatar sync and UI rendering while logging that the new `profiles.avatar_url` column still needs its live migration applied.
 - Fixed the resulting `/projects` server crash and re-verified the page in demo mode locally with the avatar shell still rendering fallback initials.
 - Added visualization-driven dashboard analytics plus a live-save path for `shared_loan_interest_payment`, and logged the new migration requirement for production databases.
+- Corrected the Supabase project URL typo in local and Vercel config after DNS verification showed the previously configured hostname did not resolve.
+- Verified live Supabase public auth settings from the real project:
+  - email/password enabled
+  - `mailer_autoconfirm = false`
+  - Google provider disabled
+- Updated the sign-in screen so production no longer advertises Google auth unless the provider is actually enabled, and so the create-account flow warns that confirmation email is required.
+- Logged that the remaining migration and Google-provider tasks are blocked on missing Supabase admin credentials rather than missing app code.
