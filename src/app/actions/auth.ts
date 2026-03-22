@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { DEMO_COOKIE_NAME } from "@/lib/app-config";
 import { isSupabaseConfigured } from "@/lib/env";
+import { getServerI18n } from "@/lib/i18n/server";
 import { syncProfileFromAuthUser } from "@/lib/supabase/profile-sync";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -17,24 +18,6 @@ function normalizeNextPath(nextPath: FormDataEntryValue | null) {
   return nextPath;
 }
 
-const signInSchema = z.object({
-  email: z.string().email("Use a valid email address."),
-  password: z.string().min(8, "Password must be at least 8 characters."),
-  nextPath: z.string().optional(),
-});
-
-const signUpSchema = z.object({
-  displayName: z
-    .string()
-    .trim()
-    .min(2, "Add the name people should see in the workspace."),
-  email: z.string().email("Use a valid email address."),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters."),
-  nextPath: z.string().optional(),
-});
-
 export type AuthActionState = {
   status: "idle" | "error" | "success";
   message?: string;
@@ -44,9 +27,17 @@ export async function signInAction(
   _previousState: AuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  const { text } = await getServerI18n();
   const cookieStore = await cookies();
+  const authText = text.actions.auth;
 
-  const parsed = signInSchema.safeParse({
+  const parsed = z
+    .object({
+      email: z.string().email(authText.invalidEmail),
+      password: z.string().min(8, authText.invalidPassword),
+      nextPath: z.string().optional(),
+    })
+    .safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
     nextPath: formData.get("nextPath"),
@@ -55,7 +46,7 @@ export async function signInAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: parsed.error.issues[0]?.message ?? "Unable to sign in.",
+      message: parsed.error.issues[0]?.message ?? authText.signInFailed,
     };
   }
 
@@ -73,7 +64,7 @@ export async function signInAction(
   if (!supabase) {
     return {
       status: "error",
-      message: "Supabase is not configured.",
+      message: authText.supabaseMissing,
     };
   }
 
@@ -98,9 +89,18 @@ export async function signUpAction(
   _previousState: AuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  const { text } = await getServerI18n();
   const cookieStore = await cookies();
+  const authText = text.actions.auth;
 
-  const parsed = signUpSchema.safeParse({
+  const parsed = z
+    .object({
+      displayName: z.string().trim().min(2, authText.invalidDisplayName),
+      email: z.string().email(authText.invalidEmail),
+      password: z.string().min(8, authText.invalidPassword),
+      nextPath: z.string().optional(),
+    })
+    .safeParse({
     displayName: formData.get("displayName"),
     email: formData.get("email"),
     password: formData.get("password"),
@@ -110,15 +110,14 @@ export async function signUpAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: parsed.error.issues[0]?.message ?? "Unable to create account.",
+      message: parsed.error.issues[0]?.message ?? authText.signUpFailed,
     };
   }
 
   if (!isSupabaseConfigured) {
     return {
       status: "error",
-      message:
-        "Live account creation is unavailable because Supabase is not configured.",
+      message: authText.demoSignUpUnavailable,
     };
   }
 
@@ -127,7 +126,7 @@ export async function signUpAction(
   if (!supabase) {
     return {
       status: "error",
-      message: "Supabase is not configured.",
+      message: authText.supabaseMissing,
     };
   }
 
@@ -161,8 +160,7 @@ export async function signUpAction(
 
   return {
     status: "success",
-    message:
-      "Account created. Check your email for a confirmation link if your Supabase project requires email verification.",
+    message: authText.emailVerificationNotice,
   };
 }
 

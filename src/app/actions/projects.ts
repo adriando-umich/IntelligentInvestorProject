@@ -6,21 +6,8 @@ import { z } from "zod";
 
 import { DEFAULT_CURRENCY_CODE } from "@/lib/app-config";
 import { getSessionState } from "@/lib/auth/session";
+import { getServerI18n } from "@/lib/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-const createProjectSchema = z.object({
-  name: z.string().trim().min(3, "Project name should be at least 3 characters."),
-  description: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => (value && value.length > 0 ? value : undefined)),
-  currencyCode: z
-    .string()
-    .trim()
-    .length(3, "Choose a valid 3-letter currency code.")
-    .transform((value) => value.toUpperCase()),
-});
 
 const rpcResponseSchema = z.string().uuid();
 
@@ -33,17 +20,32 @@ export async function createProjectAction(
   _previousState: ProjectActionState,
   formData: FormData
 ): Promise<ProjectActionState> {
+  const { text } = await getServerI18n();
   const session = await getSessionState();
+  const projectText = text.actions.projects;
 
   if (session.demoMode) {
     return {
       status: "error",
-      message:
-        "Project creation is disabled in the sample workspace. Sign in with a live account to create a real project.",
+      message: projectText.demoBlocked,
     };
   }
 
-  const parsed = createProjectSchema.safeParse({
+  const parsed = z
+    .object({
+      name: z.string().trim().min(3, projectText.projectNameMin),
+      description: z
+        .string()
+        .trim()
+        .optional()
+        .transform((value) => (value && value.length > 0 ? value : undefined)),
+      currencyCode: z
+        .string()
+        .trim()
+        .length(3, projectText.currencyInvalid)
+        .transform((value) => value.toUpperCase()),
+    })
+    .safeParse({
     name: formData.get("name"),
     description: formData.get("description"),
     currencyCode: formData.get("currencyCode") ?? DEFAULT_CURRENCY_CODE,
@@ -52,7 +54,7 @@ export async function createProjectAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: parsed.error.issues[0]?.message ?? "Unable to create project.",
+      message: parsed.error.issues[0]?.message ?? projectText.createFailed,
     };
   }
 
@@ -61,7 +63,7 @@ export async function createProjectAction(
   if (!supabase) {
     return {
       status: "error",
-      message: "Supabase is not configured.",
+      message: text.actions.auth.supabaseMissing,
     };
   }
 
@@ -72,7 +74,7 @@ export async function createProjectAction(
   if (!user) {
     return {
       status: "error",
-      message: "You must be signed in before creating a project.",
+      message: projectText.signInRequired,
     };
   }
 
@@ -90,7 +92,7 @@ export async function createProjectAction(
     return {
       status: "error",
       message: missingRpc
-        ? "The database is missing the latest project-creation migration. Apply the newest SQL migration in Supabase, then try again."
+        ? projectText.missingMigration
         : error.message,
     };
   }
@@ -100,7 +102,7 @@ export async function createProjectAction(
   if (!projectId.success) {
     return {
       status: "error",
-      message: "Project was created, but the response payload was invalid.",
+      message: projectText.invalidResponse,
     };
   }
 

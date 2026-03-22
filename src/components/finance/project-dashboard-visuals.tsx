@@ -24,9 +24,10 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  entryFamilyLabels,
+  getEntryFamilyLabel,
   getEntryFamily,
 } from "@/lib/finance/types";
+import { useLocale } from "@/components/app/locale-provider";
 import {
   formatCompactCurrency,
   formatCurrency,
@@ -65,6 +66,7 @@ function MoneyTooltip({
   label,
   payload,
   currencyCode,
+  locale,
 }: {
   active?: boolean;
   label?: string;
@@ -75,10 +77,13 @@ function MoneyTooltip({
     payload?: Record<string, unknown>;
   }>;
   currencyCode: string;
+  locale?: "en" | "vi";
 }) {
   if (!active || !payload?.length) {
     return null;
   }
+
+  const resolvedLocale = locale ?? "en";
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 shadow-lg">
@@ -103,7 +108,7 @@ function MoneyTooltip({
                 <span>{item.name}</span>
               </span>
               <span className="font-medium text-slate-950">
-                {formatCurrency(rawValue, currencyCode)}
+                {formatCurrency(rawValue, currencyCode, resolvedLocale)}
               </span>
             </div>
           );
@@ -114,9 +119,23 @@ function MoneyTooltip({
 }
 
 function CapitalShareChart({ snapshot }: { snapshot: ProjectSnapshot }) {
+  const { locale } = useLocale();
+  const copy =
+    locale === "vi"
+      ? {
+          empty: "Chưa có thành viên nào đang có vốn góp dương. Tỷ lệ chia lợi nhuận sẽ hiện ở đây sau khi có vốn góp.",
+          capital: "Vốn góp",
+          estimatedProfitToday: "Lợi nhuận ước tính hôm nay",
+        }
+      : {
+          empty: "No active capital owners yet. Profit share starts showing here once someone contributes capital.",
+          capital: "Capital",
+          estimatedProfitToday: "Estimated profit today",
+        };
+
   if (snapshot.capitalWeights.length === 0) {
     return (
-      <EmptyChartState message="No active capital owners yet. Profit share starts showing here once someone contributes capital." />
+      <EmptyChartState message={copy.empty} />
     );
   }
 
@@ -137,6 +156,7 @@ function CapitalShareChart({ snapshot }: { snapshot: ProjectSnapshot }) {
               content={
                 <MoneyTooltip
                   currencyCode={snapshot.dataset.project.currencyCode}
+                  locale={locale}
                 />
               }
             />
@@ -172,24 +192,26 @@ function CapitalShareChart({ snapshot }: { snapshot: ProjectSnapshot }) {
                 {entry.name}
               </span>
               <Badge className="rounded-full bg-white text-slate-900 ring-1 ring-slate-200">
-                {formatPercent(entry.weight)}
+                  {formatPercent(entry.weight, locale)}
               </Badge>
             </div>
             <p className="mt-2 text-sm text-slate-600">
-              Capital:{" "}
+              {copy.capital}:{" "}
               <span className="font-medium text-slate-950">
                 {formatCurrency(
                   entry.value,
-                  snapshot.dataset.project.currencyCode
+                  snapshot.dataset.project.currencyCode,
+                  locale
                 )}
               </span>
             </p>
             <p className="mt-1 text-sm text-slate-600">
-              Estimated profit today:{" "}
+              {copy.estimatedProfitToday}:{" "}
               <span className="font-medium text-slate-950">
                 {formatCurrency(
                   entry.estimatedProfitShare,
-                  snapshot.dataset.project.currencyCode
+                  snapshot.dataset.project.currencyCode,
+                  locale
                 )}
               </span>
             </p>
@@ -201,10 +223,35 @@ function CapitalShareChart({ snapshot }: { snapshot: ProjectSnapshot }) {
 }
 
 function FundingStackChart({ snapshot }: { snapshot: ProjectSnapshot }) {
+  const { locale } = useLocale();
   const retainedOperatingBuffer = Math.max(snapshot.undistributedProfit, 0);
+  const copy =
+    locale === "vi"
+      ? {
+          fundingCommitted: "Nguồn tiền còn đang tham gia dự án",
+          empty:
+            "Hiện chưa có vốn góp, dư nợ gốc vay chung hoặc phần lợi nhuận giữ lại nào được ghi nhận.",
+          capitalInvested: "Vốn còn đang góp",
+          sharedLoanOutstanding: "Gốc vay chung còn lại",
+          retainedBuffer: "Phần đệm vận hành giữ lại",
+          capital: "Vốn",
+          sharedLoanPrincipal: "Gốc vay chung",
+          retainedOperatingBuffer: "Đệm vận hành giữ lại",
+        }
+      : {
+          fundingCommitted: "Funding still committed",
+          empty:
+            "No capital, shared loan principal, or retained operating buffer has been recorded yet.",
+          capitalInvested: "Capital still invested",
+          sharedLoanOutstanding: "Shared loan principal still outstanding",
+          retainedBuffer: "Retained operating buffer",
+          capital: "Capital",
+          sharedLoanPrincipal: "Shared loan principal",
+          retainedOperatingBuffer: "Retained operating buffer",
+        };
   const fundingRows = [
     {
-      label: "Funding still committed",
+      label: copy.fundingCommitted,
       capital: snapshot.totalCapitalOutstanding,
       sharedLoan: Math.max(snapshot.sharedLoanPrincipalOutstanding, 0),
       retainedOperatingBuffer,
@@ -219,9 +266,7 @@ function FundingStackChart({ snapshot }: { snapshot: ProjectSnapshot }) {
   );
 
   if (!hasFunding) {
-    return (
-      <EmptyChartState message="No capital, shared loan principal, or retained operating buffer has been recorded yet." />
-    );
+    return <EmptyChartState message={copy.empty} />;
   }
 
   return (
@@ -237,7 +282,7 @@ function FundingStackChart({ snapshot }: { snapshot: ProjectSnapshot }) {
             <XAxis
               type="number"
               tickFormatter={(value: number) =>
-                formatCompactCurrency(value, snapshot.dataset.project.currencyCode)
+                formatCompactCurrency(value, snapshot.dataset.project.currencyCode, locale)
               }
             />
             <YAxis type="category" dataKey="label" width={120} />
@@ -245,25 +290,26 @@ function FundingStackChart({ snapshot }: { snapshot: ProjectSnapshot }) {
               content={
                 <MoneyTooltip
                   currencyCode={snapshot.dataset.project.currencyCode}
+                  locale={locale}
                 />
               }
             />
             <Bar
               dataKey="capital"
-              name="Capital still invested"
+              name={copy.capitalInvested}
               stackId="funding"
               fill="#0f766e"
               radius={[8, 0, 0, 8]}
             />
             <Bar
               dataKey="sharedLoan"
-              name="Shared loan principal still outstanding"
+              name={copy.sharedLoanOutstanding}
               stackId="funding"
               fill="#0284c7"
             />
             <Bar
               dataKey="retainedOperatingBuffer"
-              name="Retained operating buffer"
+              name={copy.retainedBuffer}
               stackId="funding"
               fill="#a855f7"
               radius={[0, 8, 8, 0]}
@@ -274,29 +320,32 @@ function FundingStackChart({ snapshot }: { snapshot: ProjectSnapshot }) {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl bg-teal-50 px-4 py-4">
-          <p className="text-sm text-teal-700">Capital</p>
+          <p className="text-sm text-teal-700">{copy.capital}</p>
           <p className="mt-2 text-lg font-semibold text-teal-950">
             {formatCurrency(
               snapshot.totalCapitalOutstanding,
-              snapshot.dataset.project.currencyCode
+              snapshot.dataset.project.currencyCode,
+              locale
             )}
           </p>
         </div>
         <div className="rounded-2xl bg-sky-50 px-4 py-4">
-          <p className="text-sm text-sky-700">Shared loan principal</p>
+          <p className="text-sm text-sky-700">{copy.sharedLoanPrincipal}</p>
           <p className="mt-2 text-lg font-semibold text-sky-950">
             {formatCurrency(
               snapshot.sharedLoanPrincipalOutstanding,
-              snapshot.dataset.project.currencyCode
+              snapshot.dataset.project.currencyCode,
+              locale
             )}
           </p>
         </div>
         <div className="rounded-2xl bg-violet-50 px-4 py-4">
-          <p className="text-sm text-violet-700">Retained operating buffer</p>
+          <p className="text-sm text-violet-700">{copy.retainedOperatingBuffer}</p>
           <p className="mt-2 text-lg font-semibold text-violet-950">
             {formatCurrency(
               retainedOperatingBuffer,
-              snapshot.dataset.project.currencyCode
+              snapshot.dataset.project.currencyCode,
+              locale
             )}
           </p>
         </div>
@@ -306,6 +355,7 @@ function FundingStackChart({ snapshot }: { snapshot: ProjectSnapshot }) {
 }
 
 function CashCustodyChart({ snapshot }: { snapshot: ProjectSnapshot }) {
+  const { locale } = useLocale();
   const rows = snapshot.memberSummaries
     .map((summary) => ({
       member: summary.profile.displayName,
@@ -319,7 +369,13 @@ function CashCustodyChart({ snapshot }: { snapshot: ProjectSnapshot }) {
 
   if (!rows.length) {
     return (
-      <EmptyChartState message="Member cash custody appears here once the team starts moving money through the project." />
+      <EmptyChartState
+        message={
+          locale === "vi"
+            ? "Biểu đồ giữ tiền dự án sẽ hiện ra khi team bắt đầu ghi nhận dòng tiền trong dự án."
+            : "Member cash custody appears here once the team starts moving money through the project."
+        }
+      />
     );
   }
 
@@ -332,30 +388,31 @@ function CashCustodyChart({ snapshot }: { snapshot: ProjectSnapshot }) {
           margin={{ top: 8, right: 18, left: 18, bottom: 8 }}
         >
           <CartesianGrid horizontal={false} stroke="#e2e8f0" />
-          <XAxis
-            type="number"
-            tickFormatter={(value: number) =>
-              formatCompactCurrency(value, snapshot.dataset.project.currencyCode)
-            }
-          />
+            <XAxis
+              type="number"
+              tickFormatter={(value: number) =>
+                formatCompactCurrency(value, snapshot.dataset.project.currencyCode, locale)
+              }
+            />
           <YAxis type="category" dataKey="member" width={86} />
           <ReferenceLine x={0} stroke="#94a3b8" />
           <RechartsTooltip
             content={
               <MoneyTooltip
                 currencyCode={snapshot.dataset.project.currencyCode}
+                locale={locale}
               />
             }
           />
           <Bar
             dataKey="fronted"
-            name="Fronted own money"
+            name={locale === "vi" ? "Đã ứng tiền riêng" : "Fronted own money"}
             fill="#f59e0b"
             radius={[8, 0, 0, 8]}
           />
           <Bar
             dataKey="held"
-            name="Holding project money"
+            name={locale === "vi" ? "Đang giữ tiền dự án" : "Holding project money"}
             fill="#0f766e"
             radius={[0, 8, 8, 0]}
           />
@@ -366,6 +423,7 @@ function CashCustodyChart({ snapshot }: { snapshot: ProjectSnapshot }) {
 }
 
 function ReimbursementChart({ snapshot }: { snapshot: ProjectSnapshot }) {
+  const { locale } = useLocale();
   const rows = snapshot.memberSummaries
     .map((summary) => ({
       member: summary.profile.displayName,
@@ -379,7 +437,13 @@ function ReimbursementChart({ snapshot }: { snapshot: ProjectSnapshot }) {
 
   if (!rows.length) {
     return (
-      <EmptyChartState message="Shared-expense balances will show here once the team records reimbursable expenses." />
+      <EmptyChartState
+        message={
+          locale === "vi"
+            ? "Số dư chi phí chung sẽ hiện ở đây khi team bắt đầu ghi nhận các khoản có hoàn trả."
+            : "Shared-expense balances will show here once the team records reimbursable expenses."
+        }
+      />
     );
   }
 
@@ -392,30 +456,31 @@ function ReimbursementChart({ snapshot }: { snapshot: ProjectSnapshot }) {
           margin={{ top: 8, right: 18, left: 18, bottom: 8 }}
         >
           <CartesianGrid horizontal={false} stroke="#e2e8f0" />
-          <XAxis
-            type="number"
-            tickFormatter={(value: number) =>
-              formatCompactCurrency(value, snapshot.dataset.project.currencyCode)
-            }
-          />
+            <XAxis
+              type="number"
+              tickFormatter={(value: number) =>
+                formatCompactCurrency(value, snapshot.dataset.project.currencyCode, locale)
+              }
+            />
           <YAxis type="category" dataKey="member" width={86} />
           <ReferenceLine x={0} stroke="#94a3b8" />
           <RechartsTooltip
             content={
               <MoneyTooltip
                 currencyCode={snapshot.dataset.project.currencyCode}
+                locale={locale}
               />
             }
           />
           <Bar
             dataKey="youOwe"
-            name="You still owe teammates"
+            name={locale === "vi" ? "Bạn còn nợ team" : "You still owe teammates"}
             fill="#fb7185"
             radius={[8, 0, 0, 8]}
           />
           <Bar
             dataKey="owedToYou"
-            name="Teammates still owe you"
+            name={locale === "vi" ? "Team còn nợ bạn" : "Teammates still owe you"}
             fill="#22c55e"
             radius={[0, 8, 8, 0]}
           />
@@ -426,6 +491,7 @@ function ReimbursementChart({ snapshot }: { snapshot: ProjectSnapshot }) {
 }
 
 function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
+  const { locale } = useLocale();
   const expectedCashFromBusiness = roundMoney(
     snapshot.totalCapitalOutstanding +
       snapshot.sharedLoanPrincipalOutstanding +
@@ -439,24 +505,28 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
   );
 
   const steps = [
-    { label: "Capital", value: snapshot.totalCapitalOutstanding, fill: "#0f766e" },
     {
-      label: "Shared loan",
+      label: locale === "vi" ? "Vốn" : "Capital",
+      value: snapshot.totalCapitalOutstanding,
+      fill: "#0f766e",
+    },
+    {
+      label: locale === "vi" ? "Vay chung" : "Shared loan",
       value: snapshot.sharedLoanPrincipalOutstanding,
       fill: "#0284c7",
     },
     {
-      label: "Income",
+      label: locale === "vi" ? "Tiền vào" : "Income",
       value: snapshot.projectOperatingIncome,
       fill: "#22c55e",
     },
     {
-      label: "Expense",
+      label: locale === "vi" ? "Chi phí" : "Expense",
       value: -snapshot.projectOperatingExpense,
       fill: "#fb7185",
     },
     {
-      label: "Profit paid",
+      label: locale === "vi" ? "Lợi nhuận đã trả" : "Profit paid",
       value: -snapshot.totalProfitDistributed,
       fill: "#a855f7",
     },
@@ -464,7 +534,7 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
 
   if (Math.abs(correctionDelta) > 0.01) {
     steps.push({
-      label: "Corrections",
+      label: locale === "vi" ? "Điều chỉnh" : "Corrections",
       value: correctionDelta,
       fill: "#f97316",
     });
@@ -485,7 +555,7 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
   });
 
   chartData.push({
-    label: "Cash now",
+    label: locale === "vi" ? "Tiền hiện có" : "Cash now",
     amount: snapshot.totalProjectCash,
     fill: "#0f172a",
     kind: "total" as const,
@@ -503,7 +573,7 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
             <XAxis dataKey="label" tickLine={false} axisLine={false} />
             <YAxis
               tickFormatter={(value: number) =>
-                formatCompactCurrency(value, snapshot.dataset.project.currencyCode)
+                formatCompactCurrency(value, snapshot.dataset.project.currencyCode, locale)
               }
             />
             <ReferenceLine y={0} stroke="#94a3b8" />
@@ -523,13 +593,18 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
                     <p className="mt-2 text-sm text-slate-600">
                       {formatSignedCurrency(
                         Number(row.amount ?? 0),
-                        snapshot.dataset.project.currencyCode
+                        snapshot.dataset.project.currencyCode,
+                        locale
                       )}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
                       {row.kind === "total"
-                        ? "Current project cash after all recorded movements."
-                        : "This bar shows only this step's own amount, not a cumulative height."}
+                        ? locale === "vi"
+                          ? "Đây là tổng tiền dự án hiện có sau tất cả các biến động đã ghi."
+                          : "Current project cash after all recorded movements."
+                        : locale === "vi"
+                          ? "Cột này chỉ thể hiện đúng số tiền của bước đó, không phải chiều cao cộng dồn."
+                          : "This bar shows only this step's own amount, not a cumulative height."}
                     </p>
                   </div>
                 );
@@ -562,7 +637,8 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
                     >
                       {formatCompactCurrency(
                         numericValue,
-                        snapshot.dataset.project.currencyCode
+                        snapshot.dataset.project.currencyCode,
+                        locale
                       )}
                     </text>
                   );
@@ -574,16 +650,16 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
       </div>
 
       <div className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-600">
-        Each movement bar shows its own amount only. The final Cash now bar is
-        the current total after those movements. This keeps cash readable
-        without merging reimbursement, capital weights, or profit payout logic
-        into one number.
+        {locale === "vi"
+          ? "Mỗi cột biến động chỉ thể hiện đúng số tiền của riêng bước đó. Cột Tiền hiện có cuối cùng là tổng số tiền sau các bước này. Cách hiển thị này giúp đọc cash dễ hơn mà không trộn lẫn khoản hoàn trả, tỷ trọng vốn hay logic chia lợi nhuận vào một con số."
+          : "Each movement bar shows its own amount only. The final Cash now bar is the current total after those movements. This keeps cash readable without merging reimbursement, capital weights, or profit payout logic into one number."}
       </div>
     </div>
   );
 }
 
 function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
+  const { locale } = useLocale();
   const rows = snapshot.memberSummaries
     .map((summary) => ({
       member: summary.profile.displayName,
@@ -594,7 +670,13 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
 
   if (!rows.length) {
     return (
-      <EmptyChartState message="Profit bars appear once the project has profit paid or a positive profit preview." />
+      <EmptyChartState
+        message={
+          locale === "vi"
+            ? "Biểu đồ lợi nhuận sẽ hiện khi dự án đã có lợi nhuận trả ra hoặc có preview lợi nhuận dương."
+            : "Profit bars appear once the project has profit paid or a positive profit preview."
+        }
+      />
     );
   }
 
@@ -606,24 +688,31 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
           <XAxis dataKey="member" tickLine={false} axisLine={false} />
           <YAxis
             tickFormatter={(value: number) =>
-              formatCompactCurrency(value, snapshot.dataset.project.currencyCode)
+              formatCompactCurrency(value, snapshot.dataset.project.currencyCode, locale)
             }
           />
           <RechartsTooltip
             content={
-              <MoneyTooltip currencyCode={snapshot.dataset.project.currencyCode} />
+              <MoneyTooltip
+                currencyCode={snapshot.dataset.project.currencyCode}
+                locale={locale}
+              />
             }
           />
           <Bar
             dataKey="paid"
-            name="Profit already paid"
+            name={locale === "vi" ? "Lợi nhuận đã trả" : "Profit already paid"}
             stackId="profit"
             fill="#0f766e"
             radius={[8, 8, 0, 0]}
           />
           <Bar
             dataKey="availableToday"
-            name="Still available if distributed today"
+            name={
+              locale === "vi"
+                ? "Còn có thể nhận nếu chia hôm nay"
+                : "Still available if distributed today"
+            }
             stackId="profit"
             fill="#14b8a6"
             radius={[8, 8, 0, 0]}
@@ -647,6 +736,7 @@ function TagPieChart({
   rows: ProjectSnapshot["expenseTagRollups"];
   currencyCode: string;
 }) {
+  const { locale } = useLocale();
   if (rows.length === 0) {
     return (
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
@@ -676,7 +766,9 @@ function TagPieChart({
         <div className="h-[260px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <RechartsTooltip content={<MoneyTooltip currencyCode={currencyCode} />} />
+              <RechartsTooltip
+                content={<MoneyTooltip currencyCode={currencyCode} locale={locale} />}
+              />
               <Pie
                 data={chartRows}
                 dataKey="amount"
@@ -709,11 +801,13 @@ function TagPieChart({
                   {entry.name}
                 </span>
                 <Badge className="rounded-full bg-white text-slate-900 ring-1 ring-slate-200">
-                  {entry.entryCount} entries
+                  {locale === "vi"
+                    ? `${entry.entryCount} giao dịch`
+                    : `${entry.entryCount} entries`}
                 </Badge>
               </div>
               <p className="mt-2 text-sm text-slate-600">
-                {formatCurrency(entry.amount, currencyCode)}
+                {formatCurrency(entry.amount, currencyCode, locale)}
               </p>
             </div>
           ))}
@@ -724,13 +818,18 @@ function TagPieChart({
 }
 
 export function ProjectOverviewVisuals({ snapshot }: { snapshot: ProjectSnapshot }) {
+  const { locale } = useLocale();
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>How project cash got here</CardTitle>
+          <CardTitle>
+            {locale === "vi" ? "Tiền dự án đã đi vào như thế nào" : "How project cash got here"}
+          </CardTitle>
           <CardDescription>
-            A plain-language cash bridge: capital, shared loan principal, and operating movement are kept visible as separate steps.
+            {locale === "vi"
+              ? "Cầu tiền theo ngôn ngữ dễ hiểu: vốn, gốc vay chung và biến động vận hành đều được tách thành từng bước."
+              : "A plain-language cash bridge: capital, shared loan principal, and operating movement are kept visible as separate steps."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -740,9 +839,11 @@ export function ProjectOverviewVisuals({ snapshot }: { snapshot: ProjectSnapshot
 
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>Project cash by member</CardTitle>
+          <CardTitle>{locale === "vi" ? "Tiền dự án theo từng thành viên" : "Project cash by member"}</CardTitle>
           <CardDescription>
-            Right side means someone is holding project money. Left side means they fronted their own money into the project.
+            {locale === "vi"
+              ? "Cột bên phải nghĩa là người đó đang giữ tiền dự án. Cột bên trái nghĩa là họ đã ứng tiền cá nhân vào dự án."
+              : "Right side means someone is holding project money. Left side means they fronted their own money into the project."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -752,9 +853,11 @@ export function ProjectOverviewVisuals({ snapshot }: { snapshot: ProjectSnapshot
 
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>Who still owes whom</CardTitle>
+          <CardTitle>{locale === "vi" ? "Ai còn đang nợ ai" : "Who still owes whom"}</CardTitle>
           <CardDescription>
-            This chart is only about shared-expense reimbursement. It is separate from capital, project cash, and profit.
+            {locale === "vi"
+              ? "Biểu đồ này chỉ nói về hoàn trả chi phí chung. Nó tách riêng khỏi vốn, tiền dự án và lợi nhuận."
+              : "This chart is only about shared-expense reimbursement. It is separate from capital, project cash, and profit."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -764,9 +867,11 @@ export function ProjectOverviewVisuals({ snapshot }: { snapshot: ProjectSnapshot
 
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>Capital ownership today</CardTitle>
+          <CardTitle>{locale === "vi" ? "Phần vốn hiện tại" : "Capital ownership today"}</CardTitle>
           <CardDescription>
-            This donut shows who currently carries profit-sharing weight. Shared loan principal does not appear here.
+            {locale === "vi"
+              ? "Donut này cho biết ai đang mang tỷ trọng chia lợi nhuận ở thời điểm hiện tại. Gốc vay chung không xuất hiện ở đây."
+              : "This donut shows who currently carries profit-sharing weight. Shared loan principal does not appear here."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -778,13 +883,18 @@ export function ProjectOverviewVisuals({ snapshot }: { snapshot: ProjectSnapshot
 }
 
 export function ProjectCapitalVisuals({ snapshot }: { snapshot: ProjectSnapshot }) {
+  const { locale } = useLocale();
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>Funding stack behind today&apos;s cash</CardTitle>
+          <CardTitle>
+            {locale === "vi" ? "Cấu phần nguồn tiền đứng sau số cash hôm nay" : "Funding stack behind today&apos;s cash"}
+          </CardTitle>
           <CardDescription>
-            Capital still invested and shared loan principal still outstanding are shown separately from retained operating buffer.
+            {locale === "vi"
+              ? "Vốn còn đang góp và gốc vay chung còn lại được tách riêng khỏi phần đệm vận hành giữ lại."
+              : "Capital still invested and shared loan principal still outstanding are shown separately from retained operating buffer."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -794,9 +904,13 @@ export function ProjectCapitalVisuals({ snapshot }: { snapshot: ProjectSnapshot 
 
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>Profit already paid vs still available</CardTitle>
+          <CardTitle>
+            {locale === "vi" ? "Lợi nhuận đã trả so với phần còn có thể chia" : "Profit already paid vs still available"}
+          </CardTitle>
           <CardDescription>
-            Lower bars show profit already paid. Upper bars show what each member could still receive if profit were distributed today.
+            {locale === "vi"
+              ? "Phần cột dưới là lợi nhuận đã trả. Phần cột trên là số mỗi thành viên còn có thể nhận nếu chia lợi nhuận hôm nay."
+              : "Lower bars show profit already paid. Upper bars show what each member could still receive if profit were distributed today."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -808,19 +922,32 @@ export function ProjectCapitalVisuals({ snapshot }: { snapshot: ProjectSnapshot 
 }
 
 export function ProjectTagVisuals({ snapshot }: { snapshot: ProjectSnapshot }) {
+  const { locale } = useLocale();
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <TagPieChart
-        title="Where tagged money came in"
-        description="Customer inflow and shared-loan drawdown are shown together here so the team can quickly see the biggest tagged sources."
-        emptyMessage="No tagged inflows yet."
+        title={
+          locale === "vi" ? "Tiền vào có tag đến từ đâu" : "Where tagged money came in"
+        }
+        description={
+          locale === "vi"
+            ? "Tiền khách hàng và giải ngân vay chung được xem cùng ở đây để team nhận ra nhanh các nguồn vào lớn nhất theo tag."
+            : "Customer inflow and shared-loan drawdown are shown together here so the team can quickly see the biggest tagged sources."
+        }
+        emptyMessage={locale === "vi" ? "Chưa có tiền vào nào được gắn tag." : "No tagged inflows yet."}
         rows={snapshot.inflowTagRollups}
         currencyCode={snapshot.dataset.project.currencyCode}
       />
       <TagPieChart
-        title="Where tagged money went out"
-        description="Operating expense and shared loan interest can both be tagged here so the team can see the largest cost buckets at a glance."
-        emptyMessage="No tagged expenses yet."
+        title={
+          locale === "vi" ? "Tiền ra có tag đi vào đâu" : "Where tagged money went out"
+        }
+        description={
+          locale === "vi"
+            ? "Chi phí vận hành và lãi vay chung đều có thể gắn tag ở đây để team nhìn nhanh các nhóm chi lớn nhất."
+            : "Operating expense and shared loan interest can both be tagged here so the team can see the largest cost buckets at a glance."
+        }
+        emptyMessage={locale === "vi" ? "Chưa có chi phí nào được gắn tag." : "No tagged expenses yet."}
         rows={snapshot.expenseTagRollups}
         currencyCode={snapshot.dataset.project.currencyCode}
       />
@@ -837,6 +964,7 @@ export function EntryFamilyReport({
   selectedFamily: ActivityFamilyFilter;
   onSelectFamily: (value: ActivityFamilyFilter) => void;
 }) {
+  const { locale } = useLocale();
   const postedEntries = snapshot.dataset.entries.filter(
     (entry) => entry.status === "posted"
   );
@@ -850,7 +978,7 @@ export function EntryFamilyReport({
   const rows = [
     {
       family: "business" as const,
-      label: entryFamilyLabels.business,
+      label: getEntryFamilyLabel("business", locale),
       amount: roundMoney(
         businessEntries.reduce((sum, entry) => sum + entry.amount, 0)
       ),
@@ -859,7 +987,7 @@ export function EntryFamilyReport({
     },
     {
       family: "correction" as const,
-      label: entryFamilyLabels.correction,
+      label: getEntryFamilyLabel("correction", locale),
       amount: roundMoney(
         correctionEntries.reduce((sum, entry) => sum + entry.amount, 0)
       ),
@@ -873,16 +1001,29 @@ export function EntryFamilyReport({
       <CardHeader className="gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle>Entry family report</CardTitle>
+            <CardTitle>
+              {locale === "vi" ? "Bao cao theo nhom giao dich" : "Entry family report"}
+            </CardTitle>
             <CardDescription className="mt-1">
-              Business events are real money activity. Corrections are ledger-fix actions like reversals and reconciliation adjustments.
+              {locale === "vi"
+                ? "Nghiep vu that la cac dong tien xay ra ngoai doi thuc. Dieu chinh la cac thao tac sua so nhu dao but toan hoac dieu chinh doi chieu."
+                : "Business events are real money activity. Corrections are ledger-fix actions like reversals and reconciliation adjustments."}
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
             {[
-              { key: "all" as const, label: "All activity" },
-              { key: "business" as const, label: "Business only" },
-              { key: "correction" as const, label: "Corrections only" },
+              {
+                key: "all" as const,
+                label: locale === "vi" ? "Tat ca hoat dong" : "All activity",
+              },
+              {
+                key: "business" as const,
+                label: locale === "vi" ? "Chi nghiep vu that" : "Business only",
+              },
+              {
+                key: "correction" as const,
+                label: locale === "vi" ? "Chi dieu chinh" : "Corrections only",
+              },
             ].map((option) => (
               <button
                 key={option.key}
@@ -908,24 +1049,29 @@ export function EntryFamilyReport({
               <XAxis dataKey="label" tickLine={false} axisLine={false} />
               <YAxis
                 tickFormatter={(value: number) =>
-                  formatCompactCurrency(value, snapshot.dataset.project.currencyCode)
+                  formatCompactCurrency(value, snapshot.dataset.project.currencyCode, locale)
                 }
               />
               <RechartsTooltip
                 content={
                   <MoneyTooltip
                     currencyCode={snapshot.dataset.project.currencyCode}
+                    locale={locale}
                   />
                 }
               />
-              <Bar dataKey="amount" name="Recorded amount">
+              <Bar dataKey="amount" name={locale === "vi" ? "Giá trị đã ghi" : "Recorded amount"}>
                 {rows.map((entry) => (
                   <Cell key={entry.family} fill={entry.fill} />
                 ))}
                 <LabelList
                   dataKey="count"
                   position="top"
-                  formatter={(value) => `${Number(value ?? 0)} entries`}
+                  formatter={(value) =>
+                    locale === "vi"
+                      ? `${Number(value ?? 0)} giao dịch`
+                      : `${Number(value ?? 0)} entries`
+                  }
                   className="fill-slate-500 text-[11px]"
                 />
               </Bar>
@@ -948,13 +1094,13 @@ export function EntryFamilyReport({
                   {row.label}
                 </span>
                 <Badge className="rounded-full bg-white text-slate-900 ring-1 ring-slate-200">
-                  {row.count} entries
+                  {locale === "vi" ? `${row.count} giao dịch` : `${row.count} entries`}
                 </Badge>
               </div>
               <p className="mt-2 text-sm text-slate-600">
-                Recorded amount:{" "}
+                {locale === "vi" ? "Giá trị đã ghi" : "Recorded amount"}:{" "}
                 <span className="font-medium text-slate-950">
-                  {formatCurrency(row.amount, snapshot.dataset.project.currencyCode)}
+                  {formatCurrency(row.amount, snapshot.dataset.project.currencyCode, locale)}
                 </span>
               </p>
             </div>

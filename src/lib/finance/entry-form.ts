@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 import {
-  entryTypeLabels,
+  getEntryTypeLabel,
   type EntryFamily,
 } from "@/lib/finance/types";
+import { defaultAppLocale, type AppLocale } from "@/lib/i18n/config";
 
 const optionalString = z.preprocess((value) => {
   if (typeof value !== "string") {
@@ -84,18 +85,63 @@ export function getPlannerEntryTypesForFamily(entryFamily: EntryFamily) {
   return plannerEntryTypesByFamily[entryFamily];
 }
 
-export function getPlannerEntryLabel(entryType: PlannerEntryType) {
-  return entryTypeLabels[entryType];
+export function getPlannerEntryLabel(
+  entryType: PlannerEntryType,
+  locale: AppLocale = defaultAppLocale
+) {
+  return getEntryTypeLabel(entryType, locale);
 }
 
-export const plannerEntrySchema = z
+function createPlannerEntrySchemaForLocale(locale: AppLocale) {
+  const validation =
+    locale === "vi"
+      ? {
+          description:
+            "Hay viet mo ta ngan de ca team hieu giao dich nay la gi.",
+          amount: "So tien phai lon hon 0.",
+          date: "Hay chon ngay hieu luc cua giao dich.",
+          chooseReceiver: "Hay chon nguoi nhan tien du an.",
+          choosePayer: "Hay chon nguoi chi tien du an.",
+          handoverDifferentMembers:
+            "Chuyen tien noi bo can 2 thanh vien khac nhau.",
+          repaymentDifferentMembers:
+            "Khoan thanh vien tra lai tien can 1 nguoi tra va 1 nguoi nhan khac nhau.",
+          chooseCapitalOwner: "Hay chon nguoi co so du von can thay doi.",
+          chooseAllocationMembers:
+            "Hay chon cac thanh vien cung chia khoan nay.",
+          chooseOneAdjustmentSide:
+            "Hay chon mot ben de dieu chinh tien du an ky vong.",
+          correctionOneSideOnly:
+            "Dieu chinh doi chieu chi duoc dung mot ben moi lan.",
+        }
+      : {
+          description:
+            "Add a short description so the team understands the entry.",
+          amount: "Amount must be greater than zero.",
+          date: "Choose the effective date for this entry.",
+          chooseReceiver: "Choose who receives the project money.",
+          choosePayer: "Choose who pays the project money out.",
+          handoverDifferentMembers:
+            "Cash handover needs two different members.",
+          repaymentDifferentMembers:
+            "Member repayment needs a payer and a receiver that are different members.",
+          chooseCapitalOwner: "Choose whose capital balance should change.",
+          chooseAllocationMembers:
+            "Choose the members who should share this amount.",
+          chooseOneAdjustmentSide:
+            "Choose one side to adjust expected project cash.",
+          correctionOneSideOnly:
+            "Reconciliation adjustment can only move one side at a time.",
+        };
+
+  return z
   .object({
     projectId: z.string().min(1),
     currencyCode: z.string().length(3),
     entryType: z.enum(plannerEntryTypes),
-    description: z.string().trim().min(5, "Add a short description."),
-    amount: z.coerce.number().positive("Amount must be greater than 0."),
-    effectiveDate: z.string().min(1, "Choose a date."),
+    description: z.string().trim().min(5, validation.description),
+    amount: z.coerce.number().positive(validation.amount),
+    effectiveDate: z.string().min(1, validation.date),
     cashInProjectMemberId: optionalString,
     cashOutProjectMemberId: optionalString,
     capitalOwnerProjectMemberId: optionalString,
@@ -131,7 +177,7 @@ export const plannerEntrySchema = z
     if (needsCashIn && !value.cashInProjectMemberId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Choose who receives the money.",
+        message: validation.chooseReceiver,
         path: ["cashInProjectMemberId"],
       });
     }
@@ -139,7 +185,7 @@ export const plannerEntrySchema = z
     if (needsCashOut && !value.cashOutProjectMemberId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Choose who pays the money out.",
+        message: validation.choosePayer,
         path: ["cashOutProjectMemberId"],
       });
     }
@@ -147,7 +193,7 @@ export const plannerEntrySchema = z
     if (value.entryType === "cash_handover" && value.cashInProjectMemberId === value.cashOutProjectMemberId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Cash handover must move money between two different members.",
+        message: validation.handoverDifferentMembers,
         path: ["cashInProjectMemberId"],
       });
     }
@@ -158,7 +204,7 @@ export const plannerEntrySchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Settlement payment must move between two different members.",
+        message: validation.repaymentDifferentMembers,
         path: ["cashInProjectMemberId"],
       });
     }
@@ -166,7 +212,7 @@ export const plannerEntrySchema = z
     if (needsCapitalOwner && !value.capitalOwnerProjectMemberId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Choose who owns this capital movement.",
+        message: validation.chooseCapitalOwner,
         path: ["capitalOwnerProjectMemberId"],
       });
     }
@@ -174,7 +220,7 @@ export const plannerEntrySchema = z
     if (needsAllocation && value.allocationProjectMemberIds.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Select at least one member to share this amount.",
+        message: validation.chooseAllocationMembers,
         path: ["allocationProjectMemberIds"],
       });
     }
@@ -186,8 +232,7 @@ export const plannerEntrySchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message:
-          "Choose one member side to adjust. Use money in to increase expected cash or money out by to decrease it.",
+        message: validation.chooseOneAdjustmentSide,
         path: ["cashInProjectMemberId"],
       });
     }
@@ -199,12 +244,20 @@ export const plannerEntrySchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message:
-          "Reconciliation adjustment should touch one side only, not both.",
+        message: validation.correctionOneSideOnly,
         path: ["cashInProjectMemberId"],
       });
     }
   });
+}
+
+export const plannerEntrySchema = createPlannerEntrySchemaForLocale(
+  defaultAppLocale
+);
+
+export function getPlannerEntrySchema(locale: AppLocale) {
+  return createPlannerEntrySchemaForLocale(locale);
+}
 
 export type PlannerEntryFormValues = z.input<typeof plannerEntrySchema>;
 export type PlannerEntryValues = z.output<typeof plannerEntrySchema>;

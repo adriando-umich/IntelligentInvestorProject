@@ -22,6 +22,10 @@
   - role changes
   - member removal / deactivation
   - invite resend UX
+- Run a focused language QA pass in both English and Vietnamese on the live app:
+  - check for any remaining English-only strings in less-frequent dashboard/chart states
+  - tighten Vietnamese wording where it still sounds too literal or overly technical
+  - confirm emoji flag rendering on Windows, macOS, iOS, and Android
 
 ## Next
 
@@ -84,4 +88,6 @@
 - Added a persistent project-section nav layout and a new `/members` route so project navigation no longer disappears when opening subpages like reconciliation.
 - Added live invite-link creation, revoke, and self-join acceptance flow backed by the new `project_invites` table and RPCs.
 - Updated auth forms so email sign-in/sign-up preserve `next` redirects for invite acceptance and other deep links.
+- Added a first-pass EN/VI localization layer with a global language switcher, locale cookie, and locale-aware formatting helpers.
+- Localized the main route headers plus key finance surfaces including sign-in, projects, create-project, member statements, tags, invite acceptance, ledger guide/planner, settlements, reconciliation, and much of the dashboard/chart storytelling.
 - Moved the remaining work to end-to-end real-user validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

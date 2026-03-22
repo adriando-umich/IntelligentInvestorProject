@@ -10,6 +10,7 @@ import {
   updateProjectTagAction,
   type ProjectTagActionState,
 } from "@/app/actions/project-tags";
+import { useLocale } from "@/components/app/locale-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +54,7 @@ export function ProjectTagManager({
   tagSummaries: TagSummary[];
   liveModeEnabled: boolean;
 }) {
+  const { locale } = useLocale();
   const router = useRouter();
   const [createName, setCreateName] = useState("");
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
@@ -64,6 +66,68 @@ export function ProjectTagManager({
     () => tagSummaries.filter((tag) => tag.entryCount > 0).length,
     [tagSummaries]
   );
+  const copy =
+    locale === "vi"
+      ? {
+          tagsInProject: "Tag trong dự án",
+          tagsInUse: "Tag đang được dùng",
+          unusedTags: "Tag chưa dùng",
+          tagLibrary: "Thư viện tag",
+          tagLibraryDescription:
+            "Tạo các nhóm báo cáo để team tái sử dụng trên giao dịch. Mọi người đều có thể tạo tag, còn đổi tên và xóa nên được xem là thao tác dọn dẹp ở cấp manager.",
+          demoDisabled:
+            "CRUD tag bị tắt trong chế độ demo. Hãy đăng nhập bằng tài khoản live để lưu thay đổi.",
+          liveHint:
+            "Tạo tag đã chạy trên dự án live. Đổi tên và xóa có thể cần quyền manager, và xóa còn phụ thuộc migration tag-policy mới nhất trên Supabase.",
+          createPlaceholder:
+            "Tạo tag như Pháp lý, Tiền cọc khách, hoặc Lãi vay ngân hàng",
+          createTag: "Tạo tag",
+          noTags: "Chưa có tag nào. Hãy tạo nhóm báo cáo đầu tiên ở đây.",
+          tag: "Tag",
+          entries: "Số giao dịch",
+          taggedAmount: "Tổng giá trị gắn tag",
+          inflow: "Tiền vào",
+          expense: "Chi phí",
+          actions: "Thao tác",
+          unused: "Chưa dùng",
+          inUse: "Đang dùng",
+          save: "Lưu",
+          cancel: "Hủy",
+          rename: "Đổi tên",
+          delete: "Xóa",
+          deleteConfirm: (tagName: string) =>
+            `Xóa tag "${tagName}"? Hành động này cũng sẽ gỡ tag khỏi các giao dịch cũ.`,
+        }
+      : {
+          tagsInProject: "Tags in this project",
+          tagsInUse: "Tags already in use",
+          unusedTags: "Unused tags",
+          tagLibrary: "Tag library",
+          tagLibraryDescription:
+            "Create the reporting buckets people will reuse on transactions. Members can create tags. Rename and delete should be treated as manager-level cleanup.",
+          demoDisabled:
+            "Tag CRUD is disabled in demo mode. Sign in with a live account to persist changes.",
+          liveHint:
+            "Create works on the live project. Rename and delete may require manager permission, and delete also depends on the latest tag-policy migration being present in Supabase.",
+          createPlaceholder:
+            "Create a tag like Legal, Buyer deposit, or Bank interest",
+          createTag: "Create tag",
+          noTags: "No tags yet. Create your first reporting bucket here.",
+          tag: "Tag",
+          entries: "Entries",
+          taggedAmount: "Total tagged amount",
+          inflow: "Inflow",
+          expense: "Expense",
+          actions: "Actions",
+          unused: "Unused",
+          inUse: "In use",
+          save: "Save",
+          cancel: "Cancel",
+          rename: "Rename",
+          delete: "Delete",
+          deleteConfirm: (tagName: string) =>
+            `Delete the tag "${tagName}"? This also removes it from older tagged entries.`,
+        };
 
   function handleCreate() {
     startTransition(async () => {
@@ -110,9 +174,7 @@ export function ProjectTagManager({
   }
 
   function handleDelete(tag: TagSummary) {
-    const confirmed = window.confirm(
-      `Delete the tag "${tag.name}"? This also removes it from older tagged entries.`
-    );
+    const confirmed = window.confirm(copy.deleteConfirm(tag.name));
 
     if (!confirmed) {
       return;
@@ -140,7 +202,7 @@ export function ProjectTagManager({
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="rounded-[1.5rem] border-white/70 bg-white/90">
           <CardContent className="px-5 py-5">
-            <p className="text-sm text-slate-500">Tags in this project</p>
+            <p className="text-sm text-slate-500">{copy.tagsInProject}</p>
             <p className="mt-2 text-3xl font-semibold text-slate-950">
               {tagSummaries.length}
             </p>
@@ -148,7 +210,7 @@ export function ProjectTagManager({
         </Card>
         <Card className="rounded-[1.5rem] border-white/70 bg-white/90">
           <CardContent className="px-5 py-5">
-            <p className="text-sm text-slate-500">Tags already in use</p>
+            <p className="text-sm text-slate-500">{copy.tagsInUse}</p>
             <p className="mt-2 text-3xl font-semibold text-slate-950">
               {usedTagCount}
             </p>
@@ -156,7 +218,7 @@ export function ProjectTagManager({
         </Card>
         <Card className="rounded-[1.5rem] border-white/70 bg-white/90">
           <CardContent className="px-5 py-5">
-            <p className="text-sm text-slate-500">Unused tags</p>
+            <p className="text-sm text-slate-500">{copy.unusedTags}</p>
             <p className="mt-2 text-3xl font-semibold text-slate-950">
               {Math.max(tagSummaries.length - usedTagCount, 0)}
             </p>
@@ -168,25 +230,18 @@ export function ProjectTagManager({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FolderTree className="size-4 text-teal-700" />
-            Tag library
+            {copy.tagLibrary}
           </CardTitle>
-          <CardDescription>
-            Create the reporting buckets people will reuse on transactions.
-            Members can create tags. Rename and delete should be treated as
-            manager-level cleanup.
-          </CardDescription>
+          <CardDescription>{copy.tagLibraryDescription}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!liveModeEnabled ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-              Tag CRUD is disabled in demo mode. Sign in with a live account to
-              persist changes.
+              {copy.demoDisabled}
             </div>
           ) : (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600">
-              Create works on the live project. Rename and delete may require
-              manager permission, and delete also depends on the latest
-              tag-policy migration being present in Supabase.
+              {copy.liveHint}
             </div>
           )}
 
@@ -206,7 +261,7 @@ export function ProjectTagManager({
             <Input
               value={createName}
               onChange={(event) => setCreateName(event.target.value)}
-              placeholder="Create a tag like Legal, Buyer deposit, or Bank interest"
+              placeholder={copy.createPlaceholder}
               disabled={!liveModeEnabled || isPending}
             />
             <Button
@@ -220,25 +275,25 @@ export function ProjectTagManager({
               ) : (
                 <Plus className="size-4" />
               )}
-              Create tag
+              {copy.createTag}
             </Button>
           </div>
 
           {tagSummaries.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
-              No tags yet. Create your first reporting bucket here.
+              {copy.noTags}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tag</TableHead>
+                  <TableHead>{copy.tag}</TableHead>
                   <TableHead>Slug</TableHead>
-                  <TableHead>Entries</TableHead>
-                  <TableHead>Total tagged amount</TableHead>
-                  <TableHead>Inflow</TableHead>
-                  <TableHead>Expense</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{copy.entries}</TableHead>
+                  <TableHead>{copy.taggedAmount}</TableHead>
+                  <TableHead>{copy.inflow}</TableHead>
+                  <TableHead>{copy.expense}</TableHead>
+                  <TableHead className="text-right">{copy.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -258,11 +313,11 @@ export function ProjectTagManager({
                             <p className="font-medium text-slate-950">{tag.name}</p>
                             {tag.entryCount === 0 ? (
                               <Badge className="rounded-full bg-slate-100 text-slate-700">
-                                Unused
+                                {copy.unused}
                               </Badge>
                             ) : (
                               <Badge className="rounded-full bg-teal-100 text-teal-800">
-                                In use
+                                {copy.inUse}
                               </Badge>
                             )}
                           </div>
@@ -273,13 +328,13 @@ export function ProjectTagManager({
                       </TableCell>
                       <TableCell className="align-top">{tag.entryCount}</TableCell>
                       <TableCell className="align-top">
-                        {formatCurrency(tag.taggedAmount, currencyCode)}
+                        {formatCurrency(tag.taggedAmount, currencyCode, locale)}
                       </TableCell>
                       <TableCell className="align-top text-emerald-700">
-                        {formatCurrency(tag.inflowAmount, currencyCode)}
+                        {formatCurrency(tag.inflowAmount, currencyCode, locale)}
                       </TableCell>
                       <TableCell className="align-top text-rose-700">
-                        {formatCurrency(tag.expenseAmount, currencyCode)}
+                        {formatCurrency(tag.expenseAmount, currencyCode, locale)}
                       </TableCell>
                       <TableCell className="align-top">
                         <div className="flex justify-end gap-2">
@@ -292,7 +347,7 @@ export function ProjectTagManager({
                                 disabled={!liveModeEnabled || isPending}
                                 onClick={() => handleUpdate(tag.id)}
                               >
-                                Save
+                                {copy.save}
                               </Button>
                               <Button
                                 type="button"
@@ -302,7 +357,7 @@ export function ProjectTagManager({
                                 disabled={isPending}
                                 onClick={cancelEditing}
                               >
-                                Cancel
+                                {copy.cancel}
                               </Button>
                             </>
                           ) : (
@@ -316,7 +371,7 @@ export function ProjectTagManager({
                                 onClick={() => startEditing(tag)}
                               >
                                 <PencilLine className="size-3.5" />
-                                Rename
+                                {copy.rename}
                               </Button>
                               <Button
                                 type="button"
@@ -327,7 +382,7 @@ export function ProjectTagManager({
                                 onClick={() => handleDelete(tag)}
                               >
                                 <Trash2 className="size-3.5" />
-                                Delete
+                                {copy.delete}
                               </Button>
                             </>
                           )}

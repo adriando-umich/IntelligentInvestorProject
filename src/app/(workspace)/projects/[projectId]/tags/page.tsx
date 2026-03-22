@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { ProjectTagManager } from "@/components/finance/project-tag-manager";
 import { getSessionState } from "@/lib/auth/session";
 import { getProjectSnapshot } from "@/lib/data/repository";
+import { getServerI18n } from "@/lib/i18n/server";
 
 export default async function ProjectTagsPage({
   params,
@@ -12,7 +13,8 @@ export default async function ProjectTagsPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const [snapshot, session] = await Promise.all([
+  const [{ locale }, snapshot, session] = await Promise.all([
+    getServerI18n(),
     getProjectSnapshot(projectId),
     getSessionState(),
   ]);
@@ -83,9 +85,17 @@ export default async function ProjectTagsPage({
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Project tags"
-        title={`Manage tags for ${snapshot.dataset.project.name}`}
-        description="Create, rename, and clean up the reporting tags that help the team roll up inflows and costs later."
+        eyebrow={locale === "vi" ? "Tag dự án" : "Project tags"}
+        title={
+          locale === "vi"
+            ? `Quản lý tag cho ${snapshot.dataset.project.name}`
+            : `Manage tags for ${snapshot.dataset.project.name}`
+        }
+        description={
+          locale === "vi"
+            ? "Tạo, đổi tên và dọn các tag báo cáo để team dễ tổng hợp tiền vào và chi phí về sau."
+            : "Create, rename, and clean up the reporting tags that help the team roll up inflows and costs later."
+        }
       />
 
       <div className="flex flex-wrap gap-3">
@@ -93,19 +103,19 @@ export default async function ProjectTagsPage({
           href={`/projects/${snapshot.dataset.project.id}`}
           className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
-          Back to dashboard
+          {locale === "vi" ? "Về dashboard" : "Back to dashboard"}
         </Link>
         <Link
           href={`/projects/${snapshot.dataset.project.id}/ledger/new`}
           className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
         >
-          Add transaction
+          {locale === "vi" ? "Thêm giao dịch" : "Add transaction"}
         </Link>
         <Link
           href={`/projects/${snapshot.dataset.project.id}/ledger/guide`}
           className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
-          Open transaction guide
+          {locale === "vi" ? "Mở hướng dẫn giao dịch" : "Open transaction guide"}
         </Link>
       </div>
 

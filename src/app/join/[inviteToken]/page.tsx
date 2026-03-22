@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { PageHeader } from "@/components/app/page-header";
 import { ProjectInviteAcceptCard } from "@/components/finance/project-invite-accept-card";
+import { getServerI18n } from "@/lib/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type InvitePreview = {
@@ -21,6 +22,7 @@ export default async function JoinProjectPage({
   params: Promise<{ inviteToken: string }>;
 }) {
   const { inviteToken } = await params;
+  const { locale } = await getServerI18n();
   const supabase = await createSupabaseServerClient();
 
   if (!supabase) {
@@ -44,17 +46,29 @@ export default async function JoinProjectPage({
   return (
     <div className="mx-auto max-w-3xl space-y-8 py-6">
       <PageHeader
-        eyebrow="Project invite"
-        title={preview?.project_name ? `Join ${preview.project_name}` : "Join a project"}
+        eyebrow={locale === "vi" ? "Lời mời dự án" : "Project invite"}
+        title={
+          preview?.project_name
+            ? locale === "vi"
+              ? `Tham gia ${preview.project_name}`
+              : `Join ${preview.project_name}`
+            : locale === "vi"
+              ? "Tham gia dự án"
+              : "Join a project"
+        }
         description={
           preview?.project_description ??
-          "Accept the invite to enter the live project workspace."
+            (locale === "vi"
+              ? "Chấp nhận lời mời để vào workspace live của dự án."
+              : "Accept the invite to enter the live project workspace.")
         }
       />
 
       {!preview || error ? (
         <div className="rounded-[1.75rem] border border-rose-200 bg-rose-50 px-6 py-6 text-sm leading-6 text-rose-800">
-          This invite link could not be loaded. It may be invalid, revoked, or expired.
+          {locale === "vi"
+            ? "Không thể tải link mời này. Link có thể không hợp lệ, đã bị thu hồi hoặc đã hết hạn."
+            : "This invite link could not be loaded. It may be invalid, revoked, or expired."}
         </div>
       ) : (
         <ProjectInviteAcceptCard

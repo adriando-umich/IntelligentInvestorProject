@@ -18,7 +18,8 @@ import {
   signUpAction,
   type AuthActionState,
 } from "@/app/actions/auth";
-import { APP_NAME, APP_TAGLINE } from "@/lib/app-config";
+import { useLocale } from "@/components/app/locale-provider";
+import { APP_NAME } from "@/lib/app-config";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PublicAuthSettings } from "@/lib/supabase/public-auth-settings";
@@ -86,6 +87,7 @@ export function SignInForm({
 }: {
   authSettings: PublicAuthSettings;
 }) {
+  const { text } = useLocale();
   const searchParams = useSearchParams();
   const [signInState, signInFormAction, signInPending] = useActionState(
     signInAction,
@@ -115,7 +117,7 @@ export function SignInForm({
 
   async function handleGoogleSignIn() {
     if (!isSupabaseConfigured) {
-      setOauthMessage("Google sign-in is unavailable until Supabase auth is configured.");
+      setOauthMessage(text.signIn.googleSetupMissing);
       return;
     }
 
@@ -157,7 +159,7 @@ export function SignInForm({
                   {APP_NAME}
                 </h1>
                 <p className="max-w-lg text-sm leading-7 text-slate-200">
-                  {APP_TAGLINE}
+                  {text.app.tagline}
                 </p>
               </div>
             </div>
@@ -166,32 +168,28 @@ export function SignInForm({
               <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
                 <div className="flex items-center gap-2 text-teal-100">
                   <WalletCards className="size-4" />
-                  <p className="text-sm font-medium">Plain-language money view</p>
+                  <p className="text-sm font-medium">{text.signIn.plainLanguageTitle}</p>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-slate-200">
-                  Project cash, team debts, capital, and profit stay separated
-                  so nobody has to decode accounting terms.
+                  {text.signIn.plainLanguageDescription}
                 </p>
               </div>
               <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
                 <div className="flex items-center gap-2 text-teal-100">
                   <HandCoins className="size-4" />
-                  <p className="text-sm font-medium">Shared-expense settlement</p>
+                  <p className="text-sm font-medium">{text.signIn.settlementTitle}</p>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-slate-200">
-                  The app suggests who should pay whom, Splitwise-style, without
-                  mixing that up with profit payouts.
+                  {text.signIn.settlementDescription}
                 </p>
               </div>
               <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5 sm:col-span-2">
                 <div className="flex items-center gap-2 text-teal-100">
                   <PiggyBank className="size-4" />
-                  <p className="text-sm font-medium">Capital-based profit logic</p>
+                  <p className="text-sm font-medium">{text.signIn.capitalTitle}</p>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-slate-200">
-                  Profit weights only follow capital contributions. Operating
-                  income and expense still show up clearly, but they do not
-                  silently rewrite ownership.
+                  {text.signIn.capitalDescription}
                 </p>
               </div>
             </div>
@@ -201,12 +199,12 @@ export function SignInForm({
             <div className="space-y-5">
               <div className="space-y-2">
                 <CardTitle className="font-heading text-2xl text-slate-950">
-                  Access the workspace
+                  {text.signIn.accessWorkspaceTitle}
                 </CardTitle>
                 <p className="text-sm leading-6 text-slate-600">
                   {isSupabaseConfigured
-                    ? "Sign in with your project account, or create one if this is your first time here."
-                    : "This deployment is currently running without live Supabase auth, so the sample workspace is the available path."}
+                    ? text.signIn.accessWorkspaceLiveDescription
+                    : text.signIn.accessWorkspaceDemoDescription}
                 </p>
               </div>
 
@@ -227,19 +225,16 @@ export function SignInForm({
                           <GoogleMark className="size-4" />
                         )}
                         {oauthPending
-                          ? "Redirecting to Google..."
-                          : "Continue with Google"}
+                          ? text.signIn.googleRedirecting
+                          : text.signIn.googleContinue}
                       </Button>
                       <p className="text-xs leading-5 text-slate-500">
-                        Use a Google account for a quicker first login. New members
-                        can still create a password-based account below if they
-                        prefer.
+                        {text.signIn.googleHelper}
                       </p>
                     </>
                   ) : (
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                      Google sign-in is not enabled for this workspace yet. Use
-                      email below for now.
+                      {text.signIn.googleUnavailable}
                     </div>
                   )}
                   <MessageBanner
@@ -252,7 +247,7 @@ export function SignInForm({
                   {emailAuthAvailable ? (
                     <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
                       <span className="h-px flex-1 bg-slate-200" />
-                      Or continue with email
+                      {text.signIn.continueWithEmail}
                       <span className="h-px flex-1 bg-slate-200" />
                     </div>
                   ) : null}
@@ -271,13 +266,13 @@ export function SignInForm({
                     value="sign-in"
                     className="rounded-[1rem] data-active:bg-white"
                   >
-                    Sign in
+                    {text.signIn.signInTab}
                   </TabsTrigger>
                   <TabsTrigger
                     value="sign-up"
                     className="rounded-[1rem] data-active:bg-white"
                   >
-                    Create account
+                    {text.signIn.signUpTab}
                   </TabsTrigger>
                 </TabsList>
 
@@ -286,7 +281,7 @@ export function SignInForm({
                     <form action={signInFormAction} className="space-y-4">
                       <input type="hidden" name="nextPath" value={safeNextPath} />
                       <div className="space-y-2">
-                        <Label htmlFor="sign-in-email">Email</Label>
+                        <Label htmlFor="sign-in-email">{text.common.email}</Label>
                         <Input
                           id="sign-in-email"
                           name="email"
@@ -296,7 +291,7 @@ export function SignInForm({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="sign-in-password">Password</Label>
+                        <Label htmlFor="sign-in-password">{text.common.password}</Label>
                         <Input
                           id="sign-in-password"
                           name="password"
@@ -312,14 +307,14 @@ export function SignInForm({
                         disabled={signInPending}
                       >
                         <LogIn className="size-4" />
-                        {signInPending ? "Signing in..." : "Sign in"}
+                        {signInPending ? text.common.signingIn : text.common.signIn}
                       </Button>
                     </form>
                   ) : (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
                       {isSupabaseConfigured
-                        ? "Email sign-in is currently disabled for this workspace."
-                        : "Live sign-in is disabled until Supabase is configured for this environment."}
+                        ? text.signIn.emailDisabledConfigured
+                        : text.signIn.emailDisabledUnconfigured}
                     </div>
                   )}
                 </TabsContent>
@@ -329,7 +324,7 @@ export function SignInForm({
                     <form action={signUpFormAction} className="space-y-4">
                       <input type="hidden" name="nextPath" value={safeNextPath} />
                       <div className="space-y-2">
-                        <Label htmlFor="display-name">Display name</Label>
+                        <Label htmlFor="display-name">{text.common.displayName}</Label>
                         <Input
                           id="display-name"
                           name="displayName"
@@ -338,7 +333,7 @@ export function SignInForm({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="sign-up-email">Email</Label>
+                        <Label htmlFor="sign-up-email">{text.common.email}</Label>
                         <Input
                           id="sign-up-email"
                           name="email"
@@ -348,20 +343,19 @@ export function SignInForm({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="sign-up-password">Password</Label>
+                        <Label htmlFor="sign-up-password">{text.common.password}</Label>
                         <Input
                           id="sign-up-password"
                           name="password"
                           type="password"
                           autoComplete="new-password"
-                          placeholder="At least 8 characters"
+                          placeholder={text.signIn.passwordPlaceholder}
                         />
                       </div>
                       <MessageBanner state={signUpState} />
                       {authSettings.emailConfirmationRequired ? (
                         <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-                          New accounts need email confirmation before the first
-                          live sign-in.
+                          {text.signIn.confirmationRequired}
                         </div>
                       ) : null}
                       <Button
@@ -370,14 +364,16 @@ export function SignInForm({
                         disabled={signUpPending}
                       >
                         <UserPlus className="size-4" />
-                        {signUpPending ? "Creating account..." : "Create account"}
+                        {signUpPending
+                          ? text.common.creatingAccount
+                          : text.common.createAccount}
                       </Button>
                     </form>
                   ) : (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
                       {isSupabaseConfigured
-                        ? "Email account creation is currently disabled for this workspace."
-                        : "Account creation will be available once Supabase auth is enabled for this deployment."}
+                        ? text.signIn.signUpDisabledConfigured
+                        : text.signIn.signUpDisabledUnconfigured}
                     </div>
                   )}
                 </TabsContent>
@@ -386,12 +382,10 @@ export function SignInForm({
               <div className="rounded-[1.5rem] border border-teal-200 bg-teal-50 px-5 py-5">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-teal-950">
-                    Need a quick walkthrough first?
+                    {text.signIn.demoCardTitle}
                   </p>
                   <p className="text-sm leading-6 text-teal-900/80">
-                    Open the sample workspace to explore the dashboard, member
-                    statements, settlements, and reconciliation screens before
-                    entering live data.
+                    {text.signIn.demoCardDescription}
                   </p>
                 </div>
                 <form action={continueInDemoAction} className="mt-4">
@@ -401,7 +395,7 @@ export function SignInForm({
                     className="w-full rounded-2xl border-teal-200 bg-white text-teal-900 hover:bg-teal-100"
                   >
                     <ShieldCheck className="size-4" />
-                    Open sample workspace
+                    {text.common.openSampleWorkspace}
                   </Button>
                 </form>
               </div>

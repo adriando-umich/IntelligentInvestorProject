@@ -8,6 +8,7 @@ import {
   revokeProjectInviteAction,
   type ProjectInviteActionState,
 } from "@/app/actions/project-invites";
+import { useLocale } from "@/components/app/locale-provider";
 import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateLabel } from "@/lib/format";
+import { getMemberRoleLabel } from "@/lib/finance/types";
 
 type MemberSummary = {
   id: string;
@@ -51,6 +53,7 @@ type InviteSummary = {
 const initialState: ProjectInviteActionState = { status: "idle" };
 
 function RoleBadge({ role }: { role: MemberSummary["role"] | InviteSummary["role"] }) {
+  const { locale } = useLocale();
   const className =
     role === "owner"
       ? "bg-slate-950 text-white"
@@ -60,7 +63,7 @@ function RoleBadge({ role }: { role: MemberSummary["role"] | InviteSummary["role
 
   return (
     <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${className}`}>
-      {role}
+      {getMemberRoleLabel(role, locale)}
     </span>
   );
 }
@@ -80,6 +83,7 @@ export function ProjectMemberManager({
   canManageInvites: boolean;
   liveModeEnabled: boolean;
 }) {
+  const { locale } = useLocale();
   const [createState, createAction, createPending] = useActionState(
     createProjectInviteAction,
     initialState
@@ -93,14 +97,116 @@ export function ProjectMemberManager({
     () => invites.filter((invite) => invite.status === "pending"),
     [invites]
   );
+  const copy =
+    locale === "vi"
+      ? {
+          currentMembers: "Số thành viên hiện tại",
+          pendingInvites: "Lời mời đang chờ",
+          joinFlow: "Cách tham gia",
+          joinFlowDescription: "Chia sẻ link để thành viên tự chấp nhận",
+          currentMembersTitle: "Thành viên hiện tại",
+          currentMembersDescription: `Mỗi người trong ${projectName} đều có tài khoản riêng và có thể ghi nhận giao dịch theo quyền của mình.`,
+          email: "Email",
+          role: "Vai trò",
+          joined: "Ngày tham gia",
+          noEmail: "Chưa có email",
+          howMembersJoinTitle: "Thành viên tham gia như thế nào",
+          howMembersJoinDescription:
+            "Tạo link mời rồi gửi trực tiếp cho đồng đội. Họ chỉ cần đăng nhập và tự chấp nhận lời mời.",
+          emailRestrictedTitle: "Link giới hạn theo email",
+          emailRestrictedDescription:
+            "Nhập email nếu bạn chỉ muốn đúng một người cụ thể được phép nhận lời mời này.",
+          reusableInviteTitle: "Link dùng lại được",
+          reusableInviteDescription:
+            "Để trống email nếu bạn muốn tạo một link chia sẻ mà bất kỳ thành viên nào đã đăng nhập cũng có thể dùng.",
+          inviteMemberTitle: "Mời thành viên",
+          inviteMemberDescription:
+            "Owner và manager có thể tạo link để thành viên tự vào dự án.",
+          inviteDisabledDemo: "Luồng mời thành viên bị tắt trong workspace mẫu.",
+          inviteDisabledPermission:
+            "Chỉ owner và manager mới có thể tạo link mời cho dự án này.",
+          restrictEmail: "Giới hạn cho một email (không bắt buộc)",
+          roleAfterJoining: "Vai trò sau khi tham gia",
+          createInvite: "Tạo link mời",
+          creatingInvite: "Đang tạo lời mời...",
+          copyInvite: "Sao chép link mời",
+          pendingInviteLinksTitle: "Các link mời đang chờ",
+          pendingInviteLinksDescription:
+            "Manager có thể gửi lại hoặc thu hồi các link này bất kỳ lúc nào trước khi chúng được chấp nhận.",
+          noInvites: "Chưa có link mời nào.",
+          invite: "Lời mời",
+          status: "Trạng thái",
+          expires: "Hết hạn",
+          created: "Ngày tạo",
+          action: "Thao tác",
+          reusableShareLink: "Link chia sẻ dùng lại được",
+          revoke: "Thu hồi",
+          member: "Thành viên",
+          manager: "Quản lý",
+        }
+      : {
+          currentMembers: "Current members",
+          pendingInvites: "Pending invites",
+          joinFlow: "Join flow",
+          joinFlowDescription: "Share a link and let members accept it themselves",
+          currentMembersTitle: "Current members",
+          currentMembersDescription: `Everyone in ${projectName} gets their own login and can record project transactions according to their role.`,
+          email: "Email",
+          role: "Role",
+          joined: "Joined",
+          noEmail: "No email",
+          howMembersJoinTitle: "How members join",
+          howMembersJoinDescription:
+            "Create an invite link, then send it directly to the teammate. They sign in and accept the invite themselves.",
+          emailRestrictedTitle: "Email-restricted invite",
+          emailRestrictedDescription:
+            "Add an email if only one specific teammate should be allowed to accept.",
+          reusableInviteTitle: "Reusable invite link",
+          reusableInviteDescription:
+            "Leave the email blank if you want a shareable link that any signed-in teammate can use.",
+          inviteMemberTitle: "Invite a member",
+          inviteMemberDescription:
+            "Owners and managers can generate share links for members to accept on their own.",
+          inviteDisabledDemo: "Invite flow is disabled in the sample workspace.",
+          inviteDisabledPermission:
+            "Only owners and managers can create invite links for this project.",
+          restrictEmail: "Restrict to one email (optional)",
+          roleAfterJoining: "Role after joining",
+          createInvite: "Create invite link",
+          creatingInvite: "Creating invite...",
+          copyInvite: "Copy invite link",
+          pendingInviteLinksTitle: "Pending invite links",
+          pendingInviteLinksDescription:
+            "Managers can resend or revoke these links any time before they are accepted.",
+          noInvites: "No invite links yet.",
+          invite: "Invite",
+          status: "Status",
+          expires: "Expires",
+          created: "Created",
+          action: "Action",
+          reusableShareLink: "Reusable share link",
+          revoke: "Revoke",
+          member: "Member",
+          manager: "Manager",
+        };
+  const copyButtonLabel = locale === "vi" ? "Sao chep" : "Copy";
+  const copiedMessage = locale === "vi" ? "Da sao chep link moi." : "Invite link copied.";
+  const copyFailedMessage =
+    locale === "vi"
+      ? "Khong the sao chep tu dong. Ban van co the tu copy link nay."
+      : "Could not copy automatically. You can still copy the link manually.";
+  const revokeFailedMessage =
+    locale === "vi" ? "Khong the thu hoi loi moi." : "Unable to revoke invite.";
+  const revokedMessage = locale === "vi" ? "Da thu hoi loi moi." : "Invite revoked.";
+  const memberLabel = locale === "vi" ? "Thanh vien" : "Member";
 
   async function copyInvite(link: string) {
     try {
       await navigator.clipboard.writeText(link);
-      setCopyMessage("Invite link copied.");
+      setCopyMessage(copiedMessage);
       setTimeout(() => setCopyMessage(null), 2500);
     } catch {
-      setCopyMessage("Could not copy automatically. You can still copy the link manually.");
+      setCopyMessage(copyFailedMessage);
       setTimeout(() => setCopyMessage(null), 3500);
     }
   }
@@ -113,11 +219,11 @@ export function ProjectMemberManager({
       const result = await revokeProjectInviteAction(projectId, inviteId);
 
       if (result.status === "error") {
-        setRevokeError(result.message ?? "Unable to revoke invite.");
+        setRevokeError(result.message ?? revokeFailedMessage);
         return;
       }
 
-      setRevokeMessage(result.message ?? "Invite revoked.");
+      setRevokeMessage(result.message ?? revokedMessage);
     });
   }
 
@@ -130,7 +236,7 @@ export function ProjectMemberManager({
               <Users className="size-5" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Current members</p>
+              <p className="text-sm text-slate-500">{copy.currentMembers}</p>
               <p className="text-2xl font-semibold text-slate-950">{members.length}</p>
             </div>
           </CardContent>
@@ -141,7 +247,7 @@ export function ProjectMemberManager({
               <Link2 className="size-5" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Pending invites</p>
+              <p className="text-sm text-slate-500">{copy.pendingInvites}</p>
               <p className="text-2xl font-semibold text-slate-950">{pendingInvites.length}</p>
             </div>
           </CardContent>
@@ -152,9 +258,9 @@ export function ProjectMemberManager({
               <ShieldCheck className="size-5" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Join flow</p>
+              <p className="text-sm text-slate-500">{copy.joinFlow}</p>
               <p className="text-sm font-medium text-slate-900">
-                Share a link and let members accept it themselves
+                {copy.joinFlowDescription}
               </p>
             </div>
           </CardContent>
@@ -163,19 +269,19 @@ export function ProjectMemberManager({
 
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>Current members</CardTitle>
+          <CardTitle>{copy.currentMembersTitle}</CardTitle>
           <CardDescription>
-            Everyone in {projectName} gets their own login and can record project transactions according to their role.
+            {copy.currentMembersDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Member</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Joined</TableHead>
+                <TableHead>{memberLabel}</TableHead>
+                <TableHead>{copy.email}</TableHead>
+                <TableHead>{copy.role}</TableHead>
+                <TableHead>{copy.joined}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -192,11 +298,11 @@ export function ProjectMemberManager({
                       <span className="font-medium text-slate-950">{member.displayName}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-slate-600">{member.email || "No email"}</TableCell>
+                  <TableCell className="text-slate-600">{member.email || copy.noEmail}</TableCell>
                   <TableCell>
                     <RoleBadge role={member.role} />
                   </TableCell>
-                  <TableCell>{formatDateLabel(member.joinedAt)}</TableCell>
+                  <TableCell>{formatDateLabel(member.joinedAt, locale)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -207,22 +313,22 @@ export function ProjectMemberManager({
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card className="rounded-[1.75rem] border-white/70 bg-[radial-gradient(circle_at_top_left,_rgba(13,148,136,0.18),_transparent_34%),linear-gradient(180deg,_#0f172a_0%,_#1e293b_100%)] text-white shadow-[0_24px_80px_-45px_rgba(15,23,42,0.55)]">
           <CardHeader>
-            <CardTitle className="text-white">How members join</CardTitle>
+            <CardTitle className="text-white">{copy.howMembersJoinTitle}</CardTitle>
             <CardDescription className="text-slate-200">
-              Create an invite link, then send it directly to the teammate. They sign in and accept the invite themselves.
+              {copy.howMembersJoinDescription}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm leading-6 text-slate-200">
             <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
-              <p className="font-medium text-teal-100">Email-restricted invite</p>
+              <p className="font-medium text-teal-100">{copy.emailRestrictedTitle}</p>
               <p className="mt-2">
-                Add an email if only one specific teammate should be allowed to accept.
+                {copy.emailRestrictedDescription}
               </p>
             </div>
             <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
-              <p className="font-medium text-teal-100">Reusable invite link</p>
+              <p className="font-medium text-teal-100">{copy.reusableInviteTitle}</p>
               <p className="mt-2">
-                Leave the email blank if you want a shareable link that any signed-in teammate can use.
+                {copy.reusableInviteDescription}
               </p>
             </div>
           </CardContent>
@@ -230,25 +336,25 @@ export function ProjectMemberManager({
 
         <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
           <CardHeader>
-            <CardTitle>Invite a member</CardTitle>
-            <CardDescription>
-              Owners and managers can generate share links for members to accept on their own.
-            </CardDescription>
+          <CardTitle>{copy.inviteMemberTitle}</CardTitle>
+          <CardDescription>
+            {copy.inviteMemberDescription}
+          </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             {!liveModeEnabled ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                Invite flow is disabled in the sample workspace.
+                {copy.inviteDisabledDemo}
               </div>
             ) : !canManageInvites ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                Only owners and managers can create invite links for this project.
+                {copy.inviteDisabledPermission}
               </div>
             ) : (
               <form action={createAction} className="space-y-4">
                 <input type="hidden" name="projectId" value={projectId} />
                 <div className="space-y-2">
-                  <Label htmlFor="invite-email">Restrict to one email (optional)</Label>
+                  <Label htmlFor="invite-email">{copy.restrictEmail}</Label>
                   <Input
                     id="invite-email"
                     name="email"
@@ -258,15 +364,15 @@ export function ProjectMemberManager({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="invite-role">Role after joining</Label>
+                  <Label htmlFor="invite-role">{copy.roleAfterJoining}</Label>
                   <select
                     id="invite-role"
                     name="role"
                     defaultValue="member"
                     className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300 sm:max-w-[220px]"
                   >
-                    <option value="member">Member</option>
-                    <option value="manager">Manager</option>
+                    <option value="member">{copy.member}</option>
+                    <option value="manager">{copy.manager}</option>
                   </select>
                 </div>
                 {createState.status === "error" ? (
@@ -290,7 +396,7 @@ export function ProjectMemberManager({
                         onClick={() => copyInvite(createState.inviteLink!)}
                       >
                         <Copy className="size-4" />
-                        Copy invite link
+                        {copy.copyInvite}
                       </Button>
                     ) : null}
                   </div>
@@ -301,7 +407,7 @@ export function ProjectMemberManager({
                   disabled={createPending}
                 >
                   <Mail className="size-4" />
-                  {createPending ? "Creating invite..." : "Create invite link"}
+                  {createPending ? copy.creatingInvite : copy.createInvite}
                 </Button>
               </form>
             )}
@@ -327,26 +433,26 @@ export function ProjectMemberManager({
 
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>Pending invite links</CardTitle>
+          <CardTitle>{copy.pendingInviteLinksTitle}</CardTitle>
           <CardDescription>
-            Managers can resend or revoke these links any time before they are accepted.
+            {copy.pendingInviteLinksDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {invites.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
-              No invite links yet.
+              {copy.noInvites}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Invite</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead>{copy.invite}</TableHead>
+                  <TableHead>{copy.role}</TableHead>
+                  <TableHead>{copy.status}</TableHead>
+                  <TableHead>{copy.expires}</TableHead>
+                  <TableHead>{copy.created}</TableHead>
+                  <TableHead className="text-right">{copy.action}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -355,7 +461,7 @@ export function ProjectMemberManager({
                     <TableCell>
                       <div className="space-y-1">
                         <p className="font-medium text-slate-950">
-                          {invite.email || "Reusable share link"}
+                          {invite.email || copy.reusableShareLink}
                         </p>
                         <p className="text-xs text-slate-500">{invite.inviteLink}</p>
                       </div>
@@ -364,10 +470,17 @@ export function ProjectMemberManager({
                       <RoleBadge role={invite.role} />
                     </TableCell>
                     <TableCell className="capitalize text-slate-700">
-                      {invite.status}
+                      {locale === "vi"
+                        ? ({
+                            pending: "đang chờ",
+                            accepted: "đã chấp nhận",
+                            revoked: "đã thu hồi",
+                            expired: "đã hết hạn",
+                          } as const)[invite.status]
+                        : invite.status}
                     </TableCell>
-                    <TableCell>{formatDateLabel(invite.expiresAt)}</TableCell>
-                    <TableCell>{formatDateLabel(invite.createdAt)}</TableCell>
+                    <TableCell>{formatDateLabel(invite.expiresAt, locale)}</TableCell>
+                    <TableCell>{formatDateLabel(invite.createdAt, locale)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex flex-wrap justify-end gap-2">
                         <Button
@@ -377,7 +490,7 @@ export function ProjectMemberManager({
                           onClick={() => copyInvite(invite.inviteLink)}
                         >
                           <Copy className="size-4" />
-                          Copy
+                          {copyButtonLabel}
                         </Button>
                         {canManageInvites && invite.status === "pending" ? (
                           <Button
@@ -388,7 +501,7 @@ export function ProjectMemberManager({
                             onClick={() => revokeInvite(invite.id)}
                           >
                             <Trash2 className="size-4" />
-                            Revoke
+                            {copy.revoke}
                           </Button>
                         ) : null}
                       </div>

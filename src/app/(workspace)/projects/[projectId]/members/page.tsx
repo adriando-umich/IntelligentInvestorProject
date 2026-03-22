@@ -5,6 +5,7 @@ import { ProjectMemberManager } from "@/components/finance/project-member-manage
 import { getSessionState } from "@/lib/auth/session";
 import { getProjectSnapshot, getViewerProfile } from "@/lib/data/repository";
 import { env } from "@/lib/env";
+import { getServerI18n } from "@/lib/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type DbProjectInviteRow = {
@@ -23,7 +24,8 @@ export default async function ProjectMembersPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const [snapshot, session, viewer] = await Promise.all([
+  const [{ locale }, snapshot, session, viewer] = await Promise.all([
+    getServerI18n(),
     getProjectSnapshot(projectId),
     getSessionState(),
     getViewerProfile(),
@@ -63,9 +65,17 @@ export default async function ProjectMembersPage({
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Members"
-        title={`Members in ${snapshot.dataset.project.name}`}
-        description="Invite teammates into the project, share a self-join link, and keep the member list visible in one place."
+        eyebrow={locale === "vi" ? "Thành viên" : "Members"}
+        title={
+          locale === "vi"
+            ? `Thành viên trong ${snapshot.dataset.project.name}`
+            : `Members in ${snapshot.dataset.project.name}`
+        }
+        description={
+          locale === "vi"
+            ? "Mời đồng đội vào dự án, chia sẻ link tự tham gia và giữ danh sách thành viên rõ ràng ở một nơi."
+            : "Invite teammates into the project, share a self-join link, and keep the member list visible in one place."
+        }
       />
 
       <ProjectMemberManager

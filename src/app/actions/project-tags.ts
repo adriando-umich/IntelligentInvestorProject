@@ -4,21 +4,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getSessionState } from "@/lib/auth/session";
+import { getServerI18n } from "@/lib/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ProjectTagActionState = {
   status: "idle" | "error" | "success";
   message?: string;
 };
-
-const projectTagSchema = z.object({
-  projectId: z.string().min(1),
-  tagName: z.string().trim().min(2, "Tag name should be at least 2 characters.").max(60, "Keep tag names under 60 characters."),
-});
-
-const existingProjectTagSchema = projectTagSchema.extend({
-  tagId: z.string().min(1),
-});
 
 function slugifyTagName(value: string) {
   const slug = value
@@ -48,14 +40,43 @@ function revalidateProjectTagPaths(projectId: string) {
 }
 
 export async function createProjectTagAction(
-  payload: z.input<typeof projectTagSchema>
+  payload: { projectId: string; tagName: string }
 ): Promise<ProjectTagActionState> {
+  const { locale } = await getServerI18n();
   const session = await getSessionState();
+  const copy =
+    locale === "vi"
+      ? {
+          nameMin: "Ten tag can co it nhat 2 ky tu.",
+          nameMax: "Ten tag nen ngan hon 60 ky tu.",
+          demoBlocked: "Khong the quan ly tag trong che do demo.",
+          createFailed: "Khong the tao tag nay.",
+          supabaseMissing: "Supabase chua duoc cau hinh.",
+          signInRequired: "Ban can dang nhap de quan ly tag.",
+          missingMigration:
+            "Database live dang thieu migration tag moi nhat. Hay apply migration Supabase moi nhat roi thu lai.",
+          saved: "Da luu tag.",
+        }
+      : {
+          nameMin: "Tag name should be at least 2 characters.",
+          nameMax: "Keep tag names under 60 characters.",
+          demoBlocked: "Tag management is disabled in demo mode.",
+          createFailed: "Unable to create this tag.",
+          supabaseMissing: "Supabase is not configured.",
+          signInRequired: "You must be signed in to manage tags.",
+          missingMigration:
+            "The live database is missing the latest tags migration. Apply the newest Supabase migration, then try again.",
+          saved: "Tag saved.",
+        };
+  const projectTagSchema = z.object({
+    projectId: z.string().min(1),
+    tagName: z.string().trim().min(2, copy.nameMin).max(60, copy.nameMax),
+  });
 
   if (session.demoMode) {
     return {
       status: "error",
-      message: "Tag management is disabled in demo mode.",
+      message: copy.demoBlocked,
     };
   }
 
@@ -64,7 +85,7 @@ export async function createProjectTagAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: parsed.error.issues[0]?.message ?? "Unable to create this tag.",
+      message: parsed.error.issues[0]?.message ?? copy.createFailed,
     };
   }
 
@@ -73,7 +94,7 @@ export async function createProjectTagAction(
   if (!supabase) {
     return {
       status: "error",
-      message: "Supabase is not configured.",
+      message: copy.supabaseMissing,
     };
   }
 
@@ -84,7 +105,7 @@ export async function createProjectTagAction(
   if (!user) {
     return {
       status: "error",
-      message: "You must be signed in to manage tags.",
+      message: copy.signInRequired,
     };
   }
 
@@ -107,7 +128,7 @@ export async function createProjectTagAction(
     return {
       status: "error",
       message: isMissingTagUpgradeError(error)
-        ? "The live database is missing the tags migration. Apply the newest Supabase migration, then try again."
+        ? copy.missingMigration
         : error.message,
     };
   }
@@ -116,19 +137,57 @@ export async function createProjectTagAction(
 
   return {
     status: "success",
-    message: "Tag saved.",
+    message: copy.saved,
   };
 }
 
 export async function updateProjectTagAction(
-  payload: z.input<typeof existingProjectTagSchema>
+  payload: { projectId: string; tagId: string; tagName: string }
 ): Promise<ProjectTagActionState> {
+  const { locale } = await getServerI18n();
   const session = await getSessionState();
+  const copy =
+    locale === "vi"
+      ? {
+          nameMin: "Ten tag can co it nhat 2 ky tu.",
+          nameMax: "Ten tag nen ngan hon 60 ky tu.",
+          demoBlocked: "Khong the quan ly tag trong che do demo.",
+          updateFailed: "Khong the cap nhat tag nay.",
+          supabaseMissing: "Supabase chua duoc cau hinh.",
+          signInRequired: "Ban can dang nhap de quan ly tag.",
+          duplicateName:
+            "Da co tag khac co ten tuong tu. Hay dat ten cu the hon.",
+          missingMigration:
+            "Database live dang thieu migration tag moi nhat. Hay apply migration Supabase moi nhat roi thu lai.",
+          managerOnlyRename:
+            "Trong live mode, chi manager cua du an moi duoc doi ten tag.",
+          updated: "Da cap nhat tag.",
+        }
+      : {
+          nameMin: "Tag name should be at least 2 characters.",
+          nameMax: "Keep tag names under 60 characters.",
+          demoBlocked: "Tag management is disabled in demo mode.",
+          updateFailed: "Unable to update this tag.",
+          supabaseMissing: "Supabase is not configured.",
+          signInRequired: "You must be signed in to manage tags.",
+          duplicateName:
+            "Another tag already uses a similar name. Try a more specific tag.",
+          missingMigration:
+            "The live database is missing the latest tags migration. Apply the newest Supabase migration, then try again.",
+          managerOnlyRename:
+            "Only project managers can rename tags in live mode.",
+          updated: "Tag updated.",
+        };
+  const existingProjectTagSchema = z.object({
+    projectId: z.string().min(1),
+    tagId: z.string().min(1),
+    tagName: z.string().trim().min(2, copy.nameMin).max(60, copy.nameMax),
+  });
 
   if (session.demoMode) {
     return {
       status: "error",
-      message: "Tag management is disabled in demo mode.",
+      message: copy.demoBlocked,
     };
   }
 
@@ -137,7 +196,7 @@ export async function updateProjectTagAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: parsed.error.issues[0]?.message ?? "Unable to update this tag.",
+      message: parsed.error.issues[0]?.message ?? copy.updateFailed,
     };
   }
 
@@ -146,7 +205,7 @@ export async function updateProjectTagAction(
   if (!supabase) {
     return {
       status: "error",
-      message: "Supabase is not configured.",
+      message: copy.supabaseMissing,
     };
   }
 
@@ -157,7 +216,7 @@ export async function updateProjectTagAction(
   if (!user) {
     return {
       status: "error",
-      message: "You must be signed in to manage tags.",
+      message: copy.signInRequired,
     };
   }
 
@@ -176,14 +235,14 @@ export async function updateProjectTagAction(
     if (error.code === "23505") {
       return {
         status: "error",
-        message: "Another tag already uses a similar name. Try a more specific tag.",
+        message: copy.duplicateName,
       };
     }
 
     return {
       status: "error",
       message: isMissingTagUpgradeError(error)
-        ? "The live database is missing the tags migration. Apply the newest Supabase migration, then try again."
+        ? copy.missingMigration
         : error.message,
     };
   }
@@ -191,7 +250,7 @@ export async function updateProjectTagAction(
   if (!data) {
     return {
       status: "error",
-      message: "Only project managers can rename tags in live mode.",
+      message: copy.managerOnlyRename,
     };
   }
 
@@ -199,19 +258,44 @@ export async function updateProjectTagAction(
 
   return {
     status: "success",
-    message: "Tag updated.",
+    message: copy.updated,
   };
 }
 
 export async function deleteProjectTagAction(
   payload: { projectId: string; tagId: string }
 ): Promise<ProjectTagActionState> {
+  const { locale } = await getServerI18n();
   const session = await getSessionState();
+  const copy =
+    locale === "vi"
+      ? {
+          demoBlocked: "Khong the quan ly tag trong che do demo.",
+          deleteFailed: "Khong the xoa tag nay.",
+          supabaseMissing: "Supabase chua duoc cau hinh.",
+          signInRequired: "Ban can dang nhap de quan ly tag.",
+          missingMigration:
+            "Database live dang thieu migration tag-policy moi nhat. Hay apply migration Supabase moi nhat roi thu lai.",
+          managerOnlyDelete:
+            "Muon xoa tag can quyen manager va migration tag-policy moi nhat tren database live.",
+          deleted: "Da xoa tag.",
+        }
+      : {
+          demoBlocked: "Tag management is disabled in demo mode.",
+          deleteFailed: "Unable to delete this tag.",
+          supabaseMissing: "Supabase is not configured.",
+          signInRequired: "You must be signed in to manage tags.",
+          missingMigration:
+            "The live database is missing the latest tag-policy migration. Apply the newest Supabase migration, then try again.",
+          managerOnlyDelete:
+            "Delete needs manager permission and the latest tag-policy migration in the live database.",
+          deleted: "Tag deleted.",
+        };
 
   if (session.demoMode) {
     return {
       status: "error",
-      message: "Tag management is disabled in demo mode.",
+      message: copy.demoBlocked,
     };
   }
 
@@ -225,7 +309,7 @@ export async function deleteProjectTagAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Unable to delete this tag.",
+      message: copy.deleteFailed,
     };
   }
 
@@ -234,7 +318,7 @@ export async function deleteProjectTagAction(
   if (!supabase) {
     return {
       status: "error",
-      message: "Supabase is not configured.",
+      message: copy.supabaseMissing,
     };
   }
 
@@ -245,7 +329,7 @@ export async function deleteProjectTagAction(
   if (!user) {
     return {
       status: "error",
-      message: "You must be signed in to manage tags.",
+      message: copy.signInRequired,
     };
   }
 
@@ -260,7 +344,7 @@ export async function deleteProjectTagAction(
     return {
       status: "error",
       message: isMissingTagUpgradeError(error)
-        ? "The live database is missing the latest tag-policy migration. Apply the newest Supabase migration, then try again."
+        ? copy.missingMigration
         : error.message,
     };
   }
@@ -268,8 +352,7 @@ export async function deleteProjectTagAction(
   if (!data || data.length === 0) {
     return {
       status: "error",
-      message:
-        "Delete needs manager permission and the latest tag-policy migration in the live database.",
+      message: copy.managerOnlyDelete,
     };
   }
 
@@ -277,6 +360,6 @@ export async function deleteProjectTagAction(
 
   return {
     status: "success",
-    message: "Tag deleted.",
+    message: copy.deleted,
   };
 }

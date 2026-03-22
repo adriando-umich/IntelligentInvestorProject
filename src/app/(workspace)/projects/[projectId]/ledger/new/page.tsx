@@ -13,6 +13,7 @@ import {
 import { getSessionState } from "@/lib/auth/session";
 import { getProjectSnapshot } from "@/lib/data/repository";
 import { type PlannerEntryType } from "@/lib/finance/entry-form";
+import { getServerI18n } from "@/lib/i18n/server";
 
 function isEntryType(value: string | undefined): value is PlannerEntryType {
   return (
@@ -39,7 +40,8 @@ export default async function NewLedgerEntryPage({
 }) {
   const { projectId } = await params;
   const query = await searchParams;
-  const [snapshot, session] = await Promise.all([
+  const [{ locale }, snapshot, session] = await Promise.all([
+    getServerI18n(),
     getProjectSnapshot(projectId),
     getSessionState(),
   ]);
@@ -56,32 +58,43 @@ export default async function NewLedgerEntryPage({
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Ledger planner"
-        title={`Add a transaction for ${snapshot.dataset.project.name}`}
-        description="Use this planner to record capital, tagged inflows, shared loan drawdowns, shared loan principal repayments, shared loan interest payments, operating expenses, project cash handovers, or member repayments. Example: if A paid for B earlier and B returns the money to A, record that here as a member repayment. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase."
+        eyebrow={locale === "vi" ? "Form giao dịch" : "Ledger planner"}
+        title={
+          locale === "vi"
+            ? `Thêm giao dịch cho ${snapshot.dataset.project.name}`
+            : `Add a transaction for ${snapshot.dataset.project.name}`
+        }
+        description={
+          locale === "vi"
+            ? "Dùng form này để ghi vốn góp, tiền vào có tag, giải ngân vay chung, trả gốc vay chung, trả lãi vay chung, chi phí vận hành, chuyển tiền nội bộ hoặc thành viên trả lại tiền cho nhau. Ví dụ A trả hộ B trước đó và B trả lại A, hãy ghi ở đây dưới loại thành viên trả lại tiền. Trong workspace mẫu, form chỉ ở chế độ preview; còn dự án live đã đăng nhập có thể lưu trực tiếp các loại giao dịch được hỗ trợ lên Supabase."
+            : "Use this planner to record capital, tagged inflows, shared loan drawdowns, shared loan principal repayments, shared loan interest payments, operating expenses, project cash handovers, or member repayments. Example: if A paid for B earlier and B returns the money to A, record that here as a member repayment. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase."
+        }
       />
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>Need help choosing the right transaction?</CardTitle>
+          <CardTitle>
+            {locale === "vi"
+              ? "Cần giúp chọn đúng loại giao dịch?"
+              : "Need help choosing the right transaction?"}
+          </CardTitle>
           <CardDescription>
-            The full helper matrix now lives on its own page so this planner
-            stays focused. Open the guide for the full business-versus-correction
-            reference, or open tag management if you need to clean up reporting
-            categories first.
+            {locale === "vi"
+              ? "Bảng helper đầy đủ đã được chuyển sang một trang riêng để form này gọn hơn. Mở hướng dẫn nếu bạn muốn xem toàn bộ ma trận nghiệp vụ thật và điều chỉnh, hoặc mở quản lý tag nếu cần dọn nhóm báo cáo trước."
+              : "The full helper matrix now lives on its own page so this planner stays focused. Open the guide for the full business-versus-correction reference, or open tag management if you need to clean up reporting categories first."}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           <Link
             href={`/projects/${snapshot.dataset.project.id}/ledger/guide`}
             className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
-          >
-            Open transaction guide
+        >
+            {locale === "vi" ? "Mở hướng dẫn giao dịch" : "Open transaction guide"}
           </Link>
           <Link
             href={`/projects/${snapshot.dataset.project.id}/tags`}
             className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Manage tags
+        >
+            {locale === "vi" ? "Quản lý tag" : "Manage tags"}
           </Link>
         </CardContent>
       </Card>

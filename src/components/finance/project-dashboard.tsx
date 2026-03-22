@@ -14,6 +14,7 @@ import {
   Wallet,
 } from "lucide-react";
 
+import { useLocale } from "@/components/app/locale-provider";
 import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { MetricCard } from "@/components/finance/metric-card";
 import {
@@ -48,8 +49,10 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
-  entryFamilyLabels,
-  entryTypeLabels,
+  type EntryType,
+  getEntryFamilyLabel,
+  getEntryTypeLabel,
+  getReconciliationStatusLabel,
   getEntryFamily,
   type EntryFamily,
   type ProjectSnapshot,
@@ -83,7 +86,7 @@ function reconciliationTone(status: string) {
   return "bg-slate-100 text-slate-700";
 }
 
-function entryTone(entryType: keyof typeof entryTypeLabels) {
+function entryTone(entryType: EntryType) {
   if (entryType === "operating_income") {
     return "bg-emerald-100 text-emerald-800";
   }
@@ -115,9 +118,236 @@ export function ProjectDashboard({
   snapshot: ProjectSnapshot;
   activeView?: DashboardView;
 }) {
+  const { locale } = useLocale();
   const [activityFamilyFilter, setActivityFamilyFilter] = useState<
     "all" | EntryFamily
   >("all");
+  const copy =
+    locale === "vi"
+      ? {
+          addTransaction: "Thêm giao dịch",
+          reviewSettlements: "Xem đối trừ",
+          reconciliation: "Đối chiếu",
+          members: "Thành viên",
+          manageTags: "Quản lý tag",
+          metricMoneyNowTitle: "Tiền hiện có trong dự án",
+          metricMoneyNowDescription:
+            "Đây là lượng tiền dự án hiện được kỳ vọng đang tồn tại rải trên các tài khoản/cash do thành viên giữ.",
+          metricHoldingCashTitle: "Thành viên đang giữ tiền dự án",
+          metricHoldingCashDescription:
+            "Số dương nghĩa là người đó đang giữ tiền của dự án.",
+          metricFrontingMoneyTitle: "Thành viên đang ứng tiền riêng",
+          metricFrontingMoneyDescription:
+            "Cash custody âm nghĩa là dự án đang nợ lại tiền cá nhân mà thành viên đó đã ứng.",
+          metricCapitalTitle: "Vốn đang góp",
+          metricCapitalDescription:
+            "Chỉ vốn góp mới làm đổi tỷ trọng chia lợi nhuận. Chi phí chung không làm đổi con số này.",
+          metricProfitPreviewTitle: "Lợi nhuận ước tính nếu chia hôm nay",
+          metricProfitPreviewDescription:
+            "Đây là lợi nhuận vận hành chưa chia. Chỉ là số preview cho tới khi quản lý thực hiện lệnh chia lợi nhuận.",
+          metricSettlementTitle: "Việc đối trừ còn mở",
+          metricSettlementDescription:
+            "Chỉ là gợi ý chuyển tiền do chi phí chung. Hoàn toàn tách biệt với vốn và lợi nhuận.",
+          whySeparateTitle: "Vì sao các con số được tách riêng",
+          whySeparateDescription:
+            "Dashboard này cố tình tách tiền dự án, tiền hoàn trả giữa thành viên, vốn góp và lợi nhuận để người không chuyên kế toán cũng dễ hiểu.",
+          holdingMoneyTitle: "Ai đang giữ tiền dự án",
+          holdingMoneyDescription:
+            "Số dương nghĩa là thành viên đó đang giữ tiền dự án. “Ứng tiền riêng” nghĩa là họ đã dùng tiền cá nhân cho hoạt động của dự án.",
+          member: "Thành viên",
+          projectMoneyHeld: "Tiền dự án đang giữ",
+          frontedOwnMoney: "Đã ứng tiền riêng",
+          teamOwesYou: "Team đang nợ bạn",
+          youOweTeam: "Bạn đang nợ team",
+          estimatedProfitToday: "Lợi nhuận ước tính hôm nay",
+          recentActivityTitle: "Hoạt động gần đây",
+          recentActivityDescription:
+            "Các giao dịch đã ghi nhận gần nhất trong sổ cái của dự án.",
+          noEntriesForFilter: "Không có giao dịch nào khớp bộ lọc hiện tại.",
+          allActivity: "Tất cả hoạt động",
+          noReceivingMember: "Chưa có người nhận tiền",
+          inLabel: "Vào",
+          outLabel: "Ra",
+          owesWhoTitle: "Ai đang nợ ai vì chi phí chung",
+          owesWhoDescription:
+            "Các gợi ý này chỉ để tất toán chi phí chung. Chúng không làm thay đổi quyền vốn.",
+          settled: "Các khoản chi phí chung đã được đối trừ xong.",
+          pays: "trả cho",
+          reconciliationHealthTitle: "Tình trạng đối chiếu",
+          reconciliationHealthDescription:
+            "Thành viên so sánh số tiền dự án mà hệ thống kỳ vọng với số họ thực sự đang giữ trong tài khoản cá nhân.",
+          matched: "Khớp",
+          pending: "Đang chờ",
+          variance: "Chênh lệch",
+          openReconciliationDetails: "Mở chi tiết đối chiếu",
+          noOpenReconciliation: "Hiện chưa có đợt đối chiếu nào đang mở.",
+          settlementTableTitle: "Gợi ý đối trừ chi phí chung",
+          settlementTableDescription:
+            "Thuật toán được giữ đơn giản để dễ giải thích: ai đang nợ team sẽ trả cho người đã ứng nhiều nhất.",
+          debtor: "Người cần trả",
+          creditor: "Người nhận",
+          suggestedPayment: "Số tiền gợi ý",
+          action: "Thao tác",
+          noOutstandingSettlements:
+            "Hiện không còn khoản chi phí chung nào cần đối trừ.",
+          recordAsPaid: "Ghi nhận đã trả",
+          taggedMoneyInTitle: "Tiền vào theo tag",
+          taggedMoneyInDescription:
+            "Phần này cộng dồn các dòng tiền vào có gắn tag, gồm cả thu nhập vận hành và giải ngân khoản vay chung. Khoản vay làm tăng cash nhưng không tính là lợi nhuận.",
+          noInflowTags: "Chưa có tag cho tiền vào.",
+          taggedExpenseTitle: "Chi phí theo tag",
+          taggedExpenseDescription:
+            "Dùng tag như pháp lý, lãi vay, khảo sát hoặc marketing để xem loại chi phí nào đang tăng nhiều nhất trong dự án.",
+          noExpenseTags: "Chưa có tag cho chi phí.",
+          tag: "Tag",
+          taggedAmount: "Giá trị gắn tag",
+          entries: "Số giao dịch",
+          capitalTableTitle: "Vốn góp và tỷ lệ chia lợi nhuận",
+          capitalTableDescription:
+            "Chỉ thành viên có vốn dương mới tham gia phần preview lợi nhuận. Sau khi làm tròn, phần lẻ được cộng vào người có vốn lớn nhất.",
+          capitalInvested: "Vốn đã góp",
+          profitWeight: "Tỷ trọng lợi nhuận",
+          openReconciliationRunTitle: "Đợt đối chiếu đang mở",
+          openReconciliationRunDescription:
+            "Phần này so sánh số tiền dự án hệ thống kỳ vọng với số tiền từng thành viên báo cáo là họ thực sự đang giữ.",
+          noOpenReconciliationRun: "Chưa có đợt đối chiếu nào đang mở.",
+          expectedProjectCash: "Tiền dự án theo hệ thống",
+          reportedProjectCash: "Tiền dự án thành viên báo cáo",
+          varianceColumn: "Chênh lệch",
+          status: "Trạng thái",
+          advancedBreakdownTitle: "Phân tích kỹ thuật",
+          advancedBreakdownDescription:
+            "Dashboard thân thiện ở phía trên là mặc định. Phần này hiển thị ý nghĩa kỹ thuật ở lớp bên dưới.",
+          operatingTotalsTitle: "Tổng số vận hành",
+          operatingTotalsTooltip:
+            "Lợi nhuận vận hành bằng tiền vào trừ chi phí vận hành, trước khi tính các lần chia lợi nhuận.",
+          income: "Tiền vào",
+          expense: "Chi phí",
+          sharedLoanInterest: "Lãi vay chung",
+          sharedLoanOutstanding: "Gốc vay chung còn lại",
+          profitPaid: "Lợi nhuận đã chi",
+          undistributedProfit: "Lợi nhuận chưa chia",
+          modelGuardrailsTitle: "Nguyên tắc mô hình",
+          modelGuardrails: [
+            "Cash custody dùng để theo dõi tiền dự án đang nằm ở đâu.",
+            "Reimbursement dùng để theo dõi ai nợ ai vì chi phí chung.",
+            "Vốn góp quyết định tỷ lệ chia lợi nhuận.",
+            "Gốc vay chung là tài trợ vốn, còn lãi vay chung là chi phí.",
+            "Lợi nhuận chỉ được xem là đã trả khi quản lý thực hiện lệnh chia lợi nhuận.",
+          ],
+        }
+      : {
+          addTransaction: "Add transaction",
+          reviewSettlements: "Review settlements",
+          reconciliation: "Reconciliation",
+          members: "Members",
+          manageTags: "Manage tags",
+          metricMoneyNowTitle: "Money in the project now",
+          metricMoneyNowDescription:
+            "This is the net project money currently expected to exist across all member-held accounts.",
+          metricHoldingCashTitle: "Members holding project money",
+          metricHoldingCashDescription:
+            "Positive balances mean the member is currently holding project money.",
+          metricFrontingMoneyTitle: "Members fronting their own money",
+          metricFrontingMoneyDescription:
+            "Negative cash custody means the project currently owes that member their own money back.",
+          metricCapitalTitle: "Capital invested",
+          metricCapitalDescription:
+            "Only capital changes profit-sharing weight. Shared expenses do not change this number.",
+          metricProfitPreviewTitle: "Estimated profit if distributed today",
+          metricProfitPreviewDescription:
+            "This is undistributed operating profit. It is only a preview until a manager posts a profit distribution.",
+          metricSettlementTitle: "Open settlement actions",
+          metricSettlementDescription:
+            "Suggested transfers for shared expenses only. This is separate from capital and profit.",
+          whySeparateTitle: "Why the numbers stay separate",
+          whySeparateDescription:
+            "This dashboard intentionally separates project cash, teammate reimbursements, capital, and profit. That keeps the app understandable even for people who do not speak accounting.",
+          holdingMoneyTitle: "Who is holding project money",
+          holdingMoneyDescription:
+            "Positive numbers mean the member is holding project money. \"Fronted own money\" means they used their own bank balance for project activity.",
+          member: "Member",
+          projectMoneyHeld: "Project money held",
+          frontedOwnMoney: "Fronted own money",
+          teamOwesYou: "Team owes you",
+          youOweTeam: "You owe team",
+          estimatedProfitToday: "Estimated profit today",
+          recentActivityTitle: "Recent activity",
+          recentActivityDescription:
+            "Latest posted transactions in this project ledger.",
+          noEntriesForFilter: "No entries match the current family filter.",
+          allActivity: "All activity",
+          noReceivingMember: "No receiving member",
+          inLabel: "In",
+          outLabel: "Out",
+          owesWhoTitle: "Who owes whom for shared expenses",
+          owesWhoDescription:
+            "These suggested transfers settle only shared expenses. They do not change capital ownership.",
+          settled: "Shared-expense balances are already settled.",
+          pays: "pays",
+          reconciliationHealthTitle: "Reconciliation health",
+          reconciliationHealthDescription:
+            "Members compare expected project cash with what they actually hold in their own accounts.",
+          matched: "Matched",
+          pending: "Pending",
+          variance: "Variance",
+          openReconciliationDetails: "Open reconciliation details",
+          noOpenReconciliation: "No open reconciliation run right now.",
+          settlementTableTitle: "Suggested settlement for shared expenses",
+          settlementTableDescription:
+            "The greedy matcher keeps the recommendation easy to explain: people who owe the team pay the people who fronted the most.",
+          debtor: "Debtor",
+          creditor: "Creditor",
+          suggestedPayment: "Suggested payment",
+          action: "Action",
+          noOutstandingSettlements:
+            "No outstanding shared-expense settlements.",
+          recordAsPaid: "Record as paid",
+          taggedMoneyInTitle: "Tagged money in",
+          taggedMoneyInDescription:
+            "This rolls up tagged inflows, including operating income and shared loan drawdowns. Loan drawdowns raise project cash, but they do not count as profit.",
+          noInflowTags: "No inflow tags yet.",
+          taggedExpenseTitle: "Tagged expense",
+          taggedExpenseDescription:
+            "Use tags like legal, bank-interest, survey, or marketing to see which kinds of cost are accumulating across the project.",
+          noExpenseTags: "No expense tags yet.",
+          tag: "Tag",
+          taggedAmount: "Tagged amount",
+          entries: "Entries",
+          capitalTableTitle: "Capital and profit-sharing weight",
+          capitalTableDescription:
+            "Only members with positive capital participate in profit preview. The remainder is assigned to the largest capital holder after rounding.",
+          capitalInvested: "Capital invested",
+          profitWeight: "Profit weight",
+          openReconciliationRunTitle: "Open reconciliation run",
+          openReconciliationRunDescription:
+            "This compares the app's expected project cash per member with what that member reports they actually hold.",
+          noOpenReconciliationRun: "No open reconciliation run.",
+          expectedProjectCash: "Expected project cash",
+          reportedProjectCash: "Reported project cash",
+          varianceColumn: "Variance",
+          status: "Status",
+          advancedBreakdownTitle: "Advanced technical breakdown",
+          advancedBreakdownDescription:
+            "The friendly dashboard above is the default. This section exposes the raw technical meaning underneath.",
+          operatingTotalsTitle: "Operating totals",
+          operatingTotalsTooltip:
+            "Operating profit is income minus operating expense before profit distributions.",
+          income: "Income",
+          expense: "Expense",
+          sharedLoanInterest: "Shared loan interest",
+          sharedLoanOutstanding: "Shared loan principal still outstanding",
+          profitPaid: "Profit paid",
+          undistributedProfit: "Undistributed profit",
+          modelGuardrailsTitle: "Model guardrails",
+          modelGuardrails: [
+            "Cash custody tracks where project money physically sits.",
+            "Reimbursement tracks who owes whom because of shared expenses.",
+            "Capital drives profit weight.",
+            "Shared loan principal is financing, while shared loan interest is cost.",
+            "Profit is only paid when a manager posts a distribution.",
+          ],
+        };
   const profileNames = new Map(
     snapshot.memberSummaries.map((summary) => [
       summary.projectMember.userId,
@@ -163,74 +393,94 @@ export function ProjectDashboard({
             href={`/projects/${snapshot.dataset.project.id}/ledger/new`}
             className={cn(buttonVariants({ variant: "default", size: "lg" }), "rounded-2xl bg-slate-950 px-4 text-white hover:bg-slate-800")}
           >
-            Add transaction
+            {copy.addTransaction}
           </Link>
           <Link
             href={`/projects/${snapshot.dataset.project.id}/settlements`}
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl border-teal-200 bg-teal-50 px-4 text-teal-900 hover:bg-teal-100")}
           >
-            Review settlements
+            {copy.reviewSettlements}
           </Link>
           <Link
             href={`/projects/${snapshot.dataset.project.id}/reconciliation`}
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl px-4")}
           >
-            Reconciliation
+            {copy.reconciliation}
           </Link>
           <Link
             href={`/projects/${snapshot.dataset.project.id}/members`}
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl px-4")}
           >
-            Members
+            {copy.members}
           </Link>
           <Link
             href={`/projects/${snapshot.dataset.project.id}/tags`}
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl px-4")}
           >
-            Manage tags
+            {copy.manageTags}
           </Link>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <MetricCard
-            title="Money in the project now"
-            value={formatCurrency(snapshot.totalProjectCash, snapshot.dataset.project.currencyCode)}
-            description="This is the net project money currently expected to exist across all member-held accounts."
+            title={copy.metricMoneyNowTitle}
+            value={formatCurrency(
+              snapshot.totalProjectCash,
+              snapshot.dataset.project.currencyCode,
+              locale
+            )}
+            description={copy.metricMoneyNowDescription}
             tone="teal"
             icon={<Wallet className="size-5" />}
           />
           <MetricCard
-            title="Members holding project money"
-            value={formatCurrency(snapshot.membersHoldingProjectCashTotal, snapshot.dataset.project.currencyCode)}
-            description="Positive balances mean the member is currently holding project money."
+            title={copy.metricHoldingCashTitle}
+            value={formatCurrency(
+              snapshot.membersHoldingProjectCashTotal,
+              snapshot.dataset.project.currencyCode,
+              locale
+            )}
+            description={copy.metricHoldingCashDescription}
             tone="blue"
             icon={<BanknoteArrowDown className="size-5" />}
           />
           <MetricCard
-            title="Members fronting their own money"
-            value={formatCurrency(snapshot.frontedByMembersTotal, snapshot.dataset.project.currencyCode)}
-            description="Negative cash custody means the project currently owes that member their own money back."
+            title={copy.metricFrontingMoneyTitle}
+            value={formatCurrency(
+              snapshot.frontedByMembersTotal,
+              snapshot.dataset.project.currencyCode,
+              locale
+            )}
+            description={copy.metricFrontingMoneyDescription}
             tone="amber"
             icon={<BanknoteArrowUp className="size-5" />}
           />
           <MetricCard
-            title="Capital invested"
-            value={formatCurrency(snapshot.totalCapitalOutstanding, snapshot.dataset.project.currencyCode)}
-            description="Only capital changes profit-sharing weight. Shared expenses do not change this number."
+            title={copy.metricCapitalTitle}
+            value={formatCurrency(
+              snapshot.totalCapitalOutstanding,
+              snapshot.dataset.project.currencyCode,
+              locale
+            )}
+            description={copy.metricCapitalDescription}
             tone="blue"
             icon={<PiggyBank className="size-5" />}
           />
           <MetricCard
-            title="Estimated profit if distributed today"
-            value={formatCurrency(Math.max(snapshot.undistributedProfit, 0), snapshot.dataset.project.currencyCode)}
-            description="This is undistributed operating profit. It is only a preview until a manager posts a profit distribution."
+            title={copy.metricProfitPreviewTitle}
+            value={formatCurrency(
+              Math.max(snapshot.undistributedProfit, 0),
+              snapshot.dataset.project.currencyCode,
+              locale
+            )}
+            description={copy.metricProfitPreviewDescription}
             tone="teal"
             icon={<HandCoins className="size-5" />}
           />
           <MetricCard
-            title="Open settlement actions"
+            title={copy.metricSettlementTitle}
             value={`${snapshot.settlementSuggestions.length}`}
-            description="Suggested transfers for shared expenses only. This is separate from capital and profit."
+            description={copy.metricSettlementDescription}
             tone={snapshot.settlementSuggestions.length > 0 ? "red" : "slate"}
             icon={<ArrowLeftRight className="size-5" />}
           />
@@ -240,10 +490,10 @@ export function ProjectDashboard({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-950">
               <CircleAlert className="size-4 text-teal-700" />
-              Why the numbers stay separate
+              {copy.whySeparateTitle}
             </CardTitle>
             <CardDescription className="text-slate-600">
-              This dashboard intentionally separates project cash, teammate reimbursements, capital, and profit. That keeps the app understandable even for people who do not speak accounting.
+              {copy.whySeparateDescription}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -255,21 +505,21 @@ export function ProjectDashboard({
 
             <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
               <CardHeader>
-                <CardTitle>Who is holding project money</CardTitle>
+                <CardTitle>{copy.holdingMoneyTitle}</CardTitle>
                 <CardDescription>
-                  Positive numbers mean the member is holding project money. {`"Fronted own money"`} means they used their own bank balance for project activity.
+                  {copy.holdingMoneyDescription}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Member</TableHead>
-                      <TableHead>Project money held</TableHead>
-                      <TableHead>Fronted own money</TableHead>
-                      <TableHead>Team owes you</TableHead>
-                      <TableHead>You owe team</TableHead>
-                      <TableHead>Estimated profit today</TableHead>
+                      <TableHead>{copy.member}</TableHead>
+                      <TableHead>{copy.projectMoneyHeld}</TableHead>
+                      <TableHead>{copy.frontedOwnMoney}</TableHead>
+                      <TableHead>{copy.teamOwesYou}</TableHead>
+                      <TableHead>{copy.youOweTeam}</TableHead>
+                      <TableHead>{copy.estimatedProfitToday}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -289,11 +539,11 @@ export function ProjectDashboard({
                             <span>{summary.profile.displayName}</span>
                           </Link>
                         </TableCell>
-                        <TableCell>{formatSignedCurrency(summary.projectCashCustody, snapshot.dataset.project.currencyCode)}</TableCell>
-                        <TableCell>{formatCurrency(summary.frontedOwnMoney, snapshot.dataset.project.currencyCode)}</TableCell>
-                        <TableCell className="text-emerald-700">{formatCurrency(summary.teamOwesYou, snapshot.dataset.project.currencyCode)}</TableCell>
-                        <TableCell className="text-rose-700">{formatCurrency(summary.youOweTeam, snapshot.dataset.project.currencyCode)}</TableCell>
-                        <TableCell>{formatCurrency(summary.estimatedProfitShare, snapshot.dataset.project.currencyCode)}</TableCell>
+                        <TableCell>{formatSignedCurrency(summary.projectCashCustody, snapshot.dataset.project.currencyCode, locale)}</TableCell>
+                        <TableCell>{formatCurrency(summary.frontedOwnMoney, snapshot.dataset.project.currencyCode, locale)}</TableCell>
+                        <TableCell className="text-emerald-700">{formatCurrency(summary.teamOwesYou, snapshot.dataset.project.currencyCode, locale)}</TableCell>
+                        <TableCell className="text-rose-700">{formatCurrency(summary.youOweTeam, snapshot.dataset.project.currencyCode, locale)}</TableCell>
+                        <TableCell>{formatCurrency(summary.estimatedProfitShare, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -306,16 +556,16 @@ export function ProjectDashboard({
                 <CardHeader className="gap-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <CardTitle>Recent activity</CardTitle>
+                      <CardTitle>{copy.recentActivityTitle}</CardTitle>
                       <CardDescription className="mt-1">
-                        Latest posted transactions in this project ledger.
+                        {copy.recentActivityDescription}
                       </CardDescription>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {([
-                        ["all", "All activity"],
-                        ["business", entryFamilyLabels.business],
-                        ["correction", entryFamilyLabels.correction],
+                        ["all", copy.allActivity],
+                        ["business", getEntryFamilyLabel("business", locale)],
+                        ["correction", getEntryFamilyLabel("correction", locale)],
                       ] as const).map(([key, label]) => (
                         <button
                           key={key}
@@ -337,7 +587,7 @@ export function ProjectDashboard({
                   <div className="space-y-3">
                     {filteredRecentEntries.length === 0 ? (
                       <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
-                        No entries match the current family filter.
+                        {copy.noEntriesForFilter}
                       </div>
                     ) : (
                       filteredRecentEntries.map((entry) => (
@@ -348,19 +598,21 @@ export function ProjectDashboard({
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge className={cn("rounded-full", entryTone(entry.entryType))}>
-                              {entryTypeLabels[entry.entryType]}
+                              {getEntryTypeLabel(entry.entryType, locale)}
                             </Badge>
                             <Badge className="rounded-full bg-white text-slate-700 ring-1 ring-slate-200">
-                              {entryFamilyLabels[getEntryFamily(entry.entryType)]}
+                              {getEntryFamilyLabel(getEntryFamily(entry.entryType), locale)}
                             </Badge>
                             <span className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                              {formatDateLabel(entry.effectiveAt)}
+                              {formatDateLabel(entry.effectiveAt, locale)}
                             </span>
                           </div>
                           <div>
                             <p className="font-medium text-slate-950">{entry.description}</p>
                             <p className="text-sm text-slate-500">
-                              {entry.cashInMemberId ? `In: ${profileNames.get(entry.cashInMemberId)}` : "No receiving member"}
+                              {entry.cashInMemberId
+                                ? `${copy.inLabel}: ${profileNames.get(entry.cashInMemberId)}`
+                                : copy.noReceivingMember}
                               {entry.cashOutMemberId ? ` • Out: ${profileNames.get(entry.cashOutMemberId)}` : ""}
                             </p>
                             {tagNamesByEntryId.get(entry.id)?.length ? (
@@ -378,7 +630,7 @@ export function ProjectDashboard({
                           </div>
                         </div>
                         <p className="text-right text-lg font-semibold text-slate-950">
-                          {formatCurrency(entry.amount, entry.currencyCode)}
+                          {formatCurrency(entry.amount, entry.currencyCode, locale)}
                         </p>
                       </div>
                       ))
@@ -390,15 +642,15 @@ export function ProjectDashboard({
               <div className="space-y-6">
                 <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
                   <CardHeader>
-                    <CardTitle>Who owes whom for shared expenses</CardTitle>
+                    <CardTitle>{copy.owesWhoTitle}</CardTitle>
                     <CardDescription>
-                      These suggested transfers settle only shared expenses. They do not change capital ownership.
+                      {copy.owesWhoDescription}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {snapshot.settlementSuggestions.length === 0 ? (
                       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
-                        Shared-expense balances are already settled.
+                        {copy.settled}
                       </div>
                     ) : (
                       snapshot.settlementSuggestions.map((suggestion) => (
@@ -407,11 +659,11 @@ export function ProjectDashboard({
                           className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4"
                         >
                           <p className="font-medium text-slate-950">
-                            {snapshot.memberSummaries.find((item) => item.projectMember.id === suggestion.fromProjectMemberId)?.profile.displayName} pays{" "}
+                            {snapshot.memberSummaries.find((item) => item.projectMember.id === suggestion.fromProjectMemberId)?.profile.displayName} {copy.pays}{" "}
                             {snapshot.memberSummaries.find((item) => item.projectMember.id === suggestion.toProjectMemberId)?.profile.displayName}
                           </p>
                           <p className="mt-2 text-sm text-slate-600">
-                            {formatCurrency(suggestion.amount, snapshot.dataset.project.currencyCode)}
+                            {formatCurrency(suggestion.amount, snapshot.dataset.project.currencyCode, locale)}
                           </p>
                         </div>
                       ))
@@ -421,9 +673,9 @@ export function ProjectDashboard({
 
                 <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
                   <CardHeader>
-                    <CardTitle>Reconciliation health</CardTitle>
+                    <CardTitle>{copy.reconciliationHealthTitle}</CardTitle>
                     <CardDescription>
-                      Members compare expected project cash with what they actually hold in their own accounts.
+                      {copy.reconciliationHealthDescription}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -431,19 +683,19 @@ export function ProjectDashboard({
                       <>
                         <div className="grid gap-3 sm:grid-cols-3">
                           <div className="rounded-2xl bg-emerald-50 px-4 py-4">
-                            <p className="text-sm text-emerald-700">Matched</p>
+                            <p className="text-sm text-emerald-700">{copy.matched}</p>
                             <p className="mt-2 text-2xl font-semibold text-emerald-900">
                               {snapshot.openReconciliation.matchedCount}
                             </p>
                           </div>
                           <div className="rounded-2xl bg-amber-50 px-4 py-4">
-                            <p className="text-sm text-amber-700">Pending</p>
+                            <p className="text-sm text-amber-700">{copy.pending}</p>
                             <p className="mt-2 text-2xl font-semibold text-amber-900">
                               {snapshot.openReconciliation.pendingCount}
                             </p>
                           </div>
                           <div className="rounded-2xl bg-rose-50 px-4 py-4">
-                            <p className="text-sm text-rose-700">Variance</p>
+                            <p className="text-sm text-rose-700">{copy.variance}</p>
                             <p className="mt-2 text-2xl font-semibold text-rose-900">
                               {snapshot.openReconciliation.varianceCount}
                             </p>
@@ -453,12 +705,12 @@ export function ProjectDashboard({
                           href={`/projects/${snapshot.dataset.project.id}/reconciliation`}
                           className={cn(buttonVariants({ variant: "outline" }), "mt-1 rounded-2xl")}
                         >
-                          Open reconciliation details
+                          {copy.openReconciliationDetails}
                         </Link>
                       </>
                     ) : (
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-                        No open reconciliation run right now.
+                        {copy.noOpenReconciliation}
                       </div>
                     )}
                   </CardContent>
@@ -470,26 +722,26 @@ export function ProjectDashboard({
           <TabsContent value="settlements">
             <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
               <CardHeader>
-                <CardTitle>Suggested settlement for shared expenses</CardTitle>
+                <CardTitle>{copy.settlementTableTitle}</CardTitle>
                 <CardDescription>
-                  The greedy matcher keeps the recommendation easy to explain: people who owe the team pay the people who fronted the most.
+                  {copy.settlementTableDescription}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Debtor</TableHead>
-                      <TableHead>Creditor</TableHead>
-                      <TableHead>Suggested payment</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
+                      <TableHead>{copy.debtor}</TableHead>
+                      <TableHead>{copy.creditor}</TableHead>
+                      <TableHead>{copy.suggestedPayment}</TableHead>
+                      <TableHead className="text-right">{copy.action}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {snapshot.settlementSuggestions.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="py-8 text-center text-slate-500">
-                          No outstanding shared-expense settlements.
+                          {copy.noOutstandingSettlements}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -497,13 +749,13 @@ export function ProjectDashboard({
                         <TableRow key={`${suggestion.fromProjectMemberId}-${suggestion.toProjectMemberId}-full`}>
                           <TableCell>{snapshot.memberSummaries.find((item) => item.projectMember.id === suggestion.fromProjectMemberId)?.profile.displayName}</TableCell>
                           <TableCell>{snapshot.memberSummaries.find((item) => item.projectMember.id === suggestion.toProjectMemberId)?.profile.displayName}</TableCell>
-                          <TableCell>{formatCurrency(suggestion.amount, snapshot.dataset.project.currencyCode)}</TableCell>
+                          <TableCell>{formatCurrency(suggestion.amount, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                           <TableCell className="text-right">
                             <Link
                               href={`/projects/${snapshot.dataset.project.id}/ledger/new?type=expense_settlement_payment&from=${suggestion.fromProjectMemberId}&to=${suggestion.toProjectMemberId}&amount=${suggestion.amount}`}
                               className={cn(buttonVariants({ variant: "outline", size: "sm" }), "rounded-xl")}
                             >
-                              Record as paid
+                              {copy.recordAsPaid}
                             </Link>
                           </TableCell>
                         </TableRow>
@@ -526,34 +778,32 @@ export function ProjectDashboard({
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <Tags className="size-4 text-teal-700" />
-                        Tagged money in
+                        {copy.taggedMoneyInTitle}
                       </CardTitle>
                     </div>
                     <Link
                       href={`/projects/${snapshot.dataset.project.id}/tags`}
                       className={cn(buttonVariants({ variant: "outline", size: "sm" }), "rounded-xl")}
                     >
-                      Manage tags
+                      {copy.manageTags}
                     </Link>
                   </div>
                   <CardDescription>
-                    This rolls up tagged inflows, including operating income and
-                    shared loan drawdowns. Loan drawdowns raise project cash,
-                    but they do not count as profit.
+                    {copy.taggedMoneyInDescription}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {snapshot.inflowTagRollups.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
-                      No inflow tags yet.
+                      {copy.noInflowTags}
                     </div>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Tag</TableHead>
-                          <TableHead>Tagged amount</TableHead>
-                          <TableHead>Entries</TableHead>
+                          <TableHead>{copy.tag}</TableHead>
+                          <TableHead>{copy.taggedAmount}</TableHead>
+                          <TableHead>{copy.entries}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -565,7 +815,8 @@ export function ProjectDashboard({
                             <TableCell>
                               {formatCurrency(
                                 row.amount,
-                                snapshot.dataset.project.currencyCode
+                                snapshot.dataset.project.currencyCode,
+                                locale
                               )}
                             </TableCell>
                             <TableCell>{row.entryCount}</TableCell>
@@ -581,25 +832,24 @@ export function ProjectDashboard({
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Landmark className="size-4 text-rose-700" />
-                    Tagged expense
+                    {copy.taggedExpenseTitle}
                   </CardTitle>
                   <CardDescription>
-                    Use tags like legal, bank-interest, survey, or marketing to
-                    see which kinds of cost are accumulating across the project.
+                    {copy.taggedExpenseDescription}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {snapshot.expenseTagRollups.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
-                      No expense tags yet.
+                      {copy.noExpenseTags}
                     </div>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Tag</TableHead>
-                          <TableHead>Tagged amount</TableHead>
-                          <TableHead>Entries</TableHead>
+                          <TableHead>{copy.tag}</TableHead>
+                          <TableHead>{copy.taggedAmount}</TableHead>
+                          <TableHead>{copy.entries}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -611,7 +861,8 @@ export function ProjectDashboard({
                             <TableCell>
                               {formatCurrency(
                                 row.amount,
-                                snapshot.dataset.project.currencyCode
+                                snapshot.dataset.project.currencyCode,
+                                locale
                               )}
                             </TableCell>
                             <TableCell>{row.entryCount}</TableCell>
@@ -632,28 +883,28 @@ export function ProjectDashboard({
 
               <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
                 <CardHeader>
-                  <CardTitle>Capital and profit-sharing weight</CardTitle>
+                  <CardTitle>{copy.capitalTableTitle}</CardTitle>
                   <CardDescription>
-                    Only members with positive capital participate in profit preview. The remainder is assigned to the largest capital holder after rounding.
+                    {copy.capitalTableDescription}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Member</TableHead>
-                        <TableHead>Capital invested</TableHead>
-                        <TableHead>Profit weight</TableHead>
-                        <TableHead>Estimated profit today</TableHead>
+                        <TableHead>{copy.member}</TableHead>
+                        <TableHead>{copy.capitalInvested}</TableHead>
+                        <TableHead>{copy.profitWeight}</TableHead>
+                        <TableHead>{copy.estimatedProfitToday}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {snapshot.capitalWeights.map((row) => (
                         <TableRow key={row.projectMemberId}>
                           <TableCell>{row.displayName}</TableCell>
-                          <TableCell>{formatCurrency(row.capitalBalance, snapshot.dataset.project.currencyCode)}</TableCell>
-                          <TableCell>{formatPercent(row.weight)}</TableCell>
-                          <TableCell>{formatCurrency(row.estimatedProfitShare, snapshot.dataset.project.currencyCode)}</TableCell>
+                          <TableCell>{formatCurrency(row.capitalBalance, snapshot.dataset.project.currencyCode, locale)}</TableCell>
+                          <TableCell>{formatPercent(row.weight, locale)}</TableCell>
+                          <TableCell>{formatCurrency(row.estimatedProfitShare, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -666,45 +917,45 @@ export function ProjectDashboard({
           <TabsContent value="reconciliation">
             <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
               <CardHeader>
-                <CardTitle>Open reconciliation run</CardTitle>
+                <CardTitle>{copy.openReconciliationRunTitle}</CardTitle>
                 <CardDescription>
-                  This compares the {`app's`} expected project cash per member with what that member reports they actually hold.
+                  {copy.openReconciliationRunDescription}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {!snapshot.openReconciliation ? (
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-                    No open reconciliation run.
+                    {copy.noOpenReconciliationRun}
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Member</TableHead>
-                        <TableHead>Expected project cash</TableHead>
-                        <TableHead>Reported project cash</TableHead>
-                        <TableHead>Variance</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>{copy.member}</TableHead>
+                        <TableHead>{copy.expectedProjectCash}</TableHead>
+                        <TableHead>{copy.reportedProjectCash}</TableHead>
+                        <TableHead>{copy.varianceColumn}</TableHead>
+                        <TableHead>{copy.status}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {snapshot.openReconciliation.checks.map(({ check, profile }) => (
                         <TableRow key={check.id}>
                           <TableCell>{profile.displayName}</TableCell>
-                          <TableCell>{formatSignedCurrency(check.expectedProjectCash, snapshot.dataset.project.currencyCode)}</TableCell>
+                          <TableCell>{formatSignedCurrency(check.expectedProjectCash, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                           <TableCell>
                             {check.reportedProjectCash == null
-                              ? "Pending"
-                              : formatSignedCurrency(check.reportedProjectCash, snapshot.dataset.project.currencyCode)}
+                              ? copy.pending
+                              : formatSignedCurrency(check.reportedProjectCash, snapshot.dataset.project.currencyCode, locale)}
                           </TableCell>
                           <TableCell>
                             {check.varianceAmount == null
-                              ? "Pending"
-                              : formatSignedCurrency(check.varianceAmount, snapshot.dataset.project.currencyCode)}
+                              ? copy.pending
+                              : formatSignedCurrency(check.varianceAmount, snapshot.dataset.project.currencyCode, locale)}
                           </TableCell>
                           <TableCell>
                             <Badge className={cn("rounded-full", reconciliationTone(check.status))}>
-                              {check.status.replaceAll("_", " ")}
+                              {getReconciliationStatusLabel(check.status, locale)}
                             </Badge>
                           </TableCell>
                         </TableRow>
@@ -726,43 +977,41 @@ export function ProjectDashboard({
 
               <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
                 <CardHeader>
-                  <CardTitle>Advanced technical breakdown</CardTitle>
+                  <CardTitle>{copy.advancedBreakdownTitle}</CardTitle>
                   <CardDescription>
-                    The friendly dashboard above is the default. This section exposes the raw technical meaning underneath.
+                    {copy.advancedBreakdownDescription}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-slate-950">Operating totals</p>
+                      <p className="font-medium text-slate-950">{copy.operatingTotalsTitle}</p>
                       <Tooltip>
                         <TooltipTrigger className="text-slate-400">
                           <CircleAlert className="size-4" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          Operating profit is income minus operating expense before profit distributions.
+                          {copy.operatingTotalsTooltip}
                         </TooltipContent>
                       </Tooltip>
                     </div>
                     <div className="mt-3 space-y-2 text-sm text-slate-600">
-                      <p>Income: {formatCompactCurrency(snapshot.projectOperatingIncome, snapshot.dataset.project.currencyCode)}</p>
-                      <p>Expense: {formatCompactCurrency(snapshot.projectOperatingExpense, snapshot.dataset.project.currencyCode)}</p>
-                      <p>Shared loan interest: {formatCompactCurrency(snapshot.sharedLoanInterestPaidTotal, snapshot.dataset.project.currencyCode)}</p>
-                      <p>Shared loan principal still outstanding: {formatCompactCurrency(snapshot.sharedLoanPrincipalOutstanding, snapshot.dataset.project.currencyCode)}</p>
-                      <p>Profit paid: {formatCompactCurrency(snapshot.totalProfitDistributed, snapshot.dataset.project.currencyCode)}</p>
+                      <p>{copy.income}: {formatCompactCurrency(snapshot.projectOperatingIncome, snapshot.dataset.project.currencyCode, locale)}</p>
+                      <p>{copy.expense}: {formatCompactCurrency(snapshot.projectOperatingExpense, snapshot.dataset.project.currencyCode, locale)}</p>
+                      <p>{copy.sharedLoanInterest}: {formatCompactCurrency(snapshot.sharedLoanInterestPaidTotal, snapshot.dataset.project.currencyCode, locale)}</p>
+                      <p>{copy.sharedLoanOutstanding}: {formatCompactCurrency(snapshot.sharedLoanPrincipalOutstanding, snapshot.dataset.project.currencyCode, locale)}</p>
+                      <p>{copy.profitPaid}: {formatCompactCurrency(snapshot.totalProfitDistributed, snapshot.dataset.project.currencyCode, locale)}</p>
                       <p className="font-medium text-slate-950">
-                        Undistributed profit: {formatCompactCurrency(snapshot.undistributedProfit, snapshot.dataset.project.currencyCode)}
+                        {copy.undistributedProfit}: {formatCompactCurrency(snapshot.undistributedProfit, snapshot.dataset.project.currencyCode, locale)}
                       </p>
                     </div>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4">
-                    <p className="font-medium text-slate-950">Model guardrails</p>
+                    <p className="font-medium text-slate-950">{copy.modelGuardrailsTitle}</p>
                     <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-                      <li>Cash custody tracks where project money physically sits.</li>
-                      <li>Reimbursement tracks who owes whom because of shared expenses.</li>
-                      <li>Capital drives profit weight.</li>
-                      <li>Shared loan principal is financing, while shared loan interest is cost.</li>
-                      <li>Profit is only paid when a manager posts a distribution.</li>
+                      {copy.modelGuardrails.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
                     </ul>
                   </div>
                 </CardContent>

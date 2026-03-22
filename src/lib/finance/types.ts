@@ -1,3 +1,5 @@
+import { defaultAppLocale, type AppLocale } from "@/lib/i18n/config";
+
 export const projectStatuses = ["active", "archived", "closed"] as const;
 export type ProjectStatus = (typeof projectStatuses)[number];
 
@@ -53,6 +55,93 @@ export const entryFamilyLabels = {
   business: "Business event",
   correction: "Correction",
 } as const satisfies Record<EntryFamily, string>;
+
+const localizedEntryTypeLabels = {
+  en: entryTypeLabels,
+  vi: {
+    capital_contribution: "Góp vốn",
+    capital_return: "Hoàn vốn",
+    operating_income: "Tiền vào vận hành",
+    shared_loan_drawdown: "Giải ngân khoản vay chung",
+    shared_loan_repayment_principal: "Trả gốc khoản vay chung",
+    shared_loan_interest_payment: "Trả lãi khoản vay chung",
+    operating_expense: "Chi phí vận hành",
+    cash_handover: "Chuyển tiền giữa thành viên",
+    expense_settlement_payment: "Thành viên trả lại tiền cho nhau",
+    profit_distribution: "Chia lợi nhuận",
+    reconciliation_adjustment: "Điều chỉnh sau đối chiếu",
+    reversal: "Bút toán đảo ngược",
+  },
+} as const satisfies Record<AppLocale, Record<EntryType, string>>;
+
+const localizedEntryFamilyLabels = {
+  en: entryFamilyLabels,
+  vi: {
+    business: "Nghiệp vụ thật",
+    correction: "Điều chỉnh sổ",
+  },
+} as const satisfies Record<AppLocale, Record<EntryFamily, string>>;
+
+const localizedRoleLabels = {
+  en: {
+    owner: "Owner",
+    manager: "Manager",
+    member: "Member",
+  },
+  vi: {
+    owner: "Chủ dự án",
+    manager: "Quản lý",
+    member: "Thành viên",
+  },
+} as const satisfies Record<AppLocale, Record<MemberRole, string>>;
+
+const localizedReconciliationStatusLabels = {
+  en: {
+    pending: "Pending",
+    matched: "Matched",
+    variance_found: "Variance found",
+    accepted: "Accepted",
+    adjustment_posted: "Adjustment posted",
+  },
+  vi: {
+    pending: "Đang chờ",
+    matched: "Khớp",
+    variance_found: "Có chênh lệch",
+    accepted: "Đã chấp nhận",
+    adjustment_posted: "Đã ghi điều chỉnh",
+  },
+} as const satisfies Record<
+  AppLocale,
+  Record<ReconciliationStatus, string>
+>;
+
+export function getEntryTypeLabel(
+  entryType: EntryType,
+  locale: AppLocale = defaultAppLocale
+) {
+  return localizedEntryTypeLabels[locale][entryType];
+}
+
+export function getEntryFamilyLabel(
+  entryFamily: EntryFamily,
+  locale: AppLocale = defaultAppLocale
+) {
+  return localizedEntryFamilyLabels[locale][entryFamily];
+}
+
+export function getMemberRoleLabel(
+  role: MemberRole,
+  locale: AppLocale = defaultAppLocale
+) {
+  return localizedRoleLabels[locale][role];
+}
+
+export function getReconciliationStatusLabel(
+  status: ReconciliationStatus,
+  locale: AppLocale = defaultAppLocale
+) {
+  return localizedReconciliationStatusLabels[locale][status];
+}
 
 export const entryFamilyByType = {
   capital_contribution: "business",

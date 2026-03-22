@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { signOutAction } from "@/app/actions/auth";
+import { useLocale } from "@/components/app/locale-provider";
 import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { APP_NAME } from "@/lib/app-config";
 import { cn } from "@/lib/utils";
@@ -44,7 +45,8 @@ function NavContent({
   viewerAvatarUrl?: string | null;
   demoMode: boolean;
 }) {
-  const navItems = [{ href: "/projects", label: "Projects", icon: FolderKanban }];
+  const { text } = useLocale();
+  const navItems = [{ href: "/projects", label: text.shell.projects, icon: FolderKanban }];
 
   return (
     <div className="flex h-full flex-col gap-8">
@@ -58,12 +60,12 @@ function NavContent({
               <p className="font-heading text-lg font-semibold text-slate-950">
                 {APP_NAME}
               </p>
-              <p className="text-sm text-slate-500">Project finance cockpit</p>
+              <p className="text-sm text-slate-500">{text.shell.cockpit}</p>
             </div>
           </div>
           {demoMode ? (
             <Badge className="rounded-full bg-sky-100 text-sky-800">
-              Demo mode
+              {text.common.demoMode}
             </Badge>
           ) : null}
         </div>
@@ -99,18 +101,18 @@ function NavContent({
           )}
         >
           <FolderPlus className="size-4" />
-          New project
+          {text.shell.newProject}
         </Link>
       </div>
 
       <div className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-          Active projects
+          {text.shell.activeProjects}
         </p>
         <div className="space-y-2">
           {projects.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
-              No live projects yet.
+              {text.shell.noLiveProjectsYet}
             </div>
           ) : null}
           {projects.map((project) => {
@@ -147,7 +149,7 @@ function NavContent({
             className="ring-2 ring-white/15 after:hidden"
           />
           <div>
-            <p className="text-sm text-slate-300">Signed in as</p>
+            <p className="text-sm text-slate-300">{text.shell.signedInAs}</p>
             <p className="font-medium">{viewerName}</p>
           </div>
         </div>
@@ -158,7 +160,7 @@ function NavContent({
             className="w-full rounded-2xl bg-white text-slate-950 hover:bg-slate-100"
           >
             <LogOut className="size-4" />
-            Sign out
+            {text.shell.signOut}
           </Button>
         </form>
       </div>
@@ -180,6 +182,7 @@ export function AppShell({
   demoMode: boolean;
 }) {
   const pathname = usePathname();
+  const { text } = useLocale();
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(13,148,136,0.16),_transparent_28%),linear-gradient(180deg,_#fdfcf9_0%,_#f6f2ea_100%)]">
@@ -215,9 +218,9 @@ export function AppShell({
               </SheetTrigger>
               <SheetContent side="left" className="w-[90vw] rounded-r-[2rem] p-0">
                 <SheetHeader className="sr-only">
-                  <SheetTitle>Project navigation</SheetTitle>
+                  <SheetTitle>{text.shell.projectNavigationTitle}</SheetTitle>
                   <SheetDescription>
-                    Switch between projects and account actions.
+                    {text.shell.projectNavigationDescription}
                   </SheetDescription>
                 </SheetHeader>
                 <div className="h-full p-6">

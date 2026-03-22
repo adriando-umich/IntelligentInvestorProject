@@ -19,9 +19,11 @@ import {
 } from "@/components/ui/card";
 import { getProjectCards } from "@/lib/data/repository";
 import { formatCurrency } from "@/lib/format";
+import { getServerI18n } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
 
 export default async function ProjectsPage() {
+  const { locale, text } = await getServerI18n();
   const projects = await getProjectCards();
 
   const totalCash = projects.reduce((sum, project) => sum + project.totalProjectCash, 0);
@@ -37,9 +39,9 @@ export default async function ProjectsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Workspace"
-        title="Projects"
-        description="Open any project to see where project money sits, who owes whom for shared expenses, and what profit could be distributed today."
+        eyebrow={text.projectsPage.eyebrow}
+        title={text.projectsPage.title}
+        description={text.projectsPage.description}
       />
 
       <div className="flex justify-end">
@@ -49,31 +51,31 @@ export default async function ProjectsPage() {
             "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium whitespace-nowrap transition-all outline-none select-none hover:bg-muted hover:text-foreground active:translate-y-px disabled:pointer-events-none disabled:opacity-50",
             "rounded-2xl border-teal-200 bg-teal-50 text-teal-900 hover:bg-teal-100"
           )}
-        >
-          <FolderPlus className="size-4" />
-          Create project
-        </Link>
+          >
+            <FolderPlus className="size-4" />
+            {text.common.createProject}
+          </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <MetricCard
-          title="Tracked project cash"
-          value={formatCurrency(totalCash, "VND")}
-          description="Combined project cash custody across the projects you can access."
+          title={text.projectsPage.trackedCashTitle}
+          value={formatCurrency(totalCash, "VND", locale)}
+          description={text.projectsPage.trackedCashDescription}
           tone="teal"
           icon={<FolderKanban className="size-5" />}
         />
         <MetricCard
-          title="Estimated profit available"
-          value={formatCurrency(totalProfit, "VND")}
-          description="This is undistributed operating profit, not yet paid out."
+          title={text.projectsPage.estimatedProfitTitle}
+          value={formatCurrency(totalProfit, "VND", locale)}
+          description={text.projectsPage.estimatedProfitDescription}
           tone="blue"
           icon={<HandCoins className="size-5" />}
         />
         <MetricCard
-          title="Open settlement actions"
+          title={text.projectsPage.openSettlementTitle}
           value={`${totalSettlements}`}
-          description="Shared-expense transfers the team may still need to record."
+          description={text.projectsPage.openSettlementDescription}
           tone={totalSettlements > 0 ? "amber" : "slate"}
           icon={<AlertTriangle className="size-5" />}
         />
@@ -83,15 +85,13 @@ export default async function ProjectsPage() {
         <Card className="rounded-[1.75rem] border-white/70 bg-white/90 shadow-[0_24px_80px_-45px_rgba(15,23,42,0.35)]">
           <CardHeader className="space-y-3">
             <span className="text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">
-              Ready for live data
+              {text.projectsPage.readyEyebrow}
             </span>
             <CardTitle className="text-2xl text-slate-950">
-              No projects yet
+              {text.projectsPage.emptyTitle}
             </CardTitle>
             <CardDescription className="max-w-2xl leading-7 text-slate-600">
-              Create your first project to start recording capital,
-              customer income, operating expenses, cash handovers, and
-              settlement payments in the live database.
+              {text.projectsPage.emptyDescription}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -103,7 +103,7 @@ export default async function ProjectsPage() {
               )}
             >
               <FolderPlus className="size-4" />
-              Create the first project
+              {text.projectsPage.createFirstProject}
             </Link>
           </CardContent>
         </Card>
@@ -129,8 +129,8 @@ export default async function ProjectsPage() {
                   )}
                 >
                   {project.hasReconciliationVariance
-                    ? "Variance found"
-                    : "Healthy reconciliation"}
+                    ? text.projectsPage.varianceFound
+                    : text.projectsPage.healthyReconciliation}
                 </Badge>
               </div>
               <div className="space-y-2">
@@ -145,28 +145,34 @@ export default async function ProjectsPage() {
             <CardContent className="space-y-5">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                  <p className="text-sm text-slate-500">Money in the project now</p>
+                  <p className="text-sm text-slate-500">
+                    {text.projectsPage.moneyInProjectNow}
+                  </p>
                   <p className="mt-2 text-xl font-semibold text-slate-950">
-                    {formatCurrency(project.totalProjectCash, project.currencyCode)}
+                    {formatCurrency(project.totalProjectCash, project.currencyCode, locale)}
                   </p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                  <p className="text-sm text-slate-500">Estimated profit today</p>
+                  <p className="text-sm text-slate-500">{text.projectsPage.estimatedProfitToday}</p>
                   <p className="mt-2 text-xl font-semibold text-slate-950">
-                    {formatCurrency(project.undistributedProfit, project.currencyCode)}
+                    {formatCurrency(project.undistributedProfit, project.currencyCode, locale)}
                   </p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-4 text-sm text-slate-600">
                 <div className="flex flex-wrap gap-4">
-                  <span>{project.memberCount} members</span>
-                  <span>{project.openSettlementCount} settlement suggestions</span>
+                  <span>{text.projectsPage.memberCount(project.memberCount)}</span>
+                  <span>
+                    {text.projectsPage.settlementSuggestionCount(
+                      project.openSettlementCount
+                    )}
+                  </span>
                 </div>
                 <Link
                   href={`/projects/${project.id}`}
                   className="inline-flex h-8 items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
                 >
-                  Open project
+                  {text.common.openProject}
                   <ArrowRight className="size-4" />
                 </Link>
               </div>

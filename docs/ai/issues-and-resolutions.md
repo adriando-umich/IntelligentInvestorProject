@@ -10,6 +10,7 @@
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
 - GitHub-triggered auto deploy is not confirmed yet; the current working deployment path is Vercel CLI plus linked project
 - Live sign-up/login behavior can still vary based on Supabase Auth settings such as email confirmation requirements.
+- The EN/VI rollout still needs one live QA pass to catch any remaining English-only strings in secondary dashboard/chart states.
 
 ## Resolved Issues
 
@@ -50,6 +51,7 @@
 - Project navigation tabs disappeared when users left the main dashboard for routes like `/reconciliation`; resolved by moving the project-section nav into a shared `[projectId]/layout.tsx` wrapper.
 - There was no real way to add members after creating a project; resolved by adding `project_invites`, manager-created share links, email-restricted invites, revoke support, and a public `/join/[inviteToken]` accept page.
 - Deep links like invite accept could lose their destination after email/password auth because server actions always redirected to `/projects`; resolved by adding hidden `nextPath` propagation through sign-in and sign-up actions.
+- The product started requiring English and Vietnamese across the UI while the app was still mostly English-only; resolved by adding a locale cookie, a global language switcher with flags, locale-aware formatters, and bilingual copy across the main routes and finance components.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -109,3 +111,4 @@
 - Verified that the live production sign-in page now renders the `Continue with Google` button after the provider was enabled upstream.
 - Investigated the live create-project failure from the UI screenshot, traced it to RLS being enforced inside `create_project_with_owner`, and applied a new live migration that changes the function to `security definer`.
 - Added a shared project layout with persistent section navigation, then introduced a `/members` page and invite-backed self-join flow with a new live Supabase migration.
+- Added the first full EN/VI localization pass, including a root language switcher, locale-aware number/date formatting, and bilingual copy across sign-in, projects, planner, guide, tags, invites, member statements, settlements, reconciliation, and major dashboard/chart surfaces.

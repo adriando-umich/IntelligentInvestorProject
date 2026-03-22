@@ -20,6 +20,7 @@ import {
   createLedgerEntryAction,
   type LedgerActionState,
 } from "@/app/actions/ledger";
+import { useLocale } from "@/components/app/locale-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,20 +35,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   getPlannerEntryLabel,
+  getPlannerEntrySchema,
   getPlannerEntryTypesForFamily,
   isAllocationEntryType,
   isCapitalEntryType,
   parseTagNames,
-  plannerEntrySchema,
   supportsLiveCreate,
   type PlannerEntryFormValues,
   type PlannerEntryType,
   type PlannerEntryValues,
 } from "@/lib/finance/entry-form";
 import {
-  entryFamilyLabels,
   type EntryFamily,
   getEntryFamily,
+  getEntryFamilyLabel,
 } from "@/lib/finance/types";
 import { formatCurrency } from "@/lib/format";
 
@@ -56,140 +57,192 @@ type MemberOption = {
   name: string;
 };
 
-function cashOutLabel(entryType: PlannerEntryType) {
+function cashOutLabel(entryType: PlannerEntryType, locale: "en" | "vi") {
   if (entryType === "reconciliation_adjustment") {
-    return "Decrease expected cash for";
+    return locale === "vi" ? "Giảm tiền dự án kỳ vọng của" : "Decrease expected cash for";
   }
 
   if (entryType === "expense_settlement_payment") {
-    return "Who is paying back";
+    return locale === "vi" ? "Ai là người trả lại tiền" : "Who is paying back";
   }
 
   if (entryType === "cash_handover") {
-    return "Who hands the money over";
+    return locale === "vi" ? "Ai là người chuyển tiền đi" : "Who hands the money over";
   }
 
-  return "Money out by";
+  return locale === "vi" ? "Tiền ra bởi" : "Money out by";
 }
 
-function cashInLabel(entryType: PlannerEntryType) {
+function cashInLabel(entryType: PlannerEntryType, locale: "en" | "vi") {
   if (entryType === "reconciliation_adjustment") {
-    return "Increase expected cash for";
+    return locale === "vi" ? "Tăng tiền dự án kỳ vọng của" : "Increase expected cash for";
   }
 
   if (entryType === "expense_settlement_payment") {
-    return "Who gets paid back";
+    return locale === "vi" ? "Ai là người nhận lại tiền" : "Who gets paid back";
   }
 
   if (entryType === "cash_handover") {
-    return "Who receives the handover";
+    return locale === "vi" ? "Ai là người nhận tiền" : "Who receives the handover";
   }
 
-  return "Money in to";
+  return locale === "vi" ? "Tiền vào cho" : "Money in to";
 }
 
-function memberTransferHelperCopy(entryType: PlannerEntryType) {
+function memberTransferHelperCopy(entryType: PlannerEntryType, locale: "en" | "vi") {
   if (entryType === "reconciliation_adjustment") {
-    return "Use one side only. Choose increase expected cash when the app should add project money to a member, or decrease expected cash when the app should remove it after reconciliation.";
+    return locale === "vi"
+      ? "Chỉ dùng một bên. Chọn tăng tiền dự án kỳ vọng khi hệ thống cần cộng thêm tiền dự án cho một thành viên, hoặc chọn giảm khi cần trừ bớt sau đối chiếu."
+      : "Use one side only. Choose increase expected cash when the app should add project money to a member, or decrease expected cash when the app should remove it after reconciliation.";
   }
 
   if (entryType === "expense_settlement_payment") {
-    return "Example: A paid for B earlier, then B sends the money back to A. Choose B as the payer and A as the receiver.";
+    return locale === "vi"
+      ? "Ví dụ A đã trả hộ B trước đó, sau đó B gửi tiền lại cho A. Hãy chọn B là người trả và A là người nhận."
+      : "Example: A paid for B earlier, then B sends the money back to A. Choose B as the payer and A as the receiver.";
   }
 
   if (entryType === "cash_handover") {
-    return "Use this when project cash is physically moved from one member to another without settling a debt.";
+    return locale === "vi"
+      ? "Dùng loại này khi tiền dự án chỉ được chuyển giữa các thành viên mà không nhằm tất toán một khoản nợ."
+      : "Use this when project cash is physically moved from one member to another without settling a debt.";
   }
 
   return null;
 }
 
-function effectCopy(entryType: PlannerEntryType) {
+function effectCopy(entryType: PlannerEntryType, locale: "en" | "vi") {
   if (entryType === "capital_contribution") {
     return {
       icon: <PiggyBank className="size-4" />,
-      title: "Capital will change",
+      title: locale === "vi" ? "Vốn sẽ thay đổi" : "Capital will change",
       description:
-        "This adds to capital balance and changes future profit-sharing weight.",
+        locale === "vi"
+          ? "Giao dịch này làm tăng số dư vốn và thay đổi tỷ trọng chia lợi nhuận về sau."
+          : "This adds to capital balance and changes future profit-sharing weight.",
     };
   }
   if (entryType === "capital_return") {
     return {
       icon: <PiggyBank className="size-4" />,
-      title: "Capital will go down",
+      title: locale === "vi" ? "Vốn sẽ giảm" : "Capital will go down",
       description:
-        "This returns invested capital and reduces future profit-sharing weight.",
+        locale === "vi"
+          ? "Giao dịch này hoàn vốn và làm giảm tỷ trọng chia lợi nhuận về sau."
+          : "This returns invested capital and reduces future profit-sharing weight.",
     };
   }
   if (entryType === "operating_income") {
     return {
       icon: <Wallet className="size-4" />,
-      title: "Project cash and operating profit will go up",
+      title:
+        locale === "vi"
+          ? "Tiền dự án và lợi nhuận vận hành sẽ tăng"
+          : "Project cash and operating profit will go up",
       description:
-        "Customer money or other operating inflow increases project cash custody and project P&L, not reimbursement.",
+        locale === "vi"
+          ? "Tiền khách hàng hoặc dòng tiền vào vận hành sẽ làm tăng tiền dự án và P&L của dự án, chứ không tạo khoản hoàn trả."
+          : "Customer money or other operating inflow increases project cash custody and project P&L, not reimbursement.",
     };
   }
   if (entryType === "shared_loan_drawdown") {
     return {
       icon: <Landmark className="size-4" />,
-      title: "Borrowed money comes into the project",
+      title:
+        locale === "vi"
+          ? "Tiền vay đi vào dự án"
+          : "Borrowed money comes into the project",
       description:
-        "This brings project cash in from a lender without giving capital credit to any member. Record bank interest separately as operating expense.",
+        locale === "vi"
+          ? "Khoản này đưa tiền vay vào dự án nhưng không tính là vốn góp của bất kỳ ai. Lãi ngân hàng hãy ghi riêng ở chi phí vận hành."
+          : "This brings project cash in from a lender without giving capital credit to any member. Record bank interest separately as operating expense.",
     };
   }
   if (entryType === "shared_loan_repayment_principal") {
     return {
       icon: <Landmark className="size-4" />,
-      title: "Borrowed principal goes back out",
+      title:
+        locale === "vi"
+          ? "Tiền gốc vay đi ra khỏi dự án"
+          : "Borrowed principal goes back out",
       description:
-        "Use this when the project repays loan principal. It reduces project cash, but it does not count as operating expense, capital return, or profit distribution. Record loan interest separately as operating expense.",
+        locale === "vi"
+          ? "Dùng khi dự án trả phần gốc vay. Nó làm giảm tiền dự án nhưng không được tính là chi phí vận hành, hoàn vốn hay chia lợi nhuận. Lãi vay hãy ghi riêng thành chi phí vận hành."
+          : "Use this when the project repays loan principal. It reduces project cash, but it does not count as operating expense, capital return, or profit distribution. Record loan interest separately as operating expense.",
     };
   }
   if (entryType === "shared_loan_interest_payment") {
     return {
       icon: <Landmark className="size-4" />,
-      title: "Loan interest becomes a project cost",
+      title:
+        locale === "vi"
+          ? "Lãi vay trở thành chi phí của dự án"
+          : "Loan interest becomes a project cost",
       description:
-        "Use this shortcut when the project pays shared bank interest. It lowers operating P&L, can create teammate reimbursement balances, and stays separate from loan principal.",
+        locale === "vi"
+          ? "Dùng shortcut này khi dự án trả lãi vay chung. Nó làm giảm P&L vận hành, có thể tạo số dư hoàn trả giữa các thành viên và luôn tách riêng khỏi gốc vay."
+          : "Use this shortcut when the project pays shared bank interest. It lowers operating P&L, can create teammate reimbursement balances, and stays separate from loan principal.",
     };
   }
   if (entryType === "operating_expense") {
     return {
       icon: <CircleAlert className="size-4" />,
-      title: "Shared-expense balances may change",
+      title:
+        locale === "vi"
+          ? "Số dư chi phí chung có thể thay đổi"
+          : "Shared-expense balances may change",
       description:
-        "The payer advances cash first, then the app can suggest who owes whom based on the expense allocation.",
+        locale === "vi"
+          ? "Người chi sẽ ứng tiền trước, sau đó app mới gợi ý ai nên trả ai dựa trên phần phân bổ chi phí."
+          : "The payer advances cash first, then the app can suggest who owes whom based on the expense allocation.",
     };
   }
   if (entryType === "reconciliation_adjustment") {
     return {
       icon: <CircleAlert className="size-4" />,
-      title: "Expected project cash gets corrected",
+      title:
+        locale === "vi"
+          ? "Tiền dự án kỳ vọng sẽ được điều chỉnh"
+          : "Expected project cash gets corrected",
       description:
-        "Use this correction after reconciliation when one member's expected project cash needs to move up or down. Pick only one side of the cash leg.",
+        locale === "vi"
+          ? "Dùng loại điều chỉnh này sau đối chiếu khi tiền dự án kỳ vọng của một thành viên cần tăng hoặc giảm. Chỉ chọn một bên tiền."
+          : "Use this correction after reconciliation when one member's expected project cash needs to move up or down. Pick only one side of the cash leg.",
     };
   }
   if (entryType === "cash_handover") {
     return {
       icon: <ArrowLeftRight className="size-4" />,
-      title: "Only cash custody moves",
+      title:
+        locale === "vi"
+          ? "Chỉ vị trí giữ tiền thay đổi"
+          : "Only cash custody moves",
       description:
-        "This shifts who is physically holding project money. It does not change capital, reimbursement, or profit.",
+        locale === "vi"
+          ? "Giao dịch này chỉ đổi người đang cầm tiền dự án. Nó không làm thay đổi vốn, khoản hoàn trả hay lợi nhuận."
+          : "This shifts who is physically holding project money. It does not change capital, reimbursement, or profit.",
     };
   }
   if (entryType === "expense_settlement_payment") {
     return {
       icon: <ArrowLeftRight className="size-4" />,
-      title: "One member pays another member back",
+      title:
+        locale === "vi"
+          ? "Một thành viên trả lại tiền cho thành viên khác"
+          : "One member pays another member back",
       description:
-        "Use this when one teammate returns money to another teammate after being paid for earlier. Example: A paid for B, then B pays A back.",
+        locale === "vi"
+          ? "Dùng khi một người trả lại tiền cho người khác sau khi đã được trả hộ trước đó. Ví dụ A trả hộ B, sau đó B trả lại A."
+          : "Use this when one teammate returns money to another teammate after being paid for earlier. Example: A paid for B, then B pays A back.",
     };
   }
   return {
     icon: <Wallet className="size-4" />,
-    title: "Profit gets paid out",
+    title: locale === "vi" ? "Lợi nhuận được chi ra" : "Profit gets paid out",
     description:
-      "This flow will need a dedicated distribution action because it depends on capital weights and distribution runs.",
+      locale === "vi"
+        ? "Luồng này cần màn thao tác riêng vì nó phụ thuộc vào tỷ trọng vốn và từng đợt chia lợi nhuận."
+        : "This flow will need a dedicated distribution action because it depends on capital weights and distribution runs.",
   };
 }
 
@@ -210,6 +263,7 @@ export function LedgerEntryPlanner({
   initialValues: Partial<PlannerEntryFormValues>;
   liveModeEnabled: boolean;
 }) {
+  const { locale } = useLocale();
   const router = useRouter();
   const [preview, setPreview] = useState<PlannerEntryValues | null>(null);
   const [liveState, setLiveState] = useState<LedgerActionState>({
@@ -217,9 +271,150 @@ export function LedgerEntryPlanner({
   });
   const [isSavingLive, startSavingLive] = useTransition();
   const today = new Date().toISOString().slice(0, 10);
+  const copy =
+    locale === "vi"
+      ? {
+          plannerTitle: "Lập giao dịch mới",
+          plannerDescription:
+            "Hãy chọn trước đây là nghiệp vụ thật hay điều chỉnh sổ cho dự án này. Các dòng tiền vào và chi phí chung sẽ được chia đều cho những thành viên bạn chọn, còn tag sẽ giúp tổng hợp báo cáo về sau.",
+          fullGuide: "Cần xem hướng dẫn đầy đủ?",
+          guideHint:
+            "Giữ form này gọn để nhập nhanh, còn ma trận đầy đủ giữa nghiệp vụ thật và điều chỉnh đã nằm ở trang hướng dẫn riêng.",
+          openGuide: "Mở hướng dẫn giao dịch",
+          manageTags: "Quản lý tag",
+          entryFamily: "Nhóm giao dịch",
+          entryFamilyHint:
+            "Hãy chọn nghiệp vụ thật hay điều chỉnh sổ trước khi chọn loại giao dịch cụ thể.",
+          businessDescription: "Có dòng tiền thật xảy ra trong dự án.",
+          correctionDescription:
+            "Ngoài đời không có nghiệp vụ mới. Bạn chỉ đang sửa lại ledger.",
+          entryType: "Loại giao dịch",
+          correctionGuideHint:
+            "Loại đảo bút toán hiện vẫn để ở trang hướng dẫn riêng vì còn cần flow chọn giao dịch gốc.",
+          amount: "Số tiền",
+          effectiveDate: "Ngày hiệu lực",
+          description: "Mô tả",
+          descriptionPlaceholder: "Đã xảy ra việc gì?",
+          noPayerSelected: "Chưa chọn người chi",
+          noReceiverSelected: "Chưa chọn người nhận",
+          capitalOwner: "Người sở hữu phần vốn",
+          chooseCapitalOwner: "Chọn người sở hữu phần vốn",
+          allocationMembers: "Những người cùng chia khoản này",
+          allocationHint:
+            "Khi lưu live, hệ thống sẽ chia đều khoản này cho các thành viên bạn chọn.",
+          tags: "Tag",
+          tagsHint:
+            "Dùng tag cách nhau bằng dấu phẩy như legal, deposit, bank-loan để sau này nhóm tiền vào và chi phí dễ hơn.",
+          editTags: "Tạo, đổi tên hoặc xóa tag",
+          tagsPlaceholder: "legal, marketing, buyer-deposit",
+          externalCounterparty: "Đối tác bên ngoài",
+          externalCounterpartyPlaceholder: "Tên vendor, khách mua hoặc đối tác nếu có",
+          notes: "Ghi chú",
+          notesPlaceholder:
+            "Bối cảnh thêm, ghi chú phân bổ hoặc lời nhắc cho team.",
+          savePreview: "Lưu preview",
+          saving: "Đang lưu...",
+          createLiveEntry: "Tạo giao dịch live",
+          realWorld: "Nghiệp vụ thật ngoài đời",
+          correctionOnly: "Chỉ là điều chỉnh sổ",
+          currentAmount: "Số tiền hiện tại",
+          moneyOut: "Tiền ra bởi",
+          moneyIn: "Tiền vào cho",
+          notSet: "Chưa chọn",
+          selectedAllocationMembers: "Thành viên được phân bổ",
+          noMembersSelected: "Chưa chọn thành viên nào",
+          noTagsYet: "Chưa thêm tag nào",
+          saveStatus: "Trạng thái lưu",
+          saveStatusDescription:
+            "Preview luôn dùng được. Lưu live cần Supabase và người dùng thật đã đăng nhập.",
+          demoLiveDisabled:
+            "App hiện đang ở demo mode nên chưa thể lưu live.",
+          profitDistributionPreviewOnly:
+            "Loại chia lợi nhuận vẫn cần flow post riêng, nên form này hiện chỉ preview cho loại đó.",
+          previewSaved: "Đã lưu preview",
+          previewEmpty:
+            'Điền form rồi bấm "Lưu preview" để xem payload sắp được gửi.',
+          type: "Loại",
+          previewDescription: "Mô tả",
+          previewAmount: "Số tiền",
+          previewTags: "Tag",
+          noTags: "Chưa có tag",
+        }
+      : {
+          plannerTitle: "Plan a new ledger entry",
+          plannerDescription:
+            "Start by choosing whether you are recording a real business event or a ledger correction for this project. Shared income and expense lines are split equally across the selected members, and tags can be attached for later aggregation.",
+          fullGuide: "Need the full guide?",
+          guideHint:
+            "Keep this planner compact here, then open the separate guide page for the full business-versus-correction matrix.",
+          openGuide: "Open transaction guide",
+          manageTags: "Manage tags",
+          entryFamily: "Entry family",
+          entryFamilyHint:
+            "Choose a real business event or a correction before picking the exact transaction type.",
+          businessDescription: "Real money happened in the project.",
+          correctionDescription:
+            "Nothing new happened in real life. You are fixing the ledger.",
+          entryType: "Entry type",
+          correctionGuideHint:
+            "Reversal stays in the separate guide for now because it still needs a dedicated reference-to-original-entry flow.",
+          amount: "Amount",
+          effectiveDate: "Effective date",
+          description: "Description",
+          descriptionPlaceholder: "What happened?",
+          noPayerSelected: "No payer selected",
+          noReceiverSelected: "No receiver selected",
+          capitalOwner: "Capital owner",
+          chooseCapitalOwner: "Choose the capital owner",
+          allocationMembers: "Members sharing this amount",
+          allocationHint:
+            "The live save splits this amount equally across the selected members.",
+          tags: "Tags",
+          tagsHint:
+            "Use comma-separated tags like legal, deposit, bank-loan so you can group inflows and expenses later.",
+          editTags: "Create, rename, or delete tags",
+          tagsPlaceholder: "legal, marketing, buyer-deposit",
+          externalCounterparty: "External counterparty",
+          externalCounterpartyPlaceholder: "Optional vendor, buyer, or partner",
+          notes: "Notes",
+          notesPlaceholder:
+            "Optional context, allocation note, or reminder for the team.",
+          savePreview: "Save preview",
+          saving: "Saving...",
+          createLiveEntry: "Create live entry",
+          realWorld: "Real-world project activity",
+          correctionOnly: "Ledger correction only",
+          currentAmount: "Current amount",
+          moneyOut: "Money out by",
+          moneyIn: "Money in to",
+          notSet: "Not set",
+          selectedAllocationMembers: "Selected allocation members",
+          noMembersSelected: "No members selected yet",
+          noTagsYet: "No tags added yet",
+          saveStatus: "Save status",
+          saveStatusDescription:
+            "Preview works in every mode. Live create requires Supabase plus a real signed-in user.",
+          demoLiveDisabled:
+            "The app is currently using demo mode, so live save is disabled.",
+          profitDistributionPreviewOnly:
+            "Profit distribution still needs a dedicated posting flow, so this planner only previews that entry type for now.",
+          previewSaved: "Preview saved",
+          previewEmpty:
+            'Fill the form and click "Save preview" to inspect the pending payload.',
+          type: "Type",
+          previewDescription: "Description",
+          previewAmount: "Amount",
+          previewTags: "Tags",
+          noTags: "No tags",
+        };
+  const plannerDescription =
+    locale === "vi"
+      ? `Bắt đầu bằng việc chọn đây là nghiệp vụ thật hay điều chỉnh sổ cho ${projectName}. Các dòng tiền vào và chi phí chung sẽ được chia đều cho những thành viên bạn chọn, còn tag sẽ giúp tổng hợp báo cáo về sau.`
+      : `Start by choosing whether you are recording a real business event or a ledger correction for ${projectName}. Shared income and expense lines are split equally across the selected members, and tags can be attached for later aggregation.`;
+  const plannerSchema = useMemo(() => getPlannerEntrySchema(locale), [locale]);
 
   const form = useForm<PlannerEntryFormValues, undefined, PlannerEntryValues>({
-    resolver: zodResolver(plannerEntrySchema),
+    resolver: zodResolver(plannerSchema),
     defaultValues: {
       projectId,
       currencyCode,
@@ -244,7 +439,7 @@ export function LedgerEntryPlanner({
 
   const watchedEntryType =
     watched.entryType ?? initialValues.entryType ?? "operating_expense";
-  const currentEffect = effectCopy(watchedEntryType);
+  const currentEffect = effectCopy(watchedEntryType, locale);
   const currentAmount =
     typeof watched.amount === "number"
       ? watched.amount
@@ -275,7 +470,7 @@ export function LedgerEntryPlanner({
     .filter((value): value is string => Boolean(value));
   const selectedTagNames = parseTagNames(watchedTagNamesText);
   const liveSupported = liveModeEnabled && supportsLiveCreate(watchedEntryType);
-  const transferHelperCopy = memberTransferHelperCopy(watchedEntryType);
+  const transferHelperCopy = memberTransferHelperCopy(watchedEntryType, locale);
   const currentEntryFamily = getEntryFamily(watchedEntryType);
   const availableEntryTypes = getPlannerEntryTypesForFamily(currentEntryFamily);
 
@@ -323,24 +518,16 @@ export function LedgerEntryPlanner({
     <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>Plan a new ledger entry</CardTitle>
-          <CardDescription>
-            Start by choosing whether you are recording a real business event
-            or a ledger correction for {projectName}. Shared income and expense
-            lines are split equally across the selected members, and tags can be
-            attached for later aggregation.
-          </CardDescription>
+          <CardTitle>{copy.plannerTitle}</CardTitle>
+          <CardDescription>{plannerDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-5">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-slate-950">Need the full guide?</p>
-                  <p className="text-sm leading-6 text-slate-600">
-                    Keep this planner compact here, then open the separate guide
-                    page for the full business-versus-correction matrix.
-                  </p>
+                  <p className="text-sm font-medium text-slate-950">{copy.fullGuide}</p>
+                  <p className="text-sm leading-6 text-slate-600">{copy.guideHint}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Link
@@ -348,14 +535,14 @@ export function LedgerEntryPlanner({
                     className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
                   >
                     <BookOpen className="size-4" />
-                    Open transaction guide
+                    {copy.openGuide}
                   </Link>
                   <Link
                     href={`/projects/${projectId}/tags`}
                     className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
                   >
                     <FolderTree className="size-4" />
-                    Manage tags
+                    {copy.manageTags}
                   </Link>
                 </div>
               </div>
@@ -363,16 +550,13 @@ export function LedgerEntryPlanner({
 
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label>Entry family</Label>
-                <p className="text-sm text-slate-500">
-                  Choose a real business event or a correction before picking
-                  the exact transaction type.
-                </p>
+                <Label>{copy.entryFamily}</Label>
+                <p className="text-sm text-slate-500">{copy.entryFamilyHint}</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {([
-                  ["business", "Real money happened in the project."],
-                  ["correction", "Nothing new happened in real life. You are fixing the ledger."],
+                  ["business", copy.businessDescription],
+                  ["correction", copy.correctionDescription],
                 ] as const).map(([family, description]) => {
                   const isActive = currentEntryFamily === family;
                   return (
@@ -394,7 +578,7 @@ export function LedgerEntryPlanner({
                               : "rounded-full bg-slate-900 text-white"
                           }
                         >
-                          {entryFamilyLabels[family]}
+                          {getEntryFamilyLabel(family, locale)}
                         </Badge>
                       </div>
                       <p className="mt-3 text-sm leading-6">{description}</p>
@@ -406,7 +590,7 @@ export function LedgerEntryPlanner({
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="entryType">Entry type</Label>
+                <Label htmlFor="entryType">{copy.entryType}</Label>
                 <select
                   id="entryType"
                   className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
@@ -414,19 +598,18 @@ export function LedgerEntryPlanner({
                 >
                   {availableEntryTypes.map((entryType) => (
                     <option key={entryType} value={entryType}>
-                      {getPlannerEntryLabel(entryType)}
+                      {getPlannerEntryLabel(entryType, locale)}
                     </option>
                   ))}
                 </select>
                 {currentEntryFamily === "correction" ? (
                   <p className="text-sm leading-6 text-slate-500">
-                    Reversal stays in the separate guide for now because it
-                    still needs a dedicated reference-to-original-entry flow.
+                    {copy.correctionGuideHint}
                   </p>
                 ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount</Label>
+                <Label htmlFor="amount">{copy.amount}</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -439,7 +622,7 @@ export function LedgerEntryPlanner({
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="effectiveDate">Effective date</Label>
+                <Label htmlFor="effectiveDate">{copy.effectiveDate}</Label>
                 <Input
                   id="effectiveDate"
                   type="date"
@@ -447,10 +630,10 @@ export function LedgerEntryPlanner({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">{copy.description}</Label>
                 <Input
                   id="description"
-                  placeholder="What happened?"
+                  placeholder={copy.descriptionPlaceholder}
                   {...form.register("description")}
                 />
               </div>
@@ -459,14 +642,14 @@ export function LedgerEntryPlanner({
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="cashOutProjectMemberId">
-                  {cashOutLabel(watchedEntryType)}
+                  {cashOutLabel(watchedEntryType, locale)}
                 </Label>
                 <select
                   id="cashOutProjectMemberId"
                   className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
                   {...form.register("cashOutProjectMemberId")}
                 >
-                  <option value="">No payer selected</option>
+                  <option value="">{copy.noPayerSelected}</option>
                   {memberOptions.map((member) => (
                     <option key={member.id} value={member.id}>
                       {member.name}
@@ -476,14 +659,14 @@ export function LedgerEntryPlanner({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cashInProjectMemberId">
-                  {cashInLabel(watchedEntryType)}
+                  {cashInLabel(watchedEntryType, locale)}
                 </Label>
                 <select
                   id="cashInProjectMemberId"
                   className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
                   {...form.register("cashInProjectMemberId")}
                 >
-                  <option value="">No receiver selected</option>
+                  <option value="">{copy.noReceiverSelected}</option>
                   {memberOptions.map((member) => (
                     <option key={member.id} value={member.id}>
                       {member.name}
@@ -502,14 +685,14 @@ export function LedgerEntryPlanner({
             {isCapitalEntryType(watchedEntryType) ? (
               <div className="space-y-2">
                 <Label htmlFor="capitalOwnerProjectMemberId">
-                  Capital owner
+                  {copy.capitalOwner}
                 </Label>
                 <select
                   id="capitalOwnerProjectMemberId"
                   className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
                   {...form.register("capitalOwnerProjectMemberId")}
                 >
-                  <option value="">Choose the capital owner</option>
+                  <option value="">{copy.chooseCapitalOwner}</option>
                   {memberOptions.map((member) => (
                     <option key={member.id} value={member.id}>
                       {member.name}
@@ -523,10 +706,7 @@ export function LedgerEntryPlanner({
               <div className="space-y-3">
                 <div className="space-y-1">
                   <Label>Members sharing this amount</Label>
-                  <p className="text-sm text-slate-500">
-                    The live save splits this amount equally across the selected
-                    members.
-                  </p>
+                  <p className="text-sm text-slate-500">{copy.allocationHint}</p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {memberOptions.map((member) => {
@@ -558,7 +738,7 @@ export function LedgerEntryPlanner({
               <div className="space-y-1">
                 <Label htmlFor="tagNamesText">Tags</Label>
                 <p className="text-sm text-slate-500">
-                  Use comma-separated tags like <span className="font-medium text-slate-700">legal, deposit, bank-loan</span> so you can group inflows and expenses later.
+                  {copy.tagsHint}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Link
@@ -566,13 +746,13 @@ export function LedgerEntryPlanner({
                     className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
                   >
                     <FolderTree className="size-3.5" />
-                    Create, rename, or delete tags
+                    {copy.editTags}
                   </Link>
                 </div>
               </div>
               <Input
                 id="tagNamesText"
-                placeholder="legal, marketing, buyer-deposit"
+                placeholder={copy.tagsPlaceholder}
                 {...form.register("tagNamesText")}
               />
               {tagOptions.length > 0 ? (
@@ -596,18 +776,18 @@ export function LedgerEntryPlanner({
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="externalCounterparty">External counterparty</Label>
+                <Label htmlFor="externalCounterparty">{copy.externalCounterparty}</Label>
                 <Input
                   id="externalCounterparty"
-                  placeholder="Optional vendor, buyer, or partner"
+                  placeholder={copy.externalCounterpartyPlaceholder}
                   {...form.register("externalCounterparty")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="note">Notes</Label>
+                <Label htmlFor="note">{copy.notes}</Label>
                 <Textarea
                   id="note"
-                  placeholder="Optional context, allocation note, or reminder for the team."
+                  placeholder={copy.notesPlaceholder}
                   {...form.register("note")}
                 />
               </div>
@@ -650,7 +830,7 @@ export function LedgerEntryPlanner({
                 className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
                 onClick={form.handleSubmit(handlePreview)}
               >
-                Save preview
+                {copy.savePreview}
               </Button>
               <Button
                 type="button"
@@ -659,7 +839,7 @@ export function LedgerEntryPlanner({
                 disabled={!liveSupported || isSavingLive}
                 onClick={form.handleSubmit(handleLiveCreate)}
               >
-                {isSavingLive ? "Saving..." : "Create live entry"}
+                {isSavingLive ? copy.saving : copy.createLiveEntry}
               </Button>
             </div>
           </form>
@@ -678,64 +858,64 @@ export function LedgerEntryPlanner({
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge className="rounded-full bg-slate-900 text-white">
-                {entryFamilyLabels[currentEntryFamily]}
+                {getEntryFamilyLabel(currentEntryFamily, locale)}
               </Badge>
               <span className="text-sm text-slate-500">
                 {currentEntryFamily === "business"
-                  ? "Real-world project activity"
-                  : "Ledger correction only"}
+                  ? copy.realWorld
+                  : copy.correctionOnly}
               </span>
             </div>
             <div className="rounded-2xl bg-slate-50 px-4 py-4">
-              <p className="text-sm text-slate-500">Current amount</p>
+              <p className="text-sm text-slate-500">{copy.currentAmount}</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">
-                {formatCurrency(currentAmount || 0, currencyCode)}
+                {formatCurrency(currentAmount || 0, currencyCode, locale)}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-sm text-slate-500">Money out by</p>
+                <p className="text-sm text-slate-500">{copy.moneyOut}</p>
                 <p className="mt-2 font-medium text-slate-950">
                   {watchedCashOutProjectMemberId
                     ? nameById.get(watchedCashOutProjectMemberId)
-                    : "Not set"}
+                    : copy.notSet}
                 </p>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-sm text-slate-500">Money in to</p>
+                <p className="text-sm text-slate-500">{copy.moneyIn}</p>
                 <p className="mt-2 font-medium text-slate-950">
                   {watchedCashInProjectMemberId
                     ? nameById.get(watchedCashInProjectMemberId)
-                    : "Not set"}
+                    : copy.notSet}
                 </p>
               </div>
             </div>
             {isCapitalEntryType(watchedEntryType) ? (
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-sm text-slate-500">Capital owner</p>
+                <p className="text-sm text-slate-500">{copy.capitalOwner}</p>
                 <p className="mt-2 font-medium text-slate-950">
                   {watchedCapitalOwnerProjectMemberId
                     ? nameById.get(watchedCapitalOwnerProjectMemberId)
-                    : "Not set"}
+                    : copy.notSet}
                 </p>
               </div>
             ) : null}
             {isAllocationEntryType(watchedEntryType) ? (
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-sm text-slate-500">Selected allocation members</p>
+                <p className="text-sm text-slate-500">{copy.selectedAllocationMembers}</p>
                 <p className="mt-2 font-medium text-slate-950">
                   {selectedAllocationNames.length > 0
                     ? selectedAllocationNames.join(", ")
-                    : "No members selected yet"}
+                    : copy.noMembersSelected}
                 </p>
               </div>
             ) : null}
             <div className="rounded-2xl bg-slate-50 px-4 py-4">
-              <p className="text-sm text-slate-500">Tags</p>
+              <p className="text-sm text-slate-500">{copy.tags}</p>
               <p className="mt-2 font-medium text-slate-950">
                 {selectedTagNames.length > 0
                   ? selectedTagNames.join(", ")
-                  : "No tags added yet"}
+                  : copy.noTagsYet}
               </p>
             </div>
           </CardContent>
@@ -743,22 +923,18 @@ export function LedgerEntryPlanner({
 
         <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
           <CardHeader>
-            <CardTitle>Save status</CardTitle>
-            <CardDescription>
-              Preview works in every mode. Live create requires Supabase plus a
-              real signed-in user.
-            </CardDescription>
+            <CardTitle>{copy.saveStatus}</CardTitle>
+            <CardDescription>{copy.saveStatusDescription}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {!liveModeEnabled ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-                The app is currently using demo mode, so live save is disabled.
+                {copy.demoLiveDisabled}
               </div>
             ) : null}
             {liveModeEnabled && !supportsLiveCreate(watchedEntryType) ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-                Profit distribution still needs a dedicated posting flow, so
-                this planner only previews that entry type for now.
+                {copy.profitDistributionPreviewOnly}
               </div>
             ) : null}
             {liveState.status === "error" ? (
@@ -769,30 +945,30 @@ export function LedgerEntryPlanner({
             {preview ? (
               <div className="space-y-3 rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-600">
                 <Badge className="rounded-full bg-emerald-100 text-emerald-800">
-                  Preview saved
+                  {copy.previewSaved}
                 </Badge>
                 <p>
-                  <span className="font-medium text-slate-950">Type:</span>{" "}
-                  {preview.entryType.replaceAll("_", " ")}
+                  <span className="font-medium text-slate-950">{copy.type}:</span>{" "}
+                  {getPlannerEntryLabel(preview.entryType, locale)}
                 </p>
                 <p>
-                  <span className="font-medium text-slate-950">Description:</span>{" "}
+                  <span className="font-medium text-slate-950">{copy.previewDescription}:</span>{" "}
                   {preview.description}
                 </p>
                 <p>
-                  <span className="font-medium text-slate-950">Amount:</span>{" "}
-                  {formatCurrency(preview.amount, currencyCode)}
+                  <span className="font-medium text-slate-950">{copy.previewAmount}:</span>{" "}
+                  {formatCurrency(preview.amount, currencyCode, locale)}
                 </p>
                 <p>
-                  <span className="font-medium text-slate-950">Tags:</span>{" "}
+                  <span className="font-medium text-slate-950">{copy.previewTags}:</span>{" "}
                   {parseTagNames(preview.tagNamesText).length > 0
                     ? parseTagNames(preview.tagNamesText).join(", ")
-                    : "No tags"}
+                    : copy.noTags}
                 </p>
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
-                Fill the form and click <span className="font-medium text-slate-700">Save preview</span> to inspect the pending payload.
+                {copy.previewEmpty}
               </div>
             )}
           </CardContent>

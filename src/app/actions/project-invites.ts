@@ -6,29 +6,8 @@ import { z } from "zod";
 
 import { env } from "@/lib/env";
 import { getSessionState } from "@/lib/auth/session";
+import { getServerI18n } from "@/lib/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-const createInviteSchema = z.object({
-  projectId: z.string().uuid("Missing project ID."),
-  email: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => (value && value.length > 0 ? value : undefined))
-    .refine((value) => !value || z.string().email().safeParse(value).success, {
-      message: "Use a valid email address or leave it blank for a reusable link.",
-    }),
-  role: z.enum(["member", "manager"]),
-});
-
-const revokeInviteSchema = z.object({
-  projectId: z.string().uuid("Missing project ID."),
-  inviteId: z.string().uuid("Missing invite ID."),
-});
-
-const acceptInviteSchema = z.object({
-  inviteToken: z.string().trim().min(10, "Invite token is missing."),
-});
 
 type InviteRow = {
   id: string;
@@ -54,12 +33,61 @@ export async function createProjectInviteAction(
   _previousState: ProjectInviteActionState,
   formData: FormData
 ): Promise<ProjectInviteActionState> {
+  const { locale } = await getServerI18n();
   const session = await getSessionState();
+  const copy =
+    locale === "vi"
+      ? {
+          missingProjectId: "Thieu project ID.",
+          invalidEmailOrBlank:
+            "Hay nhap email hop le hoac de trong neu muon tao link dung chung.",
+          demoCreateBlocked:
+            "Workspace mau khong bat tinh nang moi. Hay dung du an live.",
+          createFailed: "Khong the tao loi moi.",
+          supabaseMissing: "Supabase chua duoc cau hinh.",
+          missingMigration:
+            "Database dang thieu migration moi thanh vien moi nhat. Hay apply SQL migration moi nhat tren Supabase roi thu lai.",
+          incompleteResponse:
+            "Loi moi da duoc tao nhung payload phan hoi tra ve chua du.",
+          targetedInviteReady:
+            "Link moi da san sang. Chi email duoc chi dinh moi co the chap nhan.",
+          reusableInviteReady:
+            "Da tao link moi dung chung. Bat ky ai da dang nhap va co link deu co the tham gia.",
+        }
+      : {
+          missingProjectId: "Missing project ID.",
+          invalidEmailOrBlank:
+            "Use a valid email address or leave it blank for a reusable link.",
+          demoCreateBlocked:
+            "Invites are disabled in the sample workspace. Use a live project instead.",
+          createFailed: "Unable to create invite.",
+          supabaseMissing: "Supabase is not configured.",
+          missingMigration:
+            "The database is missing the latest invite migration. Apply the newest SQL migration in Supabase, then try again.",
+          incompleteResponse:
+            "Invite was created, but the response payload was incomplete.",
+          targetedInviteReady:
+            "Invite link ready. Only the specified email can accept it.",
+          reusableInviteReady:
+            "Reusable invite link created. Any signed-in user with the link can join.",
+        };
+  const createInviteSchema = z.object({
+    projectId: z.string().uuid(copy.missingProjectId),
+    email: z
+      .string()
+      .trim()
+      .optional()
+      .transform((value) => (value && value.length > 0 ? value : undefined))
+      .refine((value) => !value || z.string().email().safeParse(value).success, {
+        message: copy.invalidEmailOrBlank,
+      }),
+    role: z.enum(["member", "manager"]),
+  });
 
   if (session.demoMode) {
     return {
       status: "error",
-      message: "Invites are disabled in the sample workspace. Use a live project instead.",
+      message: copy.demoCreateBlocked,
     };
   }
 
@@ -72,7 +100,7 @@ export async function createProjectInviteAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: parsed.error.issues[0]?.message ?? "Unable to create invite.",
+      message: parsed.error.issues[0]?.message ?? copy.createFailed,
     };
   }
 
@@ -81,7 +109,7 @@ export async function createProjectInviteAction(
   if (!supabase) {
     return {
       status: "error",
-      message: "Supabase is not configured.",
+      message: copy.supabaseMissing,
     };
   }
 
@@ -95,7 +123,7 @@ export async function createProjectInviteAction(
     return {
       status: "error",
       message: isMissingInviteUpgrade(error)
-        ? "The database is missing the latest invite migration. Apply the newest SQL migration in Supabase, then try again."
+        ? copy.missingMigration
         : error.message,
     };
   }
@@ -105,7 +133,7 @@ export async function createProjectInviteAction(
   if (!invite?.invite_token) {
     return {
       status: "error",
-      message: "Invite was created, but the response payload was incomplete.",
+      message: copy.incompleteResponse,
     };
   }
 
@@ -118,8 +146,10 @@ export async function createProjectInviteAction(
   return {
     status: "success",
     message: invite.email
-      ? `Invite link ready for ${invite.email}. Only that email can accept it.`
-      : "Reusable invite link created. Any signed-in user with the link can join.",
+      ? locale === "vi"
+        ? `Link moi da san sang cho ${invite.email}. Chi email nay moi co the chap nhan.`
+        : `Invite link ready for ${invite.email}. Only that email can accept it.`
+      : copy.reusableInviteReady,
     inviteLink,
   };
 }
@@ -128,12 +158,40 @@ export async function revokeProjectInviteAction(
   projectId: string,
   inviteId: string
 ): Promise<ProjectInviteActionState> {
+  const { locale } = await getServerI18n();
   const session = await getSessionState();
+  const copy =
+    locale === "vi"
+      ? {
+          missingProjectId: "Thieu project ID.",
+          missingInviteId: "Thieu invite ID.",
+          demoRevokeBlocked: "Workspace mau khong cho thu hoi loi moi.",
+          revokeFailed: "Khong the thu hoi loi moi.",
+          supabaseMissing: "Supabase chua duoc cau hinh.",
+          missingMigration:
+            "Database dang thieu migration moi thanh vien moi nhat. Hay apply SQL migration moi nhat tren Supabase roi thu lai.",
+          revoked: "Da thu hoi loi moi.",
+        }
+      : {
+          missingProjectId: "Missing project ID.",
+          missingInviteId: "Missing invite ID.",
+          demoRevokeBlocked:
+            "Invite revocation is disabled in the sample workspace.",
+          revokeFailed: "Unable to revoke invite.",
+          supabaseMissing: "Supabase is not configured.",
+          missingMigration:
+            "The database is missing the latest invite migration. Apply the newest SQL migration in Supabase, then try again.",
+          revoked: "Invite revoked.",
+        };
+  const revokeInviteSchema = z.object({
+    projectId: z.string().uuid(copy.missingProjectId),
+    inviteId: z.string().uuid(copy.missingInviteId),
+  });
 
   if (session.demoMode) {
     return {
       status: "error",
-      message: "Invite revocation is disabled in the sample workspace.",
+      message: copy.demoRevokeBlocked,
     };
   }
 
@@ -142,7 +200,7 @@ export async function revokeProjectInviteAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: parsed.error.issues[0]?.message ?? "Unable to revoke invite.",
+      message: parsed.error.issues[0]?.message ?? copy.revokeFailed,
     };
   }
 
@@ -151,7 +209,7 @@ export async function revokeProjectInviteAction(
   if (!supabase) {
     return {
       status: "error",
-      message: "Supabase is not configured.",
+      message: copy.supabaseMissing,
     };
   }
 
@@ -163,7 +221,7 @@ export async function revokeProjectInviteAction(
     return {
       status: "error",
       message: isMissingInviteUpgrade(error)
-        ? "The database is missing the latest invite migration. Apply the newest SQL migration in Supabase, then try again."
+        ? copy.missingMigration
         : error.message,
     };
   }
@@ -174,7 +232,7 @@ export async function revokeProjectInviteAction(
 
   return {
     status: "success",
-    message: "Invite revoked.",
+    message: copy.revoked,
   };
 }
 
@@ -182,6 +240,31 @@ export async function acceptProjectInviteAction(
   _previousState: ProjectInviteActionState,
   formData: FormData
 ): Promise<ProjectInviteActionState> {
+  const { locale } = await getServerI18n();
+  const copy =
+    locale === "vi"
+      ? {
+          inviteTokenMissing: "Thieu invite token.",
+          acceptFailed: "Khong the chap nhan loi moi.",
+          supabaseMissing: "Supabase chua duoc cau hinh.",
+          missingMigration:
+            "Database dang thieu migration moi thanh vien moi nhat. Hay apply SQL migration moi nhat tren Supabase roi thu lai.",
+          invalidRedirect:
+            "Da chap nhan loi moi nhung diem dich chuyen huong toi du an khong hop le.",
+        }
+      : {
+          inviteTokenMissing: "Invite token is missing.",
+          acceptFailed: "Unable to accept invite.",
+          supabaseMissing: "Supabase is not configured.",
+          missingMigration:
+            "The database is missing the latest invite migration. Apply the newest SQL migration in Supabase, then try again.",
+          invalidRedirect:
+            "Invite was accepted, but the project redirect target was invalid.",
+        };
+  const acceptInviteSchema = z.object({
+    inviteToken: z.string().trim().min(10, copy.inviteTokenMissing),
+  });
+
   const parsed = acceptInviteSchema.safeParse({
     inviteToken: formData.get("inviteToken"),
   });
@@ -189,7 +272,7 @@ export async function acceptProjectInviteAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: parsed.error.issues[0]?.message ?? "Unable to accept invite.",
+      message: parsed.error.issues[0]?.message ?? copy.acceptFailed,
     };
   }
 
@@ -198,7 +281,7 @@ export async function acceptProjectInviteAction(
   if (!supabase) {
     return {
       status: "error",
-      message: "Supabase is not configured.",
+      message: copy.supabaseMissing,
     };
   }
 
@@ -218,7 +301,7 @@ export async function acceptProjectInviteAction(
     return {
       status: "error",
       message: isMissingInviteUpgrade(error)
-        ? "The database is missing the latest invite migration. Apply the newest SQL migration in Supabase, then try again."
+        ? copy.missingMigration
         : error.message,
     };
   }
@@ -228,7 +311,7 @@ export async function acceptProjectInviteAction(
   if (!projectId.success) {
     return {
       status: "error",
-      message: "Invite was accepted, but the project redirect target was invalid.",
+      message: copy.invalidRedirect,
     };
   }
 

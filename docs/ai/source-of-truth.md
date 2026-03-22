@@ -36,7 +36,7 @@ The app must keep those concepts separate in both data and UI.
 - `src/app/`
   - App Router entrypoints and server actions
 - `src/components/app/`
-  - Shell, sign-in, page-level framing
+  - Shell, sign-in, page-level framing, and global locale switcher
 - `src/components/finance/`
   - Finance dashboard and statement UI
 - `src/lib/finance/`
@@ -45,6 +45,8 @@ The app must keep those concepts separate in both data and UI.
   - Demo datasets, repository layer, and Supabase-backed dataset loader
 - `src/lib/supabase/`
   - Server client factory plus auth-profile sync helper
+- `src/lib/i18n/`
+  - Locale config, cookie-backed server locale lookup, and shared EN/VI message seed data
 - `supabase/migrations/`
   - SQL schema for live backend bootstrap
 - `vercel.json`
@@ -146,6 +148,8 @@ Only `.env.example` should be committed.
 - Never merge cash custody, reimbursement, capital, P&L share, and profit paid into one unexplained number.
 - Settlement UI must be labeled as shared-expense settlement.
 - Default dashboard language must be non-accounting-first.
+- Every user-facing UI surface should ship in both English and Vietnamese.
+- Vietnamese copy should stay natural and plain-language-first, not literal accounting jargon.
 
 ## Latest Session Delta
 
@@ -189,5 +193,8 @@ Only `.env.example` should be committed.
 - Added a persistent project-section navigation layout so the same overview/settlements/tags/members/capital/reconciliation/advanced nav stays visible across project subpages.
 - Added live project invites with `/projects/[projectId]/members` plus a public `/join/[inviteToken]` acceptance route.
 - Updated email/password auth forms to preserve `next` redirects, so invite links can return users to the accept page after sign-in.
+- Added a cookie-backed EN/VI locale layer with a global language switcher and flag buttons in the root layout.
+- Made currency/date/percent formatting locale-aware and started threading locale through dashboard, planner, statements, invites, tags, settlements, reconciliation, and project-management screens.
+- Added route- and component-level bilingual copy for the main signed-in workflows so English and Vietnamese can be toggled across the current UI.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

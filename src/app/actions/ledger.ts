@@ -6,10 +6,11 @@ import { z } from "zod";
 import { getSessionState } from "@/lib/auth/session";
 import {
   parseTagNames,
-  plannerEntrySchema,
+  getPlannerEntrySchema,
   supportsLiveCreate,
   type PlannerEntryValues,
 } from "@/lib/finance/entry-form";
+import { getServerI18n } from "@/lib/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type LedgerActionState = {
@@ -23,30 +24,57 @@ const rpcResponseSchema = z.string().uuid();
 export async function createLedgerEntryAction(
   payload: PlannerEntryValues
 ): Promise<LedgerActionState> {
+  const { locale, text } = await getServerI18n();
   const session = await getSessionState();
+  const ledgerText =
+    locale === "vi"
+      ? {
+          demoBlocked: "Workspace mau khong cho luu giao dich live.",
+          saveFailed: "Khong the luu giao dich nay.",
+          profitDistributionPreviewOnly:
+            "Luong chia loi nhuan van can man thao tac rieng. Tam thoi hay dung che do preview.",
+          signInRequired: "Ban can dang nhap truoc khi luu giao dich.",
+          missingMigration:
+            "Database live dang thieu migration ledger moi nhat. Hay apply migration Supabase moi nhat roi thu lai.",
+          invalidResponse:
+            "Giao dich da duoc luu nhung payload phan hoi tra ve khong hop le.",
+          saved: "Da luu giao dich.",
+        }
+      : {
+          demoBlocked:
+            "Live transaction saving is disabled in the sample workspace.",
+          saveFailed: "Unable to save this transaction.",
+          profitDistributionPreviewOnly:
+            "Profit distribution still needs the dedicated distribution workflow. Use preview for now.",
+          signInRequired:
+            "You must be signed in before saving a transaction.",
+          missingMigration:
+            "The live database is missing the latest ledger migration. Apply the newest Supabase migration, then try again.",
+          invalidResponse:
+            "The transaction was saved, but the response payload was invalid.",
+          saved: "Transaction saved.",
+        };
 
   if (session.demoMode) {
     return {
       status: "error",
-      message:
-        "Live save is disabled in demo mode. Configure Supabase and sign in with a real account to persist entries.",
+      message: ledgerText.demoBlocked,
     };
   }
 
-  const parsed = plannerEntrySchema.safeParse(payload);
+  const parsed = getPlannerEntrySchema(locale).safeParse(payload);
 
   if (!parsed.success) {
     return {
       status: "error",
-      message: parsed.error.issues[0]?.message ?? "Unable to save this entry.",
+      message: parsed.error.issues[0]?.message ?? ledgerText.saveFailed,
     };
   }
 
   if (!supportsLiveCreate(parsed.data.entryType)) {
     return {
       status: "error",
-      message:
-        "Profit distribution needs a dedicated posting flow. Use the preview dashboard for now.",
+      message: ledgerText.profitDistributionPreviewOnly,
     };
   }
 
@@ -55,7 +83,7 @@ export async function createLedgerEntryAction(
   if (!supabase) {
     return {
       status: "error",
-      message: "Supabase is not configured.",
+      message: text.actions.auth.supabaseMissing,
     };
   }
 
@@ -66,7 +94,7 @@ export async function createLedgerEntryAction(
   if (!user) {
     return {
       status: "error",
-      message: "You must be signed in to save a live ledger entry.",
+      message: ledgerText.signInRequired,
     };
   }
 
@@ -109,7 +137,7 @@ export async function createLedgerEntryAction(
     return {
       status: "error",
       message: missingLedgerUpgrade
-        ? "The live database is missing the latest tags-and-loan migration. Apply the newest Supabase migration, then try again."
+        ? ledgerText.missingMigration
         : error.message,
     };
   }
@@ -119,7 +147,7 @@ export async function createLedgerEntryAction(
   if (!entryId.success) {
     return {
       status: "error",
-      message: "Entry was created, but the response payload was invalid.",
+      message: ledgerText.invalidResponse,
     };
   }
 
@@ -131,7 +159,7 @@ export async function createLedgerEntryAction(
 
   return {
     status: "success",
-    message: "Ledger entry saved.",
+    message: ledgerText.saved,
     redirectTo: `/projects/${parsed.data.projectId}`,
   };
 }

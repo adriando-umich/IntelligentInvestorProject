@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
+import { useLocale } from "@/components/app/locale-provider";
 import { cn } from "@/lib/utils";
 
 type ProjectSectionNavProps = {
@@ -12,49 +13,49 @@ type ProjectSectionNavProps = {
 const projectSectionItems = [
   {
     key: "overview",
-    label: "Overview",
+    labelKey: "overview",
     href: (projectId: string) => `/projects/${projectId}`,
     isActive: (pathname: string, view: string | null, projectId: string) =>
       pathname === `/projects/${projectId}` && (!view || view === "overview"),
   },
   {
     key: "settlements",
-    label: "Settlements",
+    labelKey: "settlements",
     href: (projectId: string) => `/projects/${projectId}/settlements`,
     isActive: (pathname: string, _view: string | null, projectId: string) =>
       pathname.startsWith(`/projects/${projectId}/settlements`),
   },
   {
     key: "tags",
-    label: "Tags",
+    labelKey: "tags",
     href: (projectId: string) => `/projects/${projectId}/tags`,
     isActive: (pathname: string, _view: string | null, projectId: string) =>
       pathname.startsWith(`/projects/${projectId}/tags`),
   },
   {
     key: "members",
-    label: "Members",
+    labelKey: "members",
     href: (projectId: string) => `/projects/${projectId}/members`,
     isActive: (pathname: string, _view: string | null, projectId: string) =>
       pathname.startsWith(`/projects/${projectId}/members`),
   },
   {
     key: "capital",
-    label: "Capital",
+    labelKey: "capital",
     href: (projectId: string) => `/projects/${projectId}?view=capital`,
     isActive: (pathname: string, view: string | null, projectId: string) =>
       pathname === `/projects/${projectId}` && view === "capital",
   },
   {
     key: "reconciliation",
-    label: "Reconciliation",
+    labelKey: "reconciliation",
     href: (projectId: string) => `/projects/${projectId}/reconciliation`,
     isActive: (pathname: string, _view: string | null, projectId: string) =>
       pathname.startsWith(`/projects/${projectId}/reconciliation`),
   },
   {
     key: "advanced",
-    label: "Advanced view",
+    labelKey: "advanced",
     href: (projectId: string) => `/projects/${projectId}?view=advanced`,
     isActive: (pathname: string, view: string | null, projectId: string) =>
       pathname === `/projects/${projectId}` && view === "advanced",
@@ -65,6 +66,7 @@ export function ProjectSectionNav({ projectId }: ProjectSectionNavProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
+  const { text } = useLocale();
 
   return (
     <div className="sticky top-3 z-20 -mx-1 overflow-x-auto rounded-[1.5rem] border border-white/70 bg-white/90 px-2 py-2 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.45)] backdrop-blur">
@@ -83,7 +85,7 @@ export function ProjectSectionNav({ projectId }: ProjectSectionNavProps) {
                   : "text-slate-500 hover:bg-white/70 hover:text-slate-900"
               )}
             >
-              {item.label}
+              {text.nav[item.labelKey]}
             </Link>
           );
         })}

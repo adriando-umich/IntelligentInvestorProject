@@ -7,6 +7,7 @@ import {
   createProjectAction,
   type ProjectActionState,
 } from "@/app/actions/projects";
+import { useLocale } from "@/components/app/locale-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,10 +23,14 @@ import { Textarea } from "@/components/ui/textarea";
 const initialState: ProjectActionState = { status: "idle" };
 
 export function CreateProjectForm() {
+  const { locale, text } = useLocale();
   const [state, formAction, pending] = useActionState(
     createProjectAction,
     initialState
   );
+  const currencyLabel = locale === "vi" ? "Tien te" : "Currency";
+  const projectNamePlaceholder =
+    locale === "vi" ? "Vi du: Nha Sunrise House Flip" : "Sunrise House Flip";
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -33,29 +38,26 @@ export function CreateProjectForm() {
         <CardHeader className="space-y-4">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-teal-100">
             <Sparkles className="size-3.5" />
-            Live onboarding
+            {text.createProject.liveOnboarding}
           </div>
           <CardTitle className="font-heading text-3xl text-white">
-            Create your first live project
+            {text.createProject.heroTitle}
           </CardTitle>
           <CardDescription className="max-w-xl text-slate-200">
-            This sets up a real project in Supabase and adds you as the owner,
-            so you can start recording transactions immediately.
+            {text.createProject.heroDescription}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm leading-6 text-slate-200">
-          <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
-            <p className="font-medium text-teal-100">What gets created</p>
+            <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
+            <p className="font-medium text-teal-100">{text.createProject.whatGetsCreated}</p>
             <p className="mt-2">
-              A project record, a unique project slug, and your owner
-              membership in the project.
+              {text.createProject.whatGetsCreatedDescription}
             </p>
           </div>
           <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
-            <p className="font-medium text-teal-100">What you can do next</p>
+            <p className="font-medium text-teal-100">{text.createProject.whatNext}</p>
             <p className="mt-2">
-              Add capital, customer income, operating expenses, cash handovers,
-              and settlement payments from the project dashboard.
+              {text.createProject.whatNextDescription}
             </p>
           </div>
         </CardContent>
@@ -63,26 +65,25 @@ export function CreateProjectForm() {
 
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90 shadow-[0_24px_80px_-45px_rgba(15,23,42,0.35)]">
         <CardHeader>
-          <CardTitle>Project details</CardTitle>
+          <CardTitle>{text.createProject.detailsTitle}</CardTitle>
           <CardDescription>
-            Start with the basics. You can add more members after the project
-            exists.
+            {text.createProject.detailsDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="project-name">Project name</Label>
+              <Label htmlFor="project-name">{text.common.name}</Label>
               <Input
                 id="project-name"
                 name="name"
-                placeholder="Sunrise House Flip"
+                placeholder={projectNamePlaceholder}
                 autoComplete="off"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="currency-code">Currency</Label>
+              <Label htmlFor="currency-code">{currencyLabel}</Label>
               <select
                 id="currency-code"
                 name="currencyCode"
@@ -95,11 +96,11 @@ export function CreateProjectForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="project-description">Project summary</Label>
+              <Label htmlFor="project-description">{text.createProject.summary}</Label>
               <Textarea
                 id="project-description"
                 name="description"
-                placeholder="Example: Members use their own bank accounts, and this workspace only tracks the project's money."
+                placeholder={text.createProject.summaryPlaceholder}
               />
             </div>
 
@@ -115,7 +116,7 @@ export function CreateProjectForm() {
               disabled={pending}
             >
               <FolderPlus className="size-4" />
-              {pending ? "Creating project..." : "Create project"}
+              {pending ? text.common.creatingProject : text.common.createProject}
             </Button>
           </form>
         </CardContent>
