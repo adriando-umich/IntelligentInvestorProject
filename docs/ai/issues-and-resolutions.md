@@ -8,6 +8,7 @@
 - The new `20260322190000_entry_families_and_loan_principal.sql` migration has not yet been executed against the live Supabase database.
 - The new `20260322213000_profile_avatars.sql` migration has not yet been executed against the live Supabase database.
 - The new `20260322233000_shared_loan_interest_payment.sql` migration has not yet been executed against the live Supabase database.
+- The new `20260322234500_project_tag_delete_policy.sql` migration has not yet been executed against the live Supabase database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
 - Google OAuth still requires external setup in Supabase Auth and Google Cloud before the new sign-in button can succeed in production.
 - The current workspace does not have Supabase admin credentials, so migrations and provider configuration cannot be executed programmatically from here yet.
@@ -44,6 +45,9 @@
 - Shared loan interest had to be forced through generic operating expense wording; resolved by adding `shared_loan_interest_payment` as its own business-event shortcut.
 - The public sign-in screen could promise Google login even when the provider was disabled upstream; resolved by reading the Supabase public auth settings endpoint and only showing Google when it is actually enabled.
 - The app had been configured with a Supabase project-ref typo that pointed auth at a non-resolving hostname; resolved by correcting `NEXT_PUBLIC_SUPABASE_URL` locally and in Vercel, then redeploying production.
+- The helper matrix was taking too much vertical space inside the planner; resolved by moving it to a dedicated guide page and leaving only compact references in the planner.
+- Tags existed only as planner attachments without a real management surface; resolved by adding a dedicated tag CRUD page plus server actions.
+- The planner derived `business/correction` in code but did not let the user choose that axis first; resolved by adding a family picker and exposing `reconciliation_adjustment` directly from the planner.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -62,6 +66,7 @@
 - If a route is a server page, do not call styling helpers exported from client components; keep shared class builders server-safe or inline the classes on that page.
 - When adding dashboard visuals, keep each chart tied to exactly one finance concept so the UI never collapses custody, reimbursement, capital, and profit into one ambiguous story.
 - When live auth behavior matters, probe the Supabase public `/auth/v1/settings` endpoint before assuming providers or email-confirmation behavior from code alone.
+- When a helper becomes reference-heavy, move it to its own route and leave just a clear link in the main workflow so the primary form stays spacious.
 
 ## Latest Session Delta
 
@@ -89,3 +94,6 @@
   - Google provider disabled
 - Updated the sign-in screen so production no longer advertises Google auth unless the provider is actually enabled, and so the create-account flow warns that confirmation email is required.
 - Logged that the remaining migration and Google-provider tasks are blocked on missing Supabase admin credentials rather than missing app code.
+- Moved the planner helper matrix to a dedicated `/ledger/guide` route and kept only compact guide/tag references on the planner page.
+- Added an explicit `Business event / Correction` picker to the planner and exposed `reconciliation_adjustment` as the current live correction option there.
+- Added a dedicated `/tags` CRUD page, live tag-management server actions, and a new additive Supabase migration for project-tag delete policy.

@@ -76,6 +76,8 @@ The finance engine already derives:
 The live ledger model already supports member-to-member repayment for shared expenses through the `expense_settlement_payment` entry type. The current UI now presents this in plain language as `Member repayment`, with explicit A-paid-for-B / B-pays-A-back guidance in the planner and settlements flow.
 The transaction model now also exposes a second classification axis in code: `entryFamily = business | correction`. The persisted DB column is still `entry_type`, but the app now derives family labels and uses them in planner guidance and the transaction helper matrix.
 The business-event shortcuts now include `shared_loan_interest_payment`, which behaves like a shared operating cost while staying distinct from shared-loan principal.
+The ledger planner now lets users choose the entry family first, then narrows the entry-type picker accordingly. The planner currently supports `reconciliation_adjustment` inside the `correction` family, while `reversal` still remains guide-only until a dedicated original-entry workflow exists.
+Project tags now have a dedicated management page for create, rename, and delete, rather than being attach-only from the planner.
 
 ## Current Routes
 
@@ -87,10 +89,12 @@ Implemented now and wired:
 - `/projects`
 - `/projects/new`
 - `/projects/[projectId]`
+- `/projects/[projectId]/ledger/guide`
 - `/projects/[projectId]/ledger/new`
 - `/projects/[projectId]/members/[memberId]`
 - `/projects/[projectId]/settlements`
 - `/projects/[projectId]/reconciliation`
+- `/projects/[projectId]/tags`
 
 ## Current Env Contract
 
@@ -111,6 +115,7 @@ Only `.env.example` should be committed.
 - Additional entry-family and loan-principal migration: `supabase/migrations/20260322190000_entry_families_and_loan_principal.sql`
 - Additional profile-avatar migration: `supabase/migrations/20260322213000_profile_avatars.sql`
 - Additional shared-loan-interest migration: `supabase/migrations/20260322233000_shared_loan_interest_payment.sql`
+- Additional project-tag delete-policy migration: `supabase/migrations/20260322234500_project_tag_delete_policy.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
@@ -163,8 +168,12 @@ Only `.env.example` should be committed.
 - Added `shared_loan_interest_payment` as a dedicated transaction shortcut plus demo data that exercises shared loan drawdown, interest, and principal repayment.
 - Fixed the live Supabase project URL typo in local and Vercel env so auth flows now point at the real project instead of a non-resolving hostname.
 - Updated the sign-in screen to read live Supabase public auth settings so Google only appears when enabled and the create-account tab can warn when email confirmation is required.
+- Moved the full transaction helper matrix off the planner onto its own `/ledger/guide` page and left compact references on the planner instead.
+- Added an explicit `Business event / Correction` family picker to the planner and exposed `reconciliation_adjustment` as the live correction path there.
+- Added a dedicated `/tags` page with create, rename, and delete tag management, plus a new additive migration for live delete-policy support.
 - Current limitation: Google OAuth still depends on external provider setup in Supabase Auth and a Google OAuth client; no extra app env vars were added for that flow.
 - Current limitation: persistent avatar storage for live users depends on applying the new avatar migration so `profiles.avatar_url` exists in the database.
 - Current limitation: live databases need the new shared-loan-interest migration before that shortcut can be saved from the planner.
+- Current limitation: live databases also need the new project-tag delete-policy migration before delete will work from the new tag manager page.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: applying the pending Supabase migrations and enabling the Google provider still requires admin-side Supabase credentials that are not present in the repo-local `.env`.

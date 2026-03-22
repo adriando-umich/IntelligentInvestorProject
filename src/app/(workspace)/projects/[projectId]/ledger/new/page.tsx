@@ -1,8 +1,15 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 import { PageHeader } from "@/components/app/page-header";
 import { LedgerEntryPlanner } from "@/components/finance/ledger-entry-planner";
-import { TransactionTypeMatrix } from "@/components/finance/transaction-type-matrix";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { getSessionState } from "@/lib/auth/session";
 import { getProjectSnapshot } from "@/lib/data/repository";
 import { type PlannerEntryType } from "@/lib/finance/entry-form";
@@ -18,7 +25,8 @@ function isEntryType(value: string | undefined): value is PlannerEntryType {
     value === "operating_expense" ||
     value === "cash_handover" ||
     value === "expense_settlement_payment" ||
-    value === "profit_distribution"
+    value === "profit_distribution" ||
+    value === "reconciliation_adjustment"
   );
 }
 
@@ -52,7 +60,31 @@ export default async function NewLedgerEntryPage({
         title={`Add a transaction for ${snapshot.dataset.project.name}`}
         description="Use this planner to record capital, tagged inflows, shared loan drawdowns, shared loan principal repayments, shared loan interest payments, operating expenses, project cash handovers, or member repayments. Example: if A paid for B earlier and B returns the money to A, record that here as a member repayment. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase."
       />
-      <TransactionTypeMatrix />
+      <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
+        <CardHeader>
+          <CardTitle>Need help choosing the right transaction?</CardTitle>
+          <CardDescription>
+            The full helper matrix now lives on its own page so this planner
+            stays focused. Open the guide for the full business-versus-correction
+            reference, or open tag management if you need to clean up reporting
+            categories first.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          <Link
+            href={`/projects/${snapshot.dataset.project.id}/ledger/guide`}
+            className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            Open transaction guide
+          </Link>
+          <Link
+            href={`/projects/${snapshot.dataset.project.id}/tags`}
+            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Manage tags
+          </Link>
+        </CardContent>
+      </Card>
       <LedgerEntryPlanner
         projectId={snapshot.dataset.project.id}
         projectName={snapshot.dataset.project.name}

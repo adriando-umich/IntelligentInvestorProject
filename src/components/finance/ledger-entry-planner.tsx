@@ -1,12 +1,15 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeftRight,
+  BookOpen,
   CircleAlert,
+  FolderTree,
   Landmark,
   PiggyBank,
   Tags,
@@ -30,6 +33,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  getPlannerEntryLabel,
+  getPlannerEntryTypesForFamily,
   isAllocationEntryType,
   isCapitalEntryType,
   parseTagNames,
@@ -39,7 +44,11 @@ import {
   type PlannerEntryType,
   type PlannerEntryValues,
 } from "@/lib/finance/entry-form";
-import { entryFamilyLabels, getEntryFamily } from "@/lib/finance/types";
+import {
+  entryFamilyLabels,
+  type EntryFamily,
+  getEntryFamily,
+} from "@/lib/finance/types";
 import { formatCurrency } from "@/lib/format";
 
 type MemberOption = {
@@ -48,6 +57,10 @@ type MemberOption = {
 };
 
 function cashOutLabel(entryType: PlannerEntryType) {
+  if (entryType === "reconciliation_adjustment") {
+    return "Decrease expected cash for";
+  }
+
   if (entryType === "expense_settlement_payment") {
     return "Who is paying back";
   }
@@ -60,6 +73,10 @@ function cashOutLabel(entryType: PlannerEntryType) {
 }
 
 function cashInLabel(entryType: PlannerEntryType) {
+  if (entryType === "reconciliation_adjustment") {
+    return "Increase expected cash for";
+  }
+
   if (entryType === "expense_settlement_payment") {
     return "Who gets paid back";
   }
@@ -72,6 +89,10 @@ function cashInLabel(entryType: PlannerEntryType) {
 }
 
 function memberTransferHelperCopy(entryType: PlannerEntryType) {
+  if (entryType === "reconciliation_adjustment") {
+    return "Use one side only. Choose increase expected cash when the app should add project money to a member, or decrease expected cash when the app should remove it after reconciliation.";
+  }
+
   if (entryType === "expense_settlement_payment") {
     return "Example: A paid for B earlier, then B sends the money back to A. Choose B as the payer and A as the receiver.";
   }
@@ -138,6 +159,14 @@ function effectCopy(entryType: PlannerEntryType) {
       title: "Shared-expense balances may change",
       description:
         "The payer advances cash first, then the app can suggest who owes whom based on the expense allocation.",
+    };
+  }
+  if (entryType === "reconciliation_adjustment") {
+    return {
+      icon: <CircleAlert className="size-4" />,
+      title: "Expected project cash gets corrected",
+      description:
+        "Use this correction after reconciliation when one member's expected project cash needs to move up or down. Pick only one side of the cash leg.",
     };
   }
   if (entryType === "cash_handover") {
@@ -248,6 +277,20 @@ export function LedgerEntryPlanner({
   const liveSupported = liveModeEnabled && supportsLiveCreate(watchedEntryType);
   const transferHelperCopy = memberTransferHelperCopy(watchedEntryType);
   const currentEntryFamily = getEntryFamily(watchedEntryType);
+  const availableEntryTypes = getPlannerEntryTypesForFamily(currentEntryFamily);
+
+  function changeEntryFamily(nextFamily: EntryFamily) {
+    const nextType = getPlannerEntryTypesForFamily(nextFamily)[0];
+
+    if (!nextType || nextType === watchedEntryType) {
+      return;
+    }
+
+    form.setValue("entryType", nextType, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }
 
   function handlePreview(values: PlannerEntryValues) {
     setPreview(values);
@@ -282,25 +325,83 @@ export function LedgerEntryPlanner({
         <CardHeader>
           <CardTitle>Plan a new ledger entry</CardTitle>
           <CardDescription>
-            This form now collects enough information for live create on the
-            main transaction types for {projectName}. Shared income and expense
+            Start by choosing whether you are recording a real business event
+            or a ledger correction for {projectName}. Shared income and expense
             lines are split equally across the selected members, and tags can be
-            attached for later aggregation. Shared loan drawdown and shared loan
-            principal repayment stay separate from normal operating P&amp;L, and
-            shared loan interest now has its own shortcut instead of being buried
-            inside generic expense wording.
+            attached for later aggregation.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-5">
-            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              <Badge className="rounded-full bg-slate-900 text-white">
-                {entryFamilyLabels[currentEntryFamily]}
-              </Badge>
-              <span>
-                The family tells you whether this is a real business event or a
-                correction-only entry.
-              </span>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-slate-950">Need the full guide?</p>
+                  <p className="text-sm leading-6 text-slate-600">
+                    Keep this planner compact here, then open the separate guide
+                    page for the full business-versus-correction matrix.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/projects/${projectId}/ledger/guide`}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  >
+                    <BookOpen className="size-4" />
+                    Open transaction guide
+                  </Link>
+                  <Link
+                    href={`/projects/${projectId}/tags`}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  >
+                    <FolderTree className="size-4" />
+                    Manage tags
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>Entry family</Label>
+                <p className="text-sm text-slate-500">
+                  Choose a real business event or a correction before picking
+                  the exact transaction type.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {([
+                  ["business", "Real money happened in the project."],
+                  ["correction", "Nothing new happened in real life. You are fixing the ledger."],
+                ] as const).map(([family, description]) => {
+                  const isActive = currentEntryFamily === family;
+                  return (
+                    <button
+                      key={family}
+                      type="button"
+                      onClick={() => changeEntryFamily(family)}
+                      className={`rounded-2xl border px-4 py-4 text-left transition ${
+                        isActive
+                          ? "border-teal-300 bg-teal-50 text-teal-950"
+                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={
+                            isActive
+                              ? "rounded-full bg-teal-700 text-white"
+                              : "rounded-full bg-slate-900 text-white"
+                          }
+                        >
+                          {entryFamilyLabels[family]}
+                        </Badge>
+                      </div>
+                      <p className="mt-3 text-sm leading-6">{description}</p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
@@ -311,23 +412,18 @@ export function LedgerEntryPlanner({
                   className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
                   {...form.register("entryType")}
                 >
-                  <option value="capital_contribution">Capital contribution</option>
-                  <option value="capital_return">Capital return</option>
-                  <option value="operating_income">Operating income</option>
-                  <option value="shared_loan_drawdown">Shared loan drawdown</option>
-                  <option value="shared_loan_repayment_principal">
-                    Shared loan principal repayment
-                  </option>
-                  <option value="shared_loan_interest_payment">
-                    Shared loan interest payment
-                  </option>
-                  <option value="operating_expense">Operating expense</option>
-                  <option value="cash_handover">Cash handover</option>
-                  <option value="expense_settlement_payment">
-                    Member repayment (B pays A back)
-                  </option>
-                  <option value="profit_distribution">Profit distribution</option>
+                  {availableEntryTypes.map((entryType) => (
+                    <option key={entryType} value={entryType}>
+                      {getPlannerEntryLabel(entryType)}
+                    </option>
+                  ))}
                 </select>
+                {currentEntryFamily === "correction" ? (
+                  <p className="text-sm leading-6 text-slate-500">
+                    Reversal stays in the separate guide for now because it
+                    still needs a dedicated reference-to-original-entry flow.
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="amount">Amount</Label>
@@ -464,6 +560,15 @@ export function LedgerEntryPlanner({
                 <p className="text-sm text-slate-500">
                   Use comma-separated tags like <span className="font-medium text-slate-700">legal, deposit, bank-loan</span> so you can group inflows and expenses later.
                 </p>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/projects/${projectId}/tags`}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                  >
+                    <FolderTree className="size-3.5" />
+                    Create, rename, or delete tags
+                  </Link>
+                </div>
               </div>
               <Input
                 id="tagNamesText"
@@ -571,6 +676,16 @@ export function LedgerEntryPlanner({
             <CardDescription>{currentEffect.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="rounded-full bg-slate-900 text-white">
+                {entryFamilyLabels[currentEntryFamily]}
+              </Badge>
+              <span className="text-sm text-slate-500">
+                {currentEntryFamily === "business"
+                  ? "Real-world project activity"
+                  : "Ledger correction only"}
+              </span>
+            </div>
             <div className="rounded-2xl bg-slate-50 px-4 py-4">
               <p className="text-sm text-slate-500">Current amount</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">

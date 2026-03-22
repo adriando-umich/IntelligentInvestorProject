@@ -8,6 +8,7 @@
 - Apply the new `20260322190000_entry_families_and_loan_principal.sql` migration to the live Supabase project
 - Apply the new `20260322213000_profile_avatars.sql` migration to the live Supabase project
 - Apply the new `20260322233000_shared_loan_interest_payment.sql` migration to the live Supabase project
+- Apply the new `20260322234500_project_tag_delete_policy.sql` migration to the live Supabase project
 - Enable the Google provider in Supabase Auth and add the Google OAuth client ID/secret plus redirect URLs
 - Validate the full live flow end-to-end:
   - sign up
@@ -20,6 +21,7 @@
   - create shared loan drawdown
   - create shared loan principal repayment
   - create shared loan interest payment
+  - create, rename, and delete tags from the new tag manager page
   - verify the new dashboard charts and family filters with live data
 - Add real update/create flows for reconciliation submissions and profit distributions
 - Add member-management flow after project creation so teams can collaborate beyond the owner account
@@ -30,6 +32,7 @@
 - Add reconciliation manager actions and member submission forms
 - Add profit distribution preview/post action backed by live balances
 - Add richer allocation editing for shared income and expense lines
+- Add a dedicated reversal flow that lets a user choose the original entry instead of keeping reversal guide-only
 - Decide whether tag analytics should support multi-tag faceting only or one strict reporting category plus optional tags
 - Confirm GitHub-triggered auto-deploy integration in Vercel if push-triggered deployments are desired
 
@@ -74,4 +77,7 @@
 - Fixed the live Supabase URL typo in local + Vercel config and redeployed production so auth points at the real Supabase project.
 - Updated the sign-in screen to read live Supabase public settings, hide Google when the provider is disabled, and warn that new accounts currently require email confirmation.
 - Confirmed via the public auth settings endpoint that email auth is enabled, email confirmation is required, and Google auth is still disabled upstream in Supabase.
+- Moved the bulky planner helper matrix to its own `/ledger/guide` page and left compact references in the planner so the form has more working room.
+- Added a true family picker on the planner and surfaced `reconciliation_adjustment` as the current correction-type option there.
+- Added a dedicated `/tags` management page and live server actions for create, rename, and delete, plus an additive delete-policy migration for Supabase.
 - Moved the remaining work to live migration validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

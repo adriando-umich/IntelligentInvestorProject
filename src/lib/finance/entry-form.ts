@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  entryTypeLabels,
+  type EntryFamily,
+} from "@/lib/finance/types";
+
 const optionalString = z.preprocess((value) => {
   if (typeof value !== "string") {
     return value;
@@ -46,7 +51,7 @@ export function parseTagNames(value: string | undefined | null) {
     });
 }
 
-export const plannerEntryTypes = [
+export const businessPlannerEntryTypes = [
   "capital_contribution",
   "capital_return",
   "operating_income",
@@ -59,7 +64,29 @@ export const plannerEntryTypes = [
   "profit_distribution",
 ] as const;
 
+export const correctionPlannerEntryTypes = [
+  "reconciliation_adjustment",
+] as const;
+
+export const plannerEntryTypes = [
+  ...businessPlannerEntryTypes,
+  ...correctionPlannerEntryTypes,
+] as const;
+
 export type PlannerEntryType = (typeof plannerEntryTypes)[number];
+
+export const plannerEntryTypesByFamily = {
+  business: businessPlannerEntryTypes,
+  correction: correctionPlannerEntryTypes,
+} as const satisfies Record<EntryFamily, readonly PlannerEntryType[]>;
+
+export function getPlannerEntryTypesForFamily(entryFamily: EntryFamily) {
+  return plannerEntryTypesByFamily[entryFamily];
+}
+
+export function getPlannerEntryLabel(entryType: PlannerEntryType) {
+  return entryTypeLabels[entryType];
+}
 
 export const plannerEntrySchema = z
   .object({
@@ -99,6 +126,7 @@ export const plannerEntrySchema = z
       value.entryType === "operating_income" ||
       value.entryType === "operating_expense" ||
       value.entryType === "shared_loan_interest_payment";
+    const needsSingleCashSide = value.entryType === "reconciliation_adjustment";
 
     if (needsCashIn && !value.cashInProjectMemberId) {
       ctx.addIssue({
@@ -148,6 +176,32 @@ export const plannerEntrySchema = z
         code: z.ZodIssueCode.custom,
         message: "Select at least one member to share this amount.",
         path: ["allocationProjectMemberIds"],
+      });
+    }
+
+    if (
+      needsSingleCashSide &&
+      !value.cashInProjectMemberId &&
+      !value.cashOutProjectMemberId
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Choose one member side to adjust. Use money in to increase expected cash or money out by to decrease it.",
+        path: ["cashInProjectMemberId"],
+      });
+    }
+
+    if (
+      needsSingleCashSide &&
+      value.cashInProjectMemberId &&
+      value.cashOutProjectMemberId
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Reconciliation adjustment should touch one side only, not both.",
+        path: ["cashInProjectMemberId"],
       });
     }
   });

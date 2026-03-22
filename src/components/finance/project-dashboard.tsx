@@ -163,6 +163,12 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
           >
             Reconciliation
           </Link>
+          <Link
+            href={`/projects/${snapshot.dataset.project.id}/tags`}
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl px-4")}
+          >
+            Manage tags
+          </Link>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -504,10 +510,20 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
               <div className="grid gap-6 xl:grid-cols-2">
               <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Tags className="size-4 text-teal-700" />
-                    Tagged money in
-                  </CardTitle>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Tags className="size-4 text-teal-700" />
+                        Tagged money in
+                      </CardTitle>
+                    </div>
+                    <Link
+                      href={`/projects/${snapshot.dataset.project.id}/tags`}
+                      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "rounded-xl")}
+                    >
+                      Manage tags
+                    </Link>
+                  </div>
                   <CardDescription>
                     This rolls up tagged inflows, including operating income and
                     shared loan drawdowns. Loan drawdowns raise project cash,
