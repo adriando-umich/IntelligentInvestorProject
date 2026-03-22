@@ -17,7 +17,13 @@
   - create shared loan interest payment
   - create, rename, and delete tags from the new tag manager page
   - verify the new dashboard charts and family filters with live data
-- Add real update/create flows for reconciliation submissions and profit distributions
+- Verify the new full reconciliation workflow with a real signed-in project:
+  - manager opens a run
+  - member submits reported cash
+  - manager accepts a variance
+  - manager posts a reconciliation adjustment
+  - manager closes the run
+- Add the real live posting flow for profit distributions
 - Add richer member management after invite acceptance:
   - role changes
   - member removal / deactivation
@@ -99,4 +105,12 @@
 - Added reusable table search/filter/sort toolbars and wider table shells across the main finance tables, then QAed them locally on a production `next start` build.
 - Added accent-insensitive search normalization for the new toolbar pattern so Vietnamese queries without diacritics still match intended rows.
 - Kept follow-up bilingual UX polish on the backlog by extending the transaction-guide search index across both EN/VI copy at once, reducing the chance that a user must change locale before search works.
-- Moved the remaining work to end-to-end real-user validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.
+- Implemented the full reconciliation workflow in app code and SQL:
+  - open run
+  - member submit
+  - manager accept variance
+  - manager post ledger adjustment
+  - close run
+- Applied the new reconciliation workflow migration to the live Supabase project and confirmed a dry run shows the remote database is up to date.
+- Simplified the dashboard header actions so they no longer duplicate the section navigation tabs.
+- Moved the remaining work to end-to-end real-user validation, richer member management, profit-distribution write flows, and deeper tag-reporting decisions.

@@ -97,9 +97,8 @@ export function ProjectDashboard({
     locale === "vi"
       ? {
           addTransaction: "Thêm giao dịch",
-          reviewSettlements: "Xem đối trừ",
-          reconciliation: "Đối chiếu",
-          members: "Thành viên",
+          transactionGuide: "Hướng dẫn giao dịch",
+          inviteMembers: "Mời thành viên",
           manageTags: "Quản lý tag",
           metricMoneyNowTitle: "Tiền hiện có trong dự án",
           metricMoneyNowDescription:
@@ -209,9 +208,8 @@ export function ProjectDashboard({
         }
       : {
           addTransaction: "Add transaction",
-          reviewSettlements: "Review settlements",
-          reconciliation: "Reconciliation",
-          members: "Members",
+          transactionGuide: "Transaction guide",
+          inviteMembers: "Invite members",
           manageTags: "Manage tags",
           metricMoneyNowTitle: "Money in the project now",
           metricMoneyNowDescription:
@@ -330,22 +328,16 @@ export function ProjectDashboard({
             {copy.addTransaction}
           </Link>
           <Link
-            href={`/projects/${snapshot.dataset.project.id}/settlements`}
+            href={`/projects/${snapshot.dataset.project.id}/ledger/guide`}
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl border-teal-200 bg-teal-50 px-4 text-teal-900 hover:bg-teal-100")}
           >
-            {copy.reviewSettlements}
-          </Link>
-          <Link
-            href={`/projects/${snapshot.dataset.project.id}/reconciliation`}
-            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl px-4")}
-          >
-            {copy.reconciliation}
+            {copy.transactionGuide}
           </Link>
           <Link
             href={`/projects/${snapshot.dataset.project.id}/members`}
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl px-4")}
           >
-            {copy.members}
+            {copy.inviteMembers}
           </Link>
           <Link
             href={`/projects/${snapshot.dataset.project.id}/tags`}

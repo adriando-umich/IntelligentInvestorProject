@@ -55,6 +55,8 @@
 - The product started requiring English and Vietnamese across the UI while the app was still mostly English-only; resolved by adding a locale cookie, a global language switcher with flags, locale-aware formatters, and bilingual copy across the main routes and finance components.
 - Table-heavy workflows were hard to scan and hard to query because most finance tables had no shared search/filter/sort pattern and some columns collapsed too tightly; resolved by adding a reusable finance table toolbar/shell, applying it across the main tables, and widening dense tables so horizontal scroll is explicit.
 - Vietnamese searches initially matched only exact accented text; resolved by adding shared accent-insensitive search normalization across the new table toolbars.
+- Reconciliation had only a reporting table and no real operating workflow for managers or members; resolved by adding SQL RPCs plus UI for opening a run, member submission, manager acceptance/adjustment, and closing the run.
+- The dashboard header looked like it had two competing tab/navigation systems; resolved by keeping the section nav as the only navigation layer and reducing the dashboard row to real actions only.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -120,3 +122,4 @@
 - Added accent-insensitive Vietnamese search matching so queries like `lai vay`, `doi tru`, and `thanh vien` still hit the intended rows.
 - Verified on a local production `next start` build that transactions filtering/sorting, guide filtering/sorting, members search, and settlement/reconciliation toolbar searches all update the rendered rows as expected.
 - Found a cross-locale search gap on the live transaction guide where an English UI would not match a Vietnamese query like `lai vay`; fixed it by indexing both EN and VI matrix copy in the search parts rather than only the active locale.
+- Found that reconciliation still stopped at read-only status cards and tables; fixed by shipping a new live reconciliation workflow migration, server actions, and page-level flow UI, then applying the migration to the real Supabase database.

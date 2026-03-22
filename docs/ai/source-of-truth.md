@@ -81,6 +81,8 @@ The business-event shortcuts now include `shared_loan_interest_payment`, which b
 The ledger planner now lets users choose the entry family first, then narrows the entry-type picker accordingly. The planner currently supports `reconciliation_adjustment` inside the `correction` family, while `reversal` still remains guide-only until a dedicated original-entry workflow exists.
 Project tags now have a dedicated management page for create, rename, and delete, rather than being attach-only from the planner.
 Primary table-heavy surfaces now use a shared toolbar pattern with search, filter, sort, and wider scroll-safe table shells. Search is accent-insensitive so Vietnamese users can search with or without diacritics.
+Reconciliation now has a real write workflow: managers can open a run, members can submit reported cash, managers can accept a variance or post an adjustment directly into the ledger, and managers can close the run once no pending or unresolved variance rows remain.
+The dashboard header now uses one section-navigation system only; the secondary CTA row was reduced to true actions so it no longer duplicates the section tabs.
 
 ## Current Routes
 
@@ -201,5 +203,8 @@ Only `.env.example` should be committed.
 - Added accent-insensitive search normalization so Vietnamese users can search naturally with or without diacritics across the new table toolbars.
 - Updated the transaction-guide search index to include both English and Vietnamese labels/examples/effects at the same time, so users can search across languages without first toggling locale.
 - Replaced the dashboard's old recent-activity cards with a sortable/filterable transactions table and tightened table min-width handling so horizontal scroll is explicit on denser views.
+- Added a dedicated reconciliation workflow migration plus server actions/UI for opening runs, member submissions, manager variance resolution, automatic adjustment posting, and run closing.
+- Applied `supabase/migrations/20260323013000_reconciliation_workflow.sql` to the live Supabase project and confirmed a follow-up dry run reports the remote database is up to date.
+- Simplified the dashboard action row so it no longer acts like a second section-tab navigation strip.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.
