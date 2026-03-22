@@ -121,6 +121,7 @@ Only `.env.example` should be committed.
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
+- Live Supabase database: migrated through `20260322234500_project_tag_delete_policy.sql`
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Vercel project access protection: disabled so the production deployment is public
 - Verification status:
@@ -130,6 +131,7 @@ Only `.env.example` should be committed.
   - email/password enabled
   - email confirmation required for new accounts (`mailer_autoconfirm = false`)
   - Google provider currently disabled
+- Local operator secrets now include DB credentials plus Google OAuth client credentials, but still do not include `SUPABASE_ACCESS_TOKEN`
 
 ## Product Guardrails
 
@@ -172,9 +174,7 @@ Only `.env.example` should be committed.
 - Added an explicit `Business event / Correction` family picker to the planner and exposed `reconciliation_adjustment` as the live correction path there.
 - Added a dedicated `/tags` page with create, rename, and delete tag management, plus a new additive migration for live delete-policy support.
 - Reworked the main cash chart so each movement bar now represents its own amount directly, while `Cash now` remains a separate total bar. The previous cumulative waterfall styling was visually misleading for smaller steps like shared loan principal.
+- Fixed the ordering bug in `20260321153000_finance_app_schema.sql` by creating the core tables before helper functions that reference them, then successfully applied the full migration stack to the live Supabase database.
 - Current limitation: Google OAuth still depends on external provider setup in Supabase Auth and a Google OAuth client; no extra app env vars were added for that flow.
-- Current limitation: persistent avatar storage for live users depends on applying the new avatar migration so `profiles.avatar_url` exists in the database.
-- Current limitation: live databases need the new shared-loan-interest migration before that shortcut can be saved from the planner.
-- Current limitation: live databases also need the new project-tag delete-policy migration before delete will work from the new tag manager page.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
-- Current limitation: applying the pending Supabase migrations and enabling the Google provider still requires admin-side Supabase credentials that are not present in the repo-local `.env`.
+- Current limitation: enabling the Google provider still requires a Supabase management access token (`SUPABASE_ACCESS_TOKEN`) that is not present in the repo-local `.env`.

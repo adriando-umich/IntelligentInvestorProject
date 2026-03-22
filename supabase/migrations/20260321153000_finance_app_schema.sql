@@ -70,6 +70,120 @@ exception
   when duplicate_object then null;
 end $$;
 
+create table if not exists public.profiles (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  display_name text not null check (length(trim(display_name)) > 0),
+  email text not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.projects (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (length(trim(name)) > 0),
+  slug text not null unique check (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+  description text,
+  currency_code char(3) not null default 'VND',
+  status public.project_status not null default 'active',
+  created_by uuid not null references public.profiles (user_id) on delete restrict,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.project_members (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  user_id uuid not null references public.profiles (user_id) on delete cascade,
+  role public.project_member_role not null default 'member',
+  is_active boolean not null default true,
+  joined_at timestamptz not null default now(),
+  left_at timestamptz,
+  unique (project_id, user_id)
+);
+
+create table if not exists public.ledger_entries (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  entry_type public.ledger_entry_type not null,
+  effective_at timestamptz not null,
+  description text not null check (length(trim(description)) > 0),
+  amount numeric(18,2) not null check (amount > 0),
+  currency_code char(3) not null,
+  cash_in_member_id uuid references public.profiles (user_id) on delete restrict,
+  cash_out_member_id uuid references public.profiles (user_id) on delete restrict,
+  external_counterparty text,
+  note text,
+  status public.ledger_entry_status not null default 'posted',
+  reversal_of_entry_id uuid references public.ledger_entries (id) on delete restrict,
+  created_by uuid not null references public.profiles (user_id) on delete restrict,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.ledger_allocations (
+  id uuid primary key default gen_random_uuid(),
+  ledger_entry_id uuid not null references public.ledger_entries (id) on delete cascade,
+  project_member_id uuid not null references public.project_members (id) on delete cascade,
+  allocation_type public.ledger_allocation_type not null,
+  amount numeric(18,2) not null check (amount >= 0),
+  weight_percent numeric(8,5),
+  note text,
+  unique (ledger_entry_id, project_member_id, allocation_type)
+);
+
+create table if not exists public.profit_distribution_runs (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  as_of timestamptz not null,
+  distribution_date timestamptz not null default now(),
+  total_amount numeric(18,2) not null check (total_amount > 0),
+  cash_out_member_id uuid not null references public.profiles (user_id) on delete restrict,
+  ledger_entry_id uuid not null unique references public.ledger_entries (id) on delete cascade,
+  created_by uuid not null references public.profiles (user_id) on delete restrict,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.profit_distribution_lines (
+  id uuid primary key default gen_random_uuid(),
+  run_id uuid not null references public.profit_distribution_runs (id) on delete cascade,
+  project_member_id uuid not null references public.project_members (id) on delete cascade,
+  capital_balance_snapshot numeric(18,2) not null,
+  weight_basis_amount numeric(18,2) not null,
+  weight_percent numeric(8,5) not null check (weight_percent >= 0 and weight_percent <= 1),
+  distribution_amount numeric(18,2) not null check (distribution_amount >= 0),
+  unique (run_id, project_member_id)
+);
+
+create table if not exists public.reconciliation_runs (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  as_of timestamptz not null,
+  status public.reconciliation_run_status not null default 'open',
+  opened_by uuid not null references public.profiles (user_id) on delete restrict,
+  opened_at timestamptz not null default now(),
+  closed_by uuid references public.profiles (user_id) on delete restrict,
+  closed_at timestamptz,
+  note text
+);
+
+create table if not exists public.reconciliation_checks (
+  id uuid primary key default gen_random_uuid(),
+  run_id uuid not null references public.reconciliation_runs (id) on delete cascade,
+  project_member_id uuid not null references public.project_members (id) on delete cascade,
+  expected_project_cash numeric(18,2) not null,
+  reported_project_cash numeric(18,2),
+  variance_amount numeric(18,2),
+  status public.reconciliation_check_status not null default 'pending',
+  member_note text,
+  review_note text,
+  submitted_by uuid references public.profiles (user_id) on delete restrict,
+  submitted_at timestamptz,
+  reviewed_by uuid references public.profiles (user_id) on delete restrict,
+  reviewed_at timestamptz,
+  unique (run_id, project_member_id)
+);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
