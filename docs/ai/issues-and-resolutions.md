@@ -30,6 +30,7 @@
 - The app had no structured way to aggregate inflows and expenses by tag; resolved by adding project tags, entry-tag joins, planner support, and dashboard rollups.
 - Borrowed project cash from a shared bank loan was being forced into the wrong mental bucket; resolved by adding `shared_loan_drawdown` as a non-capital cash-in transaction type.
 - Password auth was the only live sign-in path in the app UI; resolved by adding a Google OAuth button and PKCE callback route compatible with the current Supabase SSR setup.
+- The reimbursement payment flow existed but was hidden behind overly technical wording; resolved by renaming the user-facing transaction copy to `Member repayment` and adding A/B payback examples in the planner and settlements page.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -58,3 +59,4 @@
 - Removed the public env/setup card from the sign-in screen so the live app no longer communicates internal env expectations on the web UI.
 - Added a tag system for ledger entries and a shared-loan entry type that keeps borrowed money out of capital contribution.
 - Added Google OAuth UI plus a Supabase callback handler, while logging the remaining external provider setup needed outside the repo.
+- Clarified the existing member-to-member repayment flow so users can more easily record one teammate paying another teammate back.

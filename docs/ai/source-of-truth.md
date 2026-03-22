@@ -71,6 +71,8 @@ The finance engine already derives:
 - Tagged inflow and expense rollups
 - Live dataset loading from Supabase rows when env/session are available
 
+The live ledger model already supports member-to-member repayment for shared expenses through the `expense_settlement_payment` entry type. The current UI now presents this in plain language as `Member repayment`, with explicit A-paid-for-B / B-pays-A-back guidance in the planner and settlements flow.
+
 ## Current Routes
 
 Implemented now and wired:
@@ -140,5 +142,6 @@ Only `.env.example` should be committed.
 - Added `shared_loan_drawdown` as a live transaction type for borrowed project cash that should not count as member capital.
 - Added Google OAuth on the sign-in screen, backed by a Supabase browser client helper and a PKCE callback route.
 - Added operator guidance in `README.md` for Google provider setup in Supabase and Google Cloud.
+- Clarified the existing member-to-member repayment transaction in the UI by renaming `expense_settlement_payment` to `Member repayment` in user-facing copy and adding explicit reimbursement examples.
 - Current limitation: Google OAuth still depends on external provider setup in Supabase Auth and a Google OAuth client; no extra app env vars were added for that flow.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.

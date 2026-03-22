@@ -14,7 +14,7 @@ export const entryTypeLabels = {
   shared_loan_drawdown: "Shared loan drawdown",
   operating_expense: "Operating expense",
   cash_handover: "Cash handover",
-  expense_settlement_payment: "Expense settlement payment",
+  expense_settlement_payment: "Member repayment",
   profit_distribution: "Profit distribution",
   reconciliation_adjustment: "Reconciliation adjustment",
   reversal: "Reversal",

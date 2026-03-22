@@ -46,6 +46,42 @@ type MemberOption = {
   name: string;
 };
 
+function cashOutLabel(entryType: PlannerEntryType) {
+  if (entryType === "expense_settlement_payment") {
+    return "Who is paying back";
+  }
+
+  if (entryType === "cash_handover") {
+    return "Who hands the money over";
+  }
+
+  return "Money out by";
+}
+
+function cashInLabel(entryType: PlannerEntryType) {
+  if (entryType === "expense_settlement_payment") {
+    return "Who gets paid back";
+  }
+
+  if (entryType === "cash_handover") {
+    return "Who receives the handover";
+  }
+
+  return "Money in to";
+}
+
+function memberTransferHelperCopy(entryType: PlannerEntryType) {
+  if (entryType === "expense_settlement_payment") {
+    return "Example: A paid for B earlier, then B sends the money back to A. Choose B as the payer and A as the receiver.";
+  }
+
+  if (entryType === "cash_handover") {
+    return "Use this when project cash is physically moved from one member to another without settling a debt.";
+  }
+
+  return null;
+}
+
 function effectCopy(entryType: PlannerEntryType) {
   if (entryType === "capital_contribution") {
     return {
@@ -98,9 +134,9 @@ function effectCopy(entryType: PlannerEntryType) {
   if (entryType === "expense_settlement_payment") {
     return {
       icon: <ArrowLeftRight className="size-4" />,
-      title: "Shared-expense debt gets settled",
+      title: "One member pays another member back",
       description:
-        "This records a real payment between teammates to reduce outstanding reimbursement balances.",
+        "Use this when one teammate returns money to another teammate after being paid for earlier. Example: A paid for B, then B pays A back.",
     };
   }
   return {
@@ -193,6 +229,7 @@ export function LedgerEntryPlanner({
     .filter((value): value is string => Boolean(value));
   const selectedTagNames = parseTagNames(watchedTagNamesText);
   const liveSupported = liveModeEnabled && supportsLiveCreate(watchedEntryType);
+  const transferHelperCopy = memberTransferHelperCopy(watchedEntryType);
 
   function handlePreview(values: PlannerEntryValues) {
     setPreview(values);
@@ -250,7 +287,7 @@ export function LedgerEntryPlanner({
                   <option value="operating_expense">Operating expense</option>
                   <option value="cash_handover">Cash handover</option>
                   <option value="expense_settlement_payment">
-                    Expense settlement payment
+                    Member repayment (B pays A back)
                   </option>
                   <option value="profit_distribution">Profit distribution</option>
                 </select>
@@ -288,7 +325,9 @@ export function LedgerEntryPlanner({
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="cashOutProjectMemberId">Money out by</Label>
+                <Label htmlFor="cashOutProjectMemberId">
+                  {cashOutLabel(watchedEntryType)}
+                </Label>
                 <select
                   id="cashOutProjectMemberId"
                   className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
@@ -303,7 +342,9 @@ export function LedgerEntryPlanner({
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cashInProjectMemberId">Money in to</Label>
+                <Label htmlFor="cashInProjectMemberId">
+                  {cashInLabel(watchedEntryType)}
+                </Label>
                 <select
                   id="cashInProjectMemberId"
                   className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
@@ -318,6 +359,12 @@ export function LedgerEntryPlanner({
                 </select>
               </div>
             </div>
+
+            {transferHelperCopy ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+                {transferHelperCopy}
+              </div>
+            ) : null}
 
             {isCapitalEntryType(watchedEntryType) ? (
               <div className="space-y-2">

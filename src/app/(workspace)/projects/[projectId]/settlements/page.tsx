@@ -39,7 +39,7 @@ export default async function SettlementsPage({
       <PageHeader
         eyebrow="Settlements"
         title={`Shared-expense settlement for ${snapshot.dataset.project.name}`}
-        description="This page only shows who should pay whom to settle shared expenses. It does not represent profit payout or capital return."
+        description="This page only shows who should pay whom to settle shared expenses. Example: if A paid for B earlier, this page helps record B paying A back. It does not represent profit payout or capital return."
       />
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -100,7 +100,7 @@ export default async function SettlementsPage({
         <CardHeader>
           <CardTitle>Suggested settlement for shared expenses</CardTitle>
           <CardDescription>
-            If your team records the payment, choose {`"Record as paid"`} to prefill the planner.
+            If your team records the payment, choose {`"Record repayment"`} to prefill the planner with the debtor and creditor.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -146,7 +146,7 @@ export default async function SettlementsPage({
                           href={`/projects/${snapshot.dataset.project.id}/ledger/new?type=expense_settlement_payment&from=${suggestion.fromProjectMemberId}&to=${suggestion.toProjectMemberId}&amount=${suggestion.amount}`}
                           className="inline-flex h-7 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 text-[0.8rem] font-medium text-slate-900 transition hover:bg-slate-100"
                         >
-                          Record as paid
+                          Record repayment
                         </Link>
                       </TableCell>
                     </TableRow>

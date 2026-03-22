@@ -56,4 +56,5 @@
 - Added tag creation/attachment in the ledger planner plus dashboard rollups for tagged inflows and expenses.
 - Added a shared-loan transaction type for borrowed funds that should not count as capital contribution.
 - Added a Google OAuth entry point on the sign-in screen plus the server callback route needed for Supabase SSR auth.
+- Clarified that member-to-member reimbursement already exists in the ledger through the live `expense_settlement_payment` path, now presented as `Member repayment` in the UI.
 - Moved the remaining work to live migration validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

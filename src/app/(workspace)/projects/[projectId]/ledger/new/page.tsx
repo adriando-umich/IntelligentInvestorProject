@@ -47,7 +47,7 @@ export default async function NewLedgerEntryPage({
       <PageHeader
         eyebrow="Ledger planner"
         title={`Add a transaction for ${snapshot.dataset.project.name}`}
-        description="Use this planner to record capital, tagged inflows, shared loan drawdowns, operating expenses, cash handovers, or settlement payments. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase."
+        description="Use this planner to record capital, tagged inflows, shared loan drawdowns, operating expenses, project cash handovers, or member repayments. Example: if A paid for B earlier and B returns the money to A, record that here as a member repayment. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase."
       />
       <LedgerEntryPlanner
         projectId={snapshot.dataset.project.id}
@@ -67,7 +67,7 @@ export default async function NewLedgerEntryPage({
           cashInProjectMemberId: queryTo,
           description:
             queryType === "expense_settlement_payment" && queryFrom && queryTo
-              ? "Settlement payment recorded from suggestion"
+              ? "Member repayment recorded from suggestion"
               : "",
         }}
         liveModeEnabled={!session.demoMode}
