@@ -38,6 +38,10 @@ The app must keep those concepts separate in both data and UI.
   - Server client factory
 - `supabase/migrations/`
   - SQL schema for live backend bootstrap
+- `vercel.json`
+  - Forces the Vercel project to use the Next.js framework preset
+- `.vercelignore`
+  - Prevents local `.env*` files and bulky local artifacts from being uploaded during CLI deploys
 
 ## Current Data Model In Code
 
@@ -87,6 +91,11 @@ Only `.env.example` should be committed.
 - Supabase runtime wiring: partial but now supports live reads plus live create on main ledger entry types
 - Supabase SQL migration: created at `supabase/migrations/20260321153000_finance_app_schema.sql`
 - README deploy and env guidance: created
+- GitHub remote: configured and pushed
+- GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
+- Vercel project: `intelligent-investor-project`
+- Production URL: `https://intelligent-investor-project.vercel.app`
+- Vercel project access protection: disabled so the production deployment is public
 - Verification status:
   - `npm run lint` passed
   - `npm run build` passed
@@ -108,4 +117,7 @@ Only `.env.example` should be committed.
 - Verified that lint and production build both pass.
 - Added Supabase-backed dataset loading in the repository layer when live env/session are present.
 - Added a transactional RPC-based live create flow for ledger entries from the planner.
+- Pushed the repo to GitHub.
+- Created and linked a Vercel project, deployed production, set public envs, set `NEXT_PUBLIC_APP_URL`, and redeployed.
+- Fixed Vercel serving issues by disabling project SSO protection, adding `.vercelignore`, and forcing `framework: \"nextjs\"` in `vercel.json`.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.

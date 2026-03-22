@@ -6,6 +6,7 @@
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
 - Profit distribution still has no dedicated live post flow.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
+- GitHub-triggered auto deploy is not confirmed yet; the current working deployment path is Vercel CLI plus linked project
 
 ## Resolved Issues
 
@@ -17,6 +18,9 @@
 - Production verification passed with both `npm run lint` and `npm run build`.
 - The repository layer can now read from Supabase when live env and session are available.
 - The ledger planner can now save supported entry types through a transactional SQL RPC instead of previewing only.
+- Initial Vercel deploy was unintentionally seeing local `.env` during build; resolved by adding `.vercelignore`.
+- Vercel returned `401` because project SSO protection was enabled; resolved by clearing `ssoProtection` through the Vercel API.
+- Vercel returned `404` on public routes while the project was treated as `Other`; resolved by forcing `framework: \"nextjs\"` in `vercel.json` and redeploying.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -26,6 +30,7 @@
 - Avoid importing non-component utilities from client modules into server pages.
 - With `react-hook-form` plus `z.coerce`, keep input and output types explicit to satisfy production type checking.
 - For live Supabase writes that span ledger entries plus allocations, prefer one SQL RPC over multiple client-side inserts.
+- When deploying from local with the Vercel CLI, ensure `.vercelignore` excludes `.env*` so local tokens are not uploaded as source files.
 
 ## Latest Session Delta
 
@@ -36,3 +41,4 @@
 - Confirmed the repo now builds successfully after those fixes.
 - Added Supabase-backed repository reads with demo fallback.
 - Added `create_project_ledger_entry` RPC in the migration and wired the planner to call it for supported entry types.
+- Pushed the repo to GitHub, created the Vercel project, set production env vars, deployed production, and verified the public sign-in route responds correctly.

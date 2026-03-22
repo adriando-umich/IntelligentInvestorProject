@@ -5,6 +5,7 @@
 - Validate the new SQL migration plus RPC against a live Supabase project
 - Add real update/create flows for reconciliation submissions and profit distributions
 - Add seed data or onboarding flow for the first real workspace
+- Connect GitHub auto-deploy integration in Vercel if push-triggered deployments are desired
 
 ## Next
 
@@ -37,4 +38,5 @@
   - SQL migration
   - README
 - Added live Supabase reads in the repository layer.
+- Pushed code to GitHub and shipped a public Vercel production deployment.
 - Moved the remaining work to backend validation, reconciliation write flows, and profit-distribution write flows.
