@@ -126,6 +126,9 @@ function applyEntryEffects(
     operatingIncome: number;
     operatingExpense: number;
     profitDistributed: number;
+    sharedLoanDrawdown: number;
+    sharedLoanPrincipalRepaid: number;
+    sharedLoanInterestPaid: number;
   }
 ) {
   applyCashMovement(summariesByUserId, entry, factor);
@@ -240,8 +243,56 @@ function applyEntryEffects(
       return;
     }
     case "shared_loan_drawdown":
-    case "shared_loan_repayment_principal":
+      totals.sharedLoanDrawdown = roundMoney(
+        totals.sharedLoanDrawdown + entry.amount * factor
+      );
       return;
+    case "shared_loan_repayment_principal":
+      totals.sharedLoanPrincipalRepaid = roundMoney(
+        totals.sharedLoanPrincipalRepaid + entry.amount * factor
+      );
+      return;
+    case "shared_loan_interest_payment": {
+      totals.operatingExpense = roundMoney(
+        totals.operatingExpense + entry.amount * factor
+      );
+      totals.sharedLoanInterestPaid = roundMoney(
+        totals.sharedLoanInterestPaid + entry.amount * factor
+      );
+
+      if (entry.cashOutMemberId) {
+        const payer = summariesByUserId.get(entry.cashOutMemberId);
+        if (payer) {
+          payer.expenseReimbursementBalance = roundMoney(
+            payer.expenseReimbursementBalance + entry.amount * factor
+          );
+        }
+      }
+
+      for (const allocation of getAllocationsForEntry(
+        entry.id,
+        allocations,
+        "expense_share"
+      )) {
+        const member = projectMemberById.get(allocation.projectMemberId);
+        if (!member) {
+          continue;
+        }
+
+        const summary = summariesByUserId.get(member.userId);
+        if (!summary) {
+          continue;
+        }
+
+        summary.operatingPnlShare = roundMoney(
+          summary.operatingPnlShare - allocation.amount * factor
+        );
+        summary.expenseReimbursementBalance = roundMoney(
+          summary.expenseReimbursementBalance - allocation.amount * factor
+        );
+      }
+      return;
+    }
     case "expense_settlement_payment": {
       if (entry.cashOutMemberId) {
         const debtor = summariesByUserId.get(entry.cashOutMemberId);
@@ -383,6 +434,9 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
     operatingIncome: 0,
     operatingExpense: 0,
     profitDistributed: 0,
+    sharedLoanDrawdown: 0,
+    sharedLoanPrincipalRepaid: 0,
+    sharedLoanInterestPaid: 0,
   };
 
   for (const entry of postedEntries) {
@@ -429,6 +483,9 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
   const totalCapitalOutstanding = roundMoney(
     memberSummaries.reduce((sum, summary) => sum + summary.capitalBalance, 0)
   );
+  const sharedLoanPrincipalOutstanding = roundMoney(
+    totals.sharedLoanDrawdown - totals.sharedLoanPrincipalRepaid
+  );
   const undistributedProfit = roundMoney(
     totals.operatingIncome - totals.operatingExpense - totals.profitDistributed
   );
@@ -474,6 +531,7 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
   ]);
   const expenseTagRollups = buildTagRollups(dataset, postedEntries, [
     "operating_expense",
+    "shared_loan_interest_payment",
   ]);
 
   const creditors = memberSummaries
@@ -577,6 +635,10 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
     projectOperatingProfit: roundMoney(
       totals.operatingIncome - totals.operatingExpense
     ),
+    sharedLoanDrawdownTotal: roundMoney(totals.sharedLoanDrawdown),
+    sharedLoanPrincipalRepaidTotal: roundMoney(totals.sharedLoanPrincipalRepaid),
+    sharedLoanPrincipalOutstanding,
+    sharedLoanInterestPaidTotal: roundMoney(totals.sharedLoanInterestPaid),
     totalCapitalOutstanding,
     totalProfitDistributed: roundMoney(totals.profitDistributed),
     undistributedProfit,

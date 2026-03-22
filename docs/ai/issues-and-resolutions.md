@@ -6,6 +6,7 @@
 - The new `20260322130000_tags_and_shared_loans.sql` migration has not yet been executed against the live Supabase database.
 - The new `20260322190000_entry_families_and_loan_principal.sql` migration has not yet been executed against the live Supabase database.
 - The new `20260322213000_profile_avatars.sql` migration has not yet been executed against the live Supabase database.
+- The new `20260322233000_shared_loan_interest_payment.sql` migration has not yet been executed against the live Supabase database.
 - The live Supabase path has not yet been validated end-to-end against a real project with real auth/session data.
 - Google OAuth still requires external setup in Supabase Auth and Google Cloud before the new sign-in button can succeed in production.
 - Profit distribution still has no dedicated live post flow.
@@ -37,6 +38,8 @@
 - Shared loan drawdown existed without an equally explicit principal-paydown type; resolved by adding `shared_loan_repayment_principal`.
 - Google sign-in could succeed without the app persisting profile photos into workspace profiles; resolved in code by syncing avatar metadata and rendering avatars with a fallback.
 - `/projects` started returning `500` in demo mode after the avatar rollout; resolved by removing a server-side call to `buttonVariants()` from the client-only button module.
+- The dashboard was still table-heavy and hard to scan at a glance; resolved by adding plain-language charts for cash bridge, capital share, custody, reimbursements, tags, profit outlook, and entry-family reporting.
+- Shared loan interest had to be forced through generic operating expense wording; resolved by adding `shared_loan_interest_payment` as its own business-event shortcut.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -53,6 +56,7 @@
 - When the ledger model is still stored as one enum in SQL, add a shared classification helper in app code instead of forcing a breaking schema rewrite mid-project.
 - When social-auth metadata should survive beyond the current session, sync it into the app's profile table and gracefully tolerate older databases that have not received the new column yet.
 - If a route is a server page, do not call styling helpers exported from client components; keep shared class builders server-safe or inline the classes on that page.
+- When adding dashboard visuals, keep each chart tied to exactly one finance concept so the UI never collapses custody, reimbursement, capital, and profit into one ambiguous story.
 
 ## Latest Session Delta
 
@@ -72,3 +76,4 @@
 - Added `shared_loan_repayment_principal`, a derived `business/correction` transaction family, and a planner helper matrix that explains which type to use and what each type affects.
 - Added Google-avatar sync and UI rendering while logging that the new `profiles.avatar_url` column still needs its live migration applied.
 - Fixed the resulting `/projects` server crash and re-verified the page in demo mode locally with the avatar shell still rendering fallback initials.
+- Added visualization-driven dashboard analytics plus a live-save path for `shared_loan_interest_payment`, and logged the new migration requirement for production databases.

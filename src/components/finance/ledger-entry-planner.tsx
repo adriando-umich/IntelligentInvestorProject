@@ -124,6 +124,14 @@ function effectCopy(entryType: PlannerEntryType) {
         "Use this when the project repays loan principal. It reduces project cash, but it does not count as operating expense, capital return, or profit distribution. Record loan interest separately as operating expense.",
     };
   }
+  if (entryType === "shared_loan_interest_payment") {
+    return {
+      icon: <Landmark className="size-4" />,
+      title: "Loan interest becomes a project cost",
+      description:
+        "Use this shortcut when the project pays shared bank interest. It lowers operating P&L, can create teammate reimbursement balances, and stays separate from loan principal.",
+    };
+  }
   if (entryType === "operating_expense") {
     return {
       icon: <CircleAlert className="size-4" />,
@@ -278,7 +286,9 @@ export function LedgerEntryPlanner({
             main transaction types for {projectName}. Shared income and expense
             lines are split equally across the selected members, and tags can be
             attached for later aggregation. Shared loan drawdown and shared loan
-            principal repayment stay separate from normal operating P&amp;L.
+            principal repayment stay separate from normal operating P&amp;L, and
+            shared loan interest now has its own shortcut instead of being buried
+            inside generic expense wording.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -307,6 +317,9 @@ export function LedgerEntryPlanner({
                   <option value="shared_loan_drawdown">Shared loan drawdown</option>
                   <option value="shared_loan_repayment_principal">
                     Shared loan principal repayment
+                  </option>
+                  <option value="shared_loan_interest_payment">
+                    Shared loan interest payment
                   </option>
                   <option value="operating_expense">Operating expense</option>
                   <option value="cash_handover">Cash handover</option>

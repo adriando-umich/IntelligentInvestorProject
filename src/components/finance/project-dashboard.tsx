@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
@@ -15,6 +16,12 @@ import {
 
 import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { MetricCard } from "@/components/finance/metric-card";
+import {
+  EntryFamilyReport,
+  ProjectCapitalVisuals,
+  ProjectOverviewVisuals,
+  ProjectTagVisuals,
+} from "@/components/finance/project-dashboard-visuals";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -40,7 +47,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { entryTypeLabels, type ProjectSnapshot } from "@/lib/finance/types";
+import {
+  entryFamilyLabels,
+  entryTypeLabels,
+  getEntryFamily,
+  type EntryFamily,
+  type ProjectSnapshot,
+} from "@/lib/finance/types";
 import {
   formatCompactCurrency,
   formatCurrency,
@@ -72,6 +85,9 @@ function entryTone(entryType: keyof typeof entryTypeLabels) {
   ) {
     return "bg-sky-100 text-sky-800";
   }
+  if (entryType === "shared_loan_interest_payment") {
+    return "bg-amber-100 text-amber-800";
+  }
   if (entryType === "operating_expense") {
     return "bg-rose-100 text-rose-800";
   }
@@ -85,6 +101,9 @@ function entryTone(entryType: keyof typeof entryTypeLabels) {
 }
 
 export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
+  const [activityFamilyFilter, setActivityFamilyFilter] = useState<
+    "all" | EntryFamily
+  >("all");
   const profileNames = new Map(
     snapshot.memberSummaries.map((summary) => [
       summary.projectMember.userId,
@@ -105,6 +124,22 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
       tagNamesByEntryId.set(entryTag.ledgerEntryId, current);
     }
   }
+
+  const filteredRecentEntries = useMemo(() => {
+    if (activityFamilyFilter === "all") {
+      return snapshot.recentEntries;
+    }
+
+    return snapshot.dataset.entries
+      .filter((entry) => entry.status === "posted")
+      .filter((entry) => getEntryFamily(entry.entryType) === activityFamilyFilter)
+      .sort(
+        (left, right) =>
+          new Date(right.effectiveAt).getTime() -
+          new Date(left.effectiveAt).getTime()
+      )
+      .slice(0, 8);
+  }, [activityFamilyFilter, snapshot.dataset.entries, snapshot.recentEntries]);
 
   return (
     <TooltipProvider>
@@ -198,6 +233,8 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
+            <ProjectOverviewVisuals snapshot={snapshot} />
+
             <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
               <CardHeader>
                 <CardTitle>Who is holding project money</CardTitle>
@@ -248,15 +285,44 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
 
             <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
               <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
-                <CardHeader>
-                  <CardTitle>Recent activity</CardTitle>
-                  <CardDescription>
-                    Latest posted transactions in this project ledger.
-                  </CardDescription>
+                <CardHeader className="gap-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <CardTitle>Recent activity</CardTitle>
+                      <CardDescription className="mt-1">
+                        Latest posted transactions in this project ledger.
+                      </CardDescription>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        ["all", "All activity"],
+                        ["business", entryFamilyLabels.business],
+                        ["correction", entryFamilyLabels.correction],
+                      ] as const).map(([key, label]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setActivityFamilyFilter(key)}
+                          className={
+                            activityFamilyFilter === key
+                              ? "rounded-full bg-slate-950 px-3 py-1.5 text-sm font-medium text-white"
+                              : "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          }
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {snapshot.recentEntries.map((entry) => (
+                    {filteredRecentEntries.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
+                        No entries match the current family filter.
+                      </div>
+                    ) : (
+                      filteredRecentEntries.map((entry) => (
                       <div
                         key={entry.id}
                         className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
@@ -265,6 +331,9 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge className={cn("rounded-full", entryTone(entry.entryType))}>
                               {entryTypeLabels[entry.entryType]}
+                            </Badge>
+                            <Badge className="rounded-full bg-white text-slate-700 ring-1 ring-slate-200">
+                              {entryFamilyLabels[getEntryFamily(entry.entryType)]}
                             </Badge>
                             <span className="text-xs uppercase tracking-[0.2em] text-slate-400">
                               {formatDateLabel(entry.effectiveAt)}
@@ -294,7 +363,8 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
                           {formatCurrency(entry.amount, entry.currencyCode)}
                         </p>
                       </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -428,7 +498,10 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
           </TabsContent>
 
           <TabsContent value="tags">
-            <div className="grid gap-6 xl:grid-cols-2">
+            <div className="space-y-6">
+              <ProjectTagVisuals snapshot={snapshot} />
+
+              <div className="grid gap-6 xl:grid-cols-2">
               <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -521,40 +594,45 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
                   )}
                 </CardContent>
               </Card>
+              </div>
             </div>
           </TabsContent>
 
           <TabsContent value="capital">
-            <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
-              <CardHeader>
-                <CardTitle>Capital and profit-sharing weight</CardTitle>
-                <CardDescription>
-                  Only members with positive capital participate in profit preview. The remainder is assigned to the largest capital holder after rounding.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Member</TableHead>
-                      <TableHead>Capital invested</TableHead>
-                      <TableHead>Profit weight</TableHead>
-                      <TableHead>Estimated profit today</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {snapshot.capitalWeights.map((row) => (
-                      <TableRow key={row.projectMemberId}>
-                        <TableCell>{row.displayName}</TableCell>
-                        <TableCell>{formatCurrency(row.capitalBalance, snapshot.dataset.project.currencyCode)}</TableCell>
-                        <TableCell>{formatPercent(row.weight)}</TableCell>
-                        <TableCell>{formatCurrency(row.estimatedProfitShare, snapshot.dataset.project.currencyCode)}</TableCell>
+            <div className="space-y-6">
+              <ProjectCapitalVisuals snapshot={snapshot} />
+
+              <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
+                <CardHeader>
+                  <CardTitle>Capital and profit-sharing weight</CardTitle>
+                  <CardDescription>
+                    Only members with positive capital participate in profit preview. The remainder is assigned to the largest capital holder after rounding.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Member</TableHead>
+                        <TableHead>Capital invested</TableHead>
+                        <TableHead>Profit weight</TableHead>
+                        <TableHead>Estimated profit today</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {snapshot.capitalWeights.map((row) => (
+                        <TableRow key={row.projectMemberId}>
+                          <TableCell>{row.displayName}</TableCell>
+                          <TableCell>{formatCurrency(row.capitalBalance, snapshot.dataset.project.currencyCode)}</TableCell>
+                          <TableCell>{formatPercent(row.weight)}</TableCell>
+                          <TableCell>{formatCurrency(row.estimatedProfitShare, snapshot.dataset.project.currencyCode)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="reconciliation">
@@ -611,46 +689,57 @@ export function ProjectDashboard({ snapshot }: { snapshot: ProjectSnapshot }) {
           </TabsContent>
 
           <TabsContent value="advanced">
-            <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
-              <CardHeader>
-                <CardTitle>Advanced technical breakdown</CardTitle>
-                <CardDescription>
-                  The friendly dashboard above is the default. This section exposes the raw technical meaning underneath.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-slate-950">Operating totals</p>
-                    <Tooltip>
-                      <TooltipTrigger className="text-slate-400">
-                        <CircleAlert className="size-4" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Operating profit is income minus operating expense before profit distributions.
-                      </TooltipContent>
-                    </Tooltip>
+            <div className="space-y-6">
+              <EntryFamilyReport
+                snapshot={snapshot}
+                selectedFamily={activityFamilyFilter}
+                onSelectFamily={setActivityFamilyFilter}
+              />
+
+              <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
+                <CardHeader>
+                  <CardTitle>Advanced technical breakdown</CardTitle>
+                  <CardDescription>
+                    The friendly dashboard above is the default. This section exposes the raw technical meaning underneath.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-slate-950">Operating totals</p>
+                      <Tooltip>
+                        <TooltipTrigger className="text-slate-400">
+                          <CircleAlert className="size-4" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Operating profit is income minus operating expense before profit distributions.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm text-slate-600">
+                      <p>Income: {formatCompactCurrency(snapshot.projectOperatingIncome, snapshot.dataset.project.currencyCode)}</p>
+                      <p>Expense: {formatCompactCurrency(snapshot.projectOperatingExpense, snapshot.dataset.project.currencyCode)}</p>
+                      <p>Shared loan interest: {formatCompactCurrency(snapshot.sharedLoanInterestPaidTotal, snapshot.dataset.project.currencyCode)}</p>
+                      <p>Shared loan principal still outstanding: {formatCompactCurrency(snapshot.sharedLoanPrincipalOutstanding, snapshot.dataset.project.currencyCode)}</p>
+                      <p>Profit paid: {formatCompactCurrency(snapshot.totalProfitDistributed, snapshot.dataset.project.currencyCode)}</p>
+                      <p className="font-medium text-slate-950">
+                        Undistributed profit: {formatCompactCurrency(snapshot.undistributedProfit, snapshot.dataset.project.currencyCode)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="mt-3 space-y-2 text-sm text-slate-600">
-                    <p>Income: {formatCompactCurrency(snapshot.projectOperatingIncome, snapshot.dataset.project.currencyCode)}</p>
-                    <p>Expense: {formatCompactCurrency(snapshot.projectOperatingExpense, snapshot.dataset.project.currencyCode)}</p>
-                    <p>Profit paid: {formatCompactCurrency(snapshot.totalProfitDistributed, snapshot.dataset.project.currencyCode)}</p>
-                    <p className="font-medium text-slate-950">
-                      Undistributed profit: {formatCompactCurrency(snapshot.undistributedProfit, snapshot.dataset.project.currencyCode)}
-                    </p>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4">
+                    <p className="font-medium text-slate-950">Model guardrails</p>
+                    <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                      <li>Cash custody tracks where project money physically sits.</li>
+                      <li>Reimbursement tracks who owes whom because of shared expenses.</li>
+                      <li>Capital drives profit weight.</li>
+                      <li>Shared loan principal is financing, while shared loan interest is cost.</li>
+                      <li>Profit is only paid when a manager posts a distribution.</li>
+                    </ul>
                   </div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4">
-                  <p className="font-medium text-slate-950">Model guardrails</p>
-                  <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-                    <li>Cash custody tracks where project money physically sits.</li>
-                    <li>Reimbursement tracks who owes whom because of shared expenses.</li>
-                    <li>Capital drives profit weight.</li>
-                    <li>Profit is only paid when a manager posts a distribution.</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

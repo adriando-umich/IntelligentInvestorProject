@@ -52,6 +52,7 @@ export const plannerEntryTypes = [
   "operating_income",
   "shared_loan_drawdown",
   "shared_loan_repayment_principal",
+  "shared_loan_interest_payment",
   "operating_expense",
   "cash_handover",
   "expense_settlement_payment",
@@ -86,6 +87,7 @@ export const plannerEntrySchema = z
     const needsCashOut =
       value.entryType === "capital_return" ||
       value.entryType === "shared_loan_repayment_principal" ||
+      value.entryType === "shared_loan_interest_payment" ||
       value.entryType === "operating_expense" ||
       value.entryType === "cash_handover" ||
       value.entryType === "expense_settlement_payment" ||
@@ -95,7 +97,8 @@ export const plannerEntrySchema = z
       value.entryType === "capital_return";
     const needsAllocation =
       value.entryType === "operating_income" ||
-      value.entryType === "operating_expense";
+      value.entryType === "operating_expense" ||
+      value.entryType === "shared_loan_interest_payment";
 
     if (needsCashIn && !value.cashInProjectMemberId) {
       ctx.addIssue({
@@ -159,7 +162,11 @@ export function isCapitalEntryType(entryType: PlannerEntryType) {
 }
 
 export function isAllocationEntryType(entryType: PlannerEntryType) {
-  return entryType === "operating_income" || entryType === "operating_expense";
+  return (
+    entryType === "operating_income" ||
+    entryType === "operating_expense" ||
+    entryType === "shared_loan_interest_payment"
+  );
 }
 
 export function supportsLiveCreate(entryType: PlannerEntryType) {

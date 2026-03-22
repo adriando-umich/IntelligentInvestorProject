@@ -16,6 +16,7 @@ export const entryTypeLabels = {
   operating_income: "Operating income",
   shared_loan_drawdown: "Shared loan drawdown",
   shared_loan_repayment_principal: "Shared loan principal repayment",
+  shared_loan_interest_payment: "Shared loan interest payment",
   operating_expense: "Operating expense",
   cash_handover: "Cash handover",
   expense_settlement_payment: "Member repayment",
@@ -32,6 +33,7 @@ export const businessEntryTypes = [
   "operating_income",
   "shared_loan_drawdown",
   "shared_loan_repayment_principal",
+  "shared_loan_interest_payment",
   "operating_expense",
   "cash_handover",
   "expense_settlement_payment",
@@ -58,6 +60,7 @@ export const entryFamilyByType = {
   operating_income: "business",
   shared_loan_drawdown: "business",
   shared_loan_repayment_principal: "business",
+  shared_loan_interest_payment: "business",
   operating_expense: "business",
   cash_handover: "business",
   expense_settlement_payment: "business",
@@ -289,6 +292,10 @@ export interface ProjectSnapshot {
   projectOperatingIncome: number;
   projectOperatingExpense: number;
   projectOperatingProfit: number;
+  sharedLoanDrawdownTotal: number;
+  sharedLoanPrincipalRepaidTotal: number;
+  sharedLoanPrincipalOutstanding: number;
+  sharedLoanInterestPaidTotal: number;
   totalCapitalOutstanding: number;
   totalProfitDistributed: number;
   undistributedProfit: number;

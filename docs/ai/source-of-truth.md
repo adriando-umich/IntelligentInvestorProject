@@ -74,6 +74,7 @@ The finance engine already derives:
 
 The live ledger model already supports member-to-member repayment for shared expenses through the `expense_settlement_payment` entry type. The current UI now presents this in plain language as `Member repayment`, with explicit A-paid-for-B / B-pays-A-back guidance in the planner and settlements flow.
 The transaction model now also exposes a second classification axis in code: `entryFamily = business | correction`. The persisted DB column is still `entry_type`, but the app now derives family labels and uses them in planner guidance and the transaction helper matrix.
+The business-event shortcuts now include `shared_loan_interest_payment`, which behaves like a shared operating cost while staying distinct from shared-loan principal.
 
 ## Current Routes
 
@@ -108,6 +109,7 @@ Only `.env.example` should be committed.
 - Additional tags and shared-loan migration: `supabase/migrations/20260322130000_tags_and_shared_loans.sql`
 - Additional entry-family and loan-principal migration: `supabase/migrations/20260322190000_entry_families_and_loan_principal.sql`
 - Additional profile-avatar migration: `supabase/migrations/20260322213000_profile_avatars.sql`
+- Additional shared-loan-interest migration: `supabase/migrations/20260322233000_shared_loan_interest_payment.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
@@ -151,6 +153,9 @@ Only `.env.example` should be committed.
 - Added a transaction helper matrix on the ledger planner page so users can see, in one place, which cases are business events versus corrections and what each type affects.
 - Added avatar sync from Supabase auth metadata and started rendering avatars in the workspace shell plus member-facing project UI.
 - Fixed a follow-up regression where `/projects` crashed in demo mode because the server page was calling `buttonVariants()` from the client-only button module; the page now uses server-safe classes there and the avatar UI remains intact.
+- Added chart-driven dashboard storytelling with plain-language visuals for cash bridge, capital ownership, cash custody, reimbursement balances, tag mix, profit outlook, and entry-family reporting.
+- Added `shared_loan_interest_payment` as a dedicated transaction shortcut plus demo data that exercises shared loan drawdown, interest, and principal repayment.
 - Current limitation: Google OAuth still depends on external provider setup in Supabase Auth and a Google OAuth client; no extra app env vars were added for that flow.
 - Current limitation: persistent avatar storage for live users depends on applying the new avatar migration so `profiles.avatar_url` exists in the database.
+- Current limitation: live databases need the new shared-loan-interest migration before that shortcut can be saved from the planner.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.

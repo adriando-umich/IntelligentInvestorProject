@@ -6,6 +6,7 @@
 - Apply the new `20260322130000_tags_and_shared_loans.sql` migration to the live Supabase project
 - Apply the new `20260322190000_entry_families_and_loan_principal.sql` migration to the live Supabase project
 - Apply the new `20260322213000_profile_avatars.sql` migration to the live Supabase project
+- Apply the new `20260322233000_shared_loan_interest_payment.sql` migration to the live Supabase project
 - Enable the Google provider in Supabase Auth and add the Google OAuth client ID/secret plus redirect URLs
 - Validate the full live flow end-to-end:
   - sign up
@@ -17,6 +18,8 @@
   - create tagged transaction
   - create shared loan drawdown
   - create shared loan principal repayment
+  - create shared loan interest payment
+  - verify the new dashboard charts and family filters with live data
 - Add real update/create flows for reconciliation submissions and profit distributions
 - Add member-management flow after project creation so teams can collaborate beyond the owner account
 
@@ -65,4 +68,6 @@
 - Added `shared_loan_repayment_principal` for repaying bank principal without treating it as operating expense or capital return.
 - Added avatar sync from Google metadata into profiles plus avatar rendering in the shell and member-facing UI.
 - Fixed the `/projects` demo-mode crash after the avatar work by removing a client-only `buttonVariants()` call from the server page.
+- Added dashboard visualizations for cash bridge, funding stack, custody, reimbursements, tag mix, profit outlook, and entry-family reporting.
+- Added `shared_loan_interest_payment` as a dedicated shortcut and refreshed the sample workspace so those charts have meaningful financing data.
 - Moved the remaining work to live migration validation, member management, reconciliation write flows, profit-distribution write flows, and deeper tag-reporting decisions.

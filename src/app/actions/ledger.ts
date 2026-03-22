@@ -101,6 +101,9 @@ export async function createLedgerEntryAction(
       error.message.toLowerCase().includes("shared_loan_drawdown") ||
       error.message
         .toLowerCase()
+        .includes("shared_loan_interest_payment") ||
+      error.message
+        .toLowerCase()
         .includes("shared_loan_repayment_principal");
 
     return {
