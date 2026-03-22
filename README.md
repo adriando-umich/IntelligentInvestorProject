@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Project Current
 
-## Getting Started
+Project Current is a project-based finance tracker built to feel friendly for non-accountants. It is intentionally closer to Splitwise in workflow, but the underlying model is different: the app tracks project cash custody, shared-expense settlement, capital ownership, operating P&L, and profit distributions as separate concepts.
 
-First, run the development server:
+The current workspace is mock-data-first. The UI works from local demo datasets when Supabase is not configured, so you can explore the product before wiring a live backend.
+
+## What It Tracks
+
+- `Project cash custody`: who is currently holding project money.
+- `Expense reimbursement`: who owes whom for shared operating expenses, Splitwise-style.
+- `Capital balance`: how much each member has invested for profit sharing.
+- `Operating P&L`: analytical income and expense allocation inside the project.
+- `Profit received`: actual profit distributions already paid out.
+
+Those numbers are intentionally kept separate in the UI so a user does not have to understand accounting jargon to follow the dashboard.
+
+## Stack
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Supabase for auth, database, and row-level security
+- Demo data fallback for local development and first-run exploration
+
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000` after the server starts.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Useful checks:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+## Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+Create a local `.env.local` for live Supabase mode.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Required for live Supabase:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
-## Deploy on Vercel
+Optional server-only secret:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+SUPABASE_SERVICE_ROLE_KEY=
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+If the public Supabase variables are missing, the app stays in demo mode and uses the mock datasets baked into the repository.
+
+## Demo Mode
+
+Demo mode is the fastest way to understand the product:
+
+- Sign-in can fall back to demo access.
+- The dashboard shows realistic projects, members, settlements, and reconciliation states.
+- The finance engine still computes balances, profit weights, and settlement suggestions from the demo data, so the UX reflects the actual logic.
+
+## Supabase Migration
+
+The SQL sidecar lives in `supabase/migrations/20260321153000_finance_app_schema.sql`.
+
+It includes:
+
+- tables for profiles, projects, project members, ledger entries, allocations, profit runs, and reconciliation
+- enums, constraints, indexes, triggers, and row-level security policies
+- auth-user profile bootstrap for live sign-up flows
+
+Apply it with your normal Supabase workflow, for example through the dashboard SQL editor or the CLI migration flow.
+
+## Deploy Path
+
+1. Create a Supabase project.
+2. Apply the migration in `supabase/migrations/`.
+3. Set the three public env vars in Vercel.
+4. Add `SUPABASE_SERVICE_ROLE_KEY` only if you need server-side admin actions later.
+5. Deploy the Next.js app to Vercel.
+6. Verify sign-in, project dashboard, settlement suggestions, and reconciliation screens in preview.
+
+## Product Notes
+
+- Shared-expense settlement is separate from profit distribution.
+- Profit sharing is based only on capital contributed.
+- Operating expenses can be split across selected members without affecting capital ownership.
+- Customer cash inflows increase project cash and project profit, but they do not automatically create member debt.
+
+## Current Implementation
+
+The app currently ships with:
+
+- a clean shadcn/ui dashboard
+- a friendly sign-in screen
+- demo project datasets
+- a finance calculation engine for project summaries, member statements, settlements, and profit previews
+- Supabase-backed project reads when env and session are available
+- live ledger-entry create for capital, operating income, operating expense, cash handover, and expense-settlement payment
+
+Current limitation:
+
+- profit distribution still needs a dedicated live posting flow, so that entry type remains preview-only in the planner
+
+The live Supabase schema is ready to be used alongside that mock-data-first UI once env vars are configured.
