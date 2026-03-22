@@ -490,13 +490,6 @@ export function LedgerEntryPlanner({
   const selectedAllocationIds = Array.isArray(watched.allocationProjectMemberIds)
     ? watched.allocationProjectMemberIds
     : [];
-  const cashMemberOptions = useMemo(
-    () =>
-      memberOptions.filter(
-        (member) => member.membershipStatus === "active"
-      ),
-    [memberOptions]
-  );
   const pendingMemberSuffix = locale === "vi" ? " (cho chap nhan)" : " (pending)";
   const labelById = useMemo(
     () =>
@@ -528,8 +521,8 @@ export function LedgerEntryPlanner({
   const showAllocationField = entryTypeNeedsAllocation(watchedEntryType);
   const pendingAllocationHelper =
     locale === "vi"
-      ? "Pending member co the duoc chia chi phi va gan phan von, nhung chua duoc chon o vai tro tra tien/nhan tien cho toi khi ho join."
-      : "Pending members can receive cost allocations and capital ownership now, but they cannot be selected as the payer or receiver until they join.";
+      ? "Pending member co the duoc chon o tat ca cac field lien quan den nguoi. Neu ho join sau, lich su van gan dung vao cung project member."
+      : "Pending members can be selected in every person-related field now. If they join later, the history stays attached to the same project member.";
 
   function changeEntryFamily(nextFamily: EntryFamily) {
     const nextType = getPlannerEntryTypesForFamily(nextFamily)[0];
@@ -688,7 +681,7 @@ export function LedgerEntryPlanner({
                       {...form.register("cashOutProjectMemberId")}
                     >
                       <option value="">{copy.noPayerSelected}</option>
-                      {cashMemberOptions.map((member) => (
+                      {memberOptions.map((member) => (
                         <option key={member.id} value={member.id}>
                           {labelById.get(member.id) ?? member.name}
                         </option>
@@ -707,7 +700,7 @@ export function LedgerEntryPlanner({
                       {...form.register("cashInProjectMemberId")}
                     >
                       <option value="">{copy.noReceiverSelected}</option>
-                      {cashMemberOptions.map((member) => (
+                      {memberOptions.map((member) => (
                         <option key={member.id} value={member.id}>
                           {labelById.get(member.id) ?? member.name}
                         </option>

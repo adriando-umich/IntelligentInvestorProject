@@ -75,7 +75,10 @@ export function MemberStatement({
 }) {
   const { locale } = useLocale();
   const profileNames = new Map(
-    statement.memberDirectory.map((item) => [item.userId, item.displayName])
+    statement.memberDirectory.flatMap((item) => [
+      [item.projectMemberId, item.displayName] as const,
+      [item.userId, item.displayName] as const,
+    ])
   );
 
   return (

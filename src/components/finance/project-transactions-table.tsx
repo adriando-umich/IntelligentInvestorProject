@@ -132,13 +132,16 @@ export function ProjectTransactionsTable({
         };
 
   const profileNames = useMemo(
-    () =>
-      new Map(
-        snapshot.memberSummaries.map((summary) => [
-          summary.projectMember.userId,
-          summary.profile.displayName,
-        ])
-      ),
+    () => {
+      const map = new Map<string, string>();
+
+      for (const summary of snapshot.memberSummaries) {
+        map.set(summary.projectMember.id, summary.profile.displayName);
+        map.set(summary.projectMember.userId, summary.profile.displayName);
+      }
+
+      return map;
+    },
     [snapshot.memberSummaries]
   );
 

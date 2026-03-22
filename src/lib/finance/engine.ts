@@ -93,12 +93,12 @@ function buildTagRollups(
 }
 
 function applyCashMovement(
-  summariesByUserId: Map<string, MemberFinanceSummary>,
+  summariesByMemberRef: Map<string, MemberFinanceSummary>,
   entry: LedgerEntry,
   factor: number
 ) {
   if (entry.cashInMemberId) {
-    const receiver = summariesByUserId.get(entry.cashInMemberId);
+    const receiver = summariesByMemberRef.get(entry.cashInMemberId);
     if (receiver) {
       receiver.projectCashCustody = roundMoney(
         receiver.projectCashCustody + entry.amount * factor
@@ -107,7 +107,7 @@ function applyCashMovement(
   }
 
   if (entry.cashOutMemberId) {
-    const payer = summariesByUserId.get(entry.cashOutMemberId);
+    const payer = summariesByMemberRef.get(entry.cashOutMemberId);
     if (payer) {
       payer.projectCashCustody = roundMoney(
         payer.projectCashCustody - entry.amount * factor
@@ -120,7 +120,7 @@ function applyEntryEffects(
   entry: LedgerEntry,
   factor: number,
   allocations: LedgerAllocation[],
-  summariesByUserId: Map<string, MemberFinanceSummary>,
+  summariesByMemberRef: Map<string, MemberFinanceSummary>,
   projectMemberById: Map<string, ProjectMember>,
   totals: {
     operatingIncome: number;
@@ -131,7 +131,7 @@ function applyEntryEffects(
     sharedLoanInterestPaid: number;
   }
 ) {
-  applyCashMovement(summariesByUserId, entry, factor);
+  applyCashMovement(summariesByMemberRef, entry, factor);
 
   switch (entry.entryType) {
     case "capital_contribution": {
@@ -145,7 +145,7 @@ function applyEntryEffects(
           continue;
         }
 
-        const summary = summariesByUserId.get(member.userId);
+        const summary = summariesByMemberRef.get(member.id);
         if (!summary) {
           continue;
         }
@@ -167,7 +167,7 @@ function applyEntryEffects(
           continue;
         }
 
-        const summary = summariesByUserId.get(member.userId);
+        const summary = summariesByMemberRef.get(member.id);
         if (!summary) {
           continue;
         }
@@ -193,7 +193,7 @@ function applyEntryEffects(
           continue;
         }
 
-        const summary = summariesByUserId.get(member.userId);
+        const summary = summariesByMemberRef.get(member.id);
         if (!summary) {
           continue;
         }
@@ -210,7 +210,7 @@ function applyEntryEffects(
       );
 
       if (entry.cashOutMemberId) {
-        const payer = summariesByUserId.get(entry.cashOutMemberId);
+        const payer = summariesByMemberRef.get(entry.cashOutMemberId);
         if (payer) {
           payer.expenseReimbursementBalance = roundMoney(
             payer.expenseReimbursementBalance + entry.amount * factor
@@ -228,7 +228,7 @@ function applyEntryEffects(
           continue;
         }
 
-        const summary = summariesByUserId.get(member.userId);
+        const summary = summariesByMemberRef.get(member.id);
         if (!summary) {
           continue;
         }
@@ -261,7 +261,7 @@ function applyEntryEffects(
       );
 
       if (entry.cashOutMemberId) {
-        const payer = summariesByUserId.get(entry.cashOutMemberId);
+        const payer = summariesByMemberRef.get(entry.cashOutMemberId);
         if (payer) {
           payer.expenseReimbursementBalance = roundMoney(
             payer.expenseReimbursementBalance + entry.amount * factor
@@ -279,7 +279,7 @@ function applyEntryEffects(
           continue;
         }
 
-        const summary = summariesByUserId.get(member.userId);
+        const summary = summariesByMemberRef.get(member.id);
         if (!summary) {
           continue;
         }
@@ -295,7 +295,7 @@ function applyEntryEffects(
     }
     case "expense_settlement_payment": {
       if (entry.cashOutMemberId) {
-        const debtor = summariesByUserId.get(entry.cashOutMemberId);
+        const debtor = summariesByMemberRef.get(entry.cashOutMemberId);
         if (debtor) {
           debtor.expenseReimbursementBalance = roundMoney(
             debtor.expenseReimbursementBalance + entry.amount * factor
@@ -304,7 +304,7 @@ function applyEntryEffects(
       }
 
       if (entry.cashInMemberId) {
-        const creditor = summariesByUserId.get(entry.cashInMemberId);
+        const creditor = summariesByMemberRef.get(entry.cashInMemberId);
         if (creditor) {
           creditor.expenseReimbursementBalance = roundMoney(
             creditor.expenseReimbursementBalance - entry.amount * factor
@@ -328,7 +328,7 @@ function applyEntryEffects(
           continue;
         }
 
-        const summary = summariesByUserId.get(member.userId);
+        const summary = summariesByMemberRef.get(member.id);
         if (!summary) {
           continue;
         }
@@ -421,9 +421,11 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
       left.profile.displayName.localeCompare(right.profile.displayName)
     );
 
-  const summariesByUserId = new Map(
-    memberSummaries.map((summary) => [summary.projectMember.userId, summary])
-  );
+  const summariesByMemberRef = new Map<string, MemberFinanceSummary>();
+  for (const summary of memberSummaries) {
+    summariesByMemberRef.set(summary.projectMember.id, summary);
+    summariesByMemberRef.set(summary.projectMember.userId, summary);
+  }
 
   const entryById = new Map(dataset.entries.map((entry) => [entry.id, entry]));
   const postedEntries = dataset.entries
@@ -447,7 +449,7 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
           reversedEntry,
           -1,
           dataset.allocations,
-          summariesByUserId,
+          summariesByMemberRef,
           projectMemberById,
           totals
         );
@@ -459,7 +461,7 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
       entry,
       1,
       dataset.allocations,
-      summariesByUserId,
+      summariesByMemberRef,
       projectMemberById,
       totals
     );
@@ -668,6 +670,8 @@ export function buildMemberStatement(
     .filter((entry) => entry.status === "posted")
     .filter((entry) => {
       if (
+        entry.cashInMemberId === summary.projectMember.id ||
+        entry.cashOutMemberId === summary.projectMember.id ||
         entry.cashInMemberId === summary.projectMember.userId ||
         entry.cashOutMemberId === summary.projectMember.userId
       ) {

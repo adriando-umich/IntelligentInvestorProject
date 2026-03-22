@@ -10,8 +10,8 @@
   - re-test create first project after the `create_project_with_owner` RLS fix
   - regression-test reusable invites versus targeted pending-member invites from `/members`
   - confirm pending-member UI rules in live data:
-    pending members can receive allocations before join
-    pending members cannot be chosen as cash payer/receiver until after join
+    pending members can be chosen in all person-related fields before join
+    pre-join cash and capital records still stay on the same `project_member_id` after invite acceptance
   - create live transaction
   - create tagged transaction
   - create shared loan drawdown
@@ -127,4 +127,5 @@
 - Trimmed duplicate guide/tag CTAs from the ledger planner, left one support card above the form, and made the support + submit actions friendlier on mobile widths.
 - Added `docs/manual-qa/ledger-planner-ui-ux.md` so future planner UI work has one stable desktop/mobile regression checklist.
 - Tightened the planner so only relevant cash-leg fields show for each entry type, especially around capital contribution vs capital return.
+- Added a project-member-backed cash-leg migration so pending members can now be selected in every person-related field, not just allocations and capital ownership, and verified that those rows still map to the same member after invite acceptance.
 - Moved the remaining work to end-to-end real-user validation, richer member management, profit-distribution write flows, and deeper tag-reporting decisions.

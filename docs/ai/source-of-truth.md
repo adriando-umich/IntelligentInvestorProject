@@ -77,6 +77,7 @@ The finance engine already derives:
 
 The live ledger model already supports member-to-member repayment for shared expenses through the `expense_settlement_payment` entry type. The current UI now presents this in plain language as `Member repayment`, with explicit A-paid-for-B / B-pays-A-back guidance in the planner and settlements flow.
 Project members can now exist as `active` or `pending_invite`. Pending members get a stable `project_member_id` before account acceptance so expenses can be allocated to them before they join, then keep the same history after invite acceptance.
+Live cash-leg storage now keys ledger custody fields by `project_member_id` first, while legacy `cash_in_member_id` / `cash_out_member_id` user references remain as backward-compatible mirrors when a joined user exists. This lets pending members appear in every person-related field, including cash-holder selectors, without rewriting history when they accept later.
 The transaction model now also exposes a second classification axis in code: `entryFamily = business | correction`. The persisted DB column is still `entry_type`, but the app now derives family labels and uses them in planner guidance and the transaction helper matrix.
 The business-event shortcuts now include `shared_loan_interest_payment`, which behaves like a shared operating cost while staying distinct from shared-loan principal.
 The ledger planner now lets users choose the entry family first, then narrows the entry-type picker accordingly. The planner currently supports `reconciliation_adjustment` inside the `correction` family, while `reversal` still remains guide-only until a dedicated original-entry workflow exists.
@@ -134,7 +135,7 @@ Only `.env.example` should be committed.
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
-- Live Supabase database: migrated through `20260323023000_pending_project_members.sql`
+- Live Supabase database: migrated through `20260323040000_cash_legs_by_project_member.sql`
 - Latest production deployment for commit `da42e48`: ready and promoted on Vercel
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
@@ -220,5 +221,7 @@ Only `.env.example` should be committed.
 - Trimmed the ledger planner so `Open transaction guide` and `Manage tags` now appear only once in a page-level support card, then made the support buttons and bottom planner actions stack full-width on mobile.
 - Added `docs/manual-qa/ledger-planner-ui-ux.md` as the manual desktop/tablet/phone validation flow for `/projects/[projectId]/ledger/new`.
 - Fixed a follow-up planner UX bug where capital contribution still showed both `Money out by` and `Money in to`; the planner now hides irrelevant cash-leg fields per entry type and adds clearer capital-specific helper copy.
+- Added and applied `supabase/migrations/20260323040000_cash_legs_by_project_member.sql`, so cash-holder fields now persist by `project_member_id` and can safely include pending members before they join.
+- Verified on a disposable live project that a pending member can be used in `capital owner`, `cash in`, and `cash out`, then accept the invite later without changing the stored `project_member_id` on those earlier entries.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

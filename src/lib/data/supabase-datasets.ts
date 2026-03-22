@@ -61,6 +61,8 @@ type DbLedgerEntryRow = {
   description: string;
   amount: number | string;
   currency_code: string;
+  cash_in_project_member_id: string | null;
+  cash_out_project_member_id: string | null;
   cash_in_member_id: string | null;
   cash_out_member_id: string | null;
   external_counterparty: string | null;
@@ -206,8 +208,8 @@ function mapLedgerEntry(row: DbLedgerEntryRow): LedgerEntry {
     description: row.description,
     amount: toNumber(row.amount),
     currencyCode: row.currency_code,
-    cashInMemberId: row.cash_in_member_id,
-    cashOutMemberId: row.cash_out_member_id,
+    cashInMemberId: row.cash_in_project_member_id ?? row.cash_in_member_id,
+    cashOutMemberId: row.cash_out_project_member_id ?? row.cash_out_member_id,
     externalCounterparty: row.external_counterparty,
     note: row.note,
     status: row.status,

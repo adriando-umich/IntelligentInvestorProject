@@ -63,6 +63,7 @@
 - The dashboard header looked like it had two competing tab/navigation systems; resolved by keeping the section nav as the only navigation layer and reducing the dashboard row to real actions only.
 - The ledger planner was showing `Open transaction guide` and `Manage tags` in two stacked places close together, which made the form feel repetitive and especially crowded on mobile; resolved by keeping one page-level support card above the planner and removing the duplicate CTA block from inside the form.
 - The ledger planner still showed both `Money out by` and `Money in to` for `capital_contribution`, even though only the receiving custody side is required there; resolved by showing only the cash-leg selectors relevant to the selected entry type and by adding clearer capital-specific helper copy.
+- Pending members could receive allocations and capital ownership before join, but they were still blocked from cash-holder fields because `ledger_entries` stored cash legs by joined `profiles.user_id`; resolved by adding `cash_in_project_member_id` / `cash_out_project_member_id`, widening the person selectors, and keeping history attached to the same `project_member_id` after invite acceptance.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -135,3 +136,4 @@
 - The dashboard header still had one remaining pseudo-navigation CTA (`Manage tags`) after the larger nav cleanup; fixed by removing it so the secondary row now contains only true actions.
 - Added a planner-specific manual QA flow in `docs/manual-qa/ledger-planner-ui-ux.md`, then tightened the planner layout so guide/tag support lives in one place and the primary actions become full-width on mobile.
 - Found a follow-up planner confusion on capital entries while validating the production link: `capital_contribution` was still rendering an unnecessary `Money out by` field. Fixed the UI to show only the relevant cash legs and kept the validation helpers shared between schema and planner.
+- Added and applied `20260323040000_cash_legs_by_project_member.sql`, then verified on a disposable live project that pending members can now be selected in every person-related field, including cash-holder fields, without losing the same `project_member_id` when the invite is accepted later.
