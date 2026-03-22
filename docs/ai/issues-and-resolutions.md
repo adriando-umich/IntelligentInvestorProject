@@ -8,7 +8,7 @@
 - The invite flow now has database-level live verification, but it still needs one full browser-level pass covering create invite, sign in from deep link, and accept invite through the production UI.
 - Profit distribution still has no dedicated live post flow.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
-- GitHub-triggered auto deploy is not confirmed yet; the current working deployment path is Vercel CLI plus linked project
+- Vercel git-source API deployments currently fail with `git_info_fail` for this project; the working deployment path for the latest release is manual uploaded-file deployment through the Vercel API.
 - Live sign-up/login behavior can still vary based on Supabase Auth settings such as email confirmation requirements.
 - The EN/VI rollout still needs one live QA pass to catch any remaining English-only strings in secondary dashboard/chart states.
 - The new table-toolbar rollout still needs one production pass with real signed-in data, not just the sample workspace and local production build.
@@ -53,6 +53,7 @@
 - Project navigation tabs disappeared when users left the main dashboard for routes like `/reconciliation`; resolved by moving the project-section nav into a shared `[projectId]/layout.tsx` wrapper.
 - There was no real way to add members after creating a project; resolved by adding `project_invites`, manager-created share links, email-restricted invites, revoke support, and a public `/join/[inviteToken]` accept page.
 - Targeted invites could only create a `project_member` on acceptance, which meant pre-join expense allocations would either be impossible or would risk remapping history later; resolved by adding stable pending project members linked from invite rows, then activating that same row on acceptance.
+- The latest production release still needed to be shipped after the pending-member work; resolved by pushing the commit to both `main` and `master` and creating a new production deployment that reached `READY` / `PROMOTED` on Vercel.
 - Deep links like invite accept could lose their destination after email/password auth because server actions always redirected to `/projects`; resolved by adding hidden `nextPath` propagation through sign-in and sign-up actions.
 - The product started requiring English and Vietnamese across the UI while the app was still mostly English-only; resolved by adding a locale cookie, a global language switcher with flags, locale-aware formatters, and bilingual copy across the main routes and finance components.
 - Table-heavy workflows were hard to scan and hard to query because most finance tables had no shared search/filter/sort pattern and some columns collapsed too tightly; resolved by adding a reusable finance table toolbar/shell, applying it across the main tables, and widening dense tables so horizontal scroll is explicit.
@@ -121,6 +122,7 @@
 - Added a shared project layout with persistent section navigation, then introduced a `/members` page and invite-backed self-join flow with a new live Supabase migration.
 - Added and applied a new pending-member migration that lets targeted invites create stable pre-join `project_members`, backfilled existing invite links in the live database, and verified on the real `Vinh Truong` plus `Nha Trang 02` projects that old invite tokens now point at the correct per-project member rows.
 - Verified with a disposable live test project that assigning an expense to a pending member before acceptance still keeps the same `project_member_id` after invite acceptance, so allocations do not need any history rewrite.
+- Tried the Vercel git-source deployment API for the new commit and confirmed it fails immediately with `git_info_fail`; switched to uploading the committed file set through the Vercel deployment API, which succeeded and promoted the new production release.
 - Added the first full EN/VI localization pass, including a root language switcher, locale-aware number/date formatting, and bilingual copy across sign-in, projects, planner, guide, tags, invites, member statements, settlements, reconciliation, and major dashboard/chart surfaces.
 - Added a reusable table toolbar/shell across transactions, transaction guide, members, invites, tags, settlements, and reconciliation, including per-table search, filter, and sort controls.
 - Added accent-insensitive Vietnamese search matching so queries like `lai vay`, `doi tru`, and `thanh vien` still hit the intended rows.

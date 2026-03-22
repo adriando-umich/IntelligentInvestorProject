@@ -133,6 +133,7 @@ Only `.env.example` should be committed.
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
 - Live Supabase database: migrated through `20260323023000_pending_project_members.sql`
+- Latest production deployment for commit `da42e48`: ready and promoted on Vercel
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
 - Live Supabase Auth redirect allow-list now includes:
@@ -201,6 +202,7 @@ Only `.env.example` should be committed.
 - Applied `supabase/migrations/20260323023000_pending_project_members.sql` to the live Supabase project and backfilled existing targeted invites so old invite links now map to the correct pending member rows.
 - Verified live on `Vinh Truong` and `Nha Trang 02` that the same email invited into two different projects now maps to two different pending `project_member` rows, one per project, with each old invite linked to the correct row.
 - Verified end-to-end on the live database with a disposable test project that an expense allocated to a pending member before invite acceptance still points to the exact same `project_member_id` after the invite is accepted.
+- Pushed the pending-member flow commit to both `main` and `master`, then promoted a new production Vercel deployment from that commit. Git-based API-triggered deployments failed with `git_info_fail`, so the working deployment path for this session was uploaded-file deployment through the Vercel API.
 - Updated email/password auth forms to preserve `next` redirects, so invite links can return users to the accept page after sign-in.
 - Added a cookie-backed EN/VI locale layer with a global language switcher and flag buttons in the root layout.
 - Made currency/date/percent formatting locale-aware and started threading locale through dashboard, planner, statements, invites, tags, settlements, reconciliation, and project-management screens.

@@ -49,7 +49,7 @@
 - Add richer allocation editing for shared income and expense lines
 - Add a dedicated reversal flow that lets a user choose the original entry instead of keeping reversal guide-only
 - Decide whether tag analytics should support multi-tag faceting only or one strict reporting category plus optional tags
-- Confirm GitHub-triggered auto-deploy integration in Vercel if push-triggered deployments are desired
+- Repair or replace the Vercel git-based deployment path; current git-source API deploy attempts fail with `git_info_fail`, while uploaded-file API deploys work
 
 ## Blocked
 
@@ -104,6 +104,7 @@
 - Added a stable pending-member flow for targeted invites so cost allocations can be assigned before acceptance and still land on the same `project_member_id` after join.
 - Applied the pending-member migration to the live Supabase project, backfilled existing targeted invites, and verified the real `Vinh Truong` plus `Nha Trang 02` projects now link old invite tokens to the correct per-project pending member rows.
 - Verified on the live database with a disposable test project that a pending member can receive an expense allocation before join and then accept the invite later without changing the allocation's `project_member_id`.
+- Pushed the pending-member flow commit to both `main` and `master`, then shipped production successfully through the Vercel uploaded-file deployment API after git-source deploy attempts failed with `git_info_fail`.
 - Updated auth forms so email sign-in/sign-up preserve `next` redirects for invite acceptance and other deep links.
 - Added a first-pass EN/VI localization layer with a global language switcher, locale cookie, and locale-aware formatting helpers.
 - Localized the main route headers plus key finance surfaces including sign-in, projects, create-project, member statements, tags, invite acceptance, ledger guide/planner, settlements, reconciliation, and much of the dashboard/chart storytelling.
