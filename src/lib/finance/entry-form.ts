@@ -76,6 +76,12 @@ export const plannerEntryTypes = [
 
 export type PlannerEntryType = (typeof plannerEntryTypes)[number];
 
+export function isPlannerEntryType(
+  value: string | null | undefined
+): value is PlannerEntryType {
+  return plannerEntryTypes.includes(value as PlannerEntryType);
+}
+
 export const plannerEntryTypesByFamily = {
   business: businessPlannerEntryTypes,
   correction: correctionPlannerEntryTypes,
@@ -302,4 +308,8 @@ export function isAllocationEntryType(entryType: PlannerEntryType) {
 
 export function supportsLiveCreate(entryType: PlannerEntryType) {
   return entryType !== "profit_distribution";
+}
+
+export function supportsLiveEdit(entryType: PlannerEntryType) {
+  return plannerEntryTypes.includes(entryType);
 }

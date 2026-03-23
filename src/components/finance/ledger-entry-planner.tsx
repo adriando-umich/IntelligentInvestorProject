@@ -17,6 +17,7 @@ import {
 
 import {
   createLedgerEntryAction,
+  updateLedgerEntryAction,
   type LedgerActionState,
 } from "@/app/actions/ledger";
 import { useLocale } from "@/components/app/locale-provider";
@@ -43,6 +44,7 @@ import {
   getPlannerEntryTypesForFamily,
   parseTagNames,
   supportsLiveCreate,
+  supportsLiveEdit,
   type PlannerEntryFormValues,
   type PlannerEntryType,
   type PlannerEntryValues,
@@ -275,6 +277,8 @@ export function LedgerEntryPlanner({
   projectId,
   projectName,
   currencyCode,
+  editingEntryId,
+  editingEntryType,
   memberOptions,
   tagOptions,
   initialValues,
@@ -283,6 +287,8 @@ export function LedgerEntryPlanner({
   projectId: string;
   projectName: string;
   currencyCode: string;
+  editingEntryId?: string;
+  editingEntryType?: PlannerEntryType;
   memberOptions: MemberOption[];
   tagOptions: string[];
   initialValues: Partial<PlannerEntryFormValues>;
@@ -295,6 +301,7 @@ export function LedgerEntryPlanner({
     status: "idle",
   });
   const [isSavingLive, startSavingLive] = useTransition();
+  const isEditMode = Boolean(editingEntryId);
   const today = new Date().toISOString().slice(0, 10);
   const copy =
     locale === "vi"
@@ -440,6 +447,28 @@ export function LedgerEntryPlanner({
     locale === "vi"
       ? `Chọn nhóm giao dịch, điền luồng tiền, rồi preview hoặc lưu live cho ${projectName}.`
       : `Choose the entry family, fill in the money movement, then preview or save the ledger entry for ${projectName}.`;
+  const plannerTitle = isEditMode
+    ? locale === "vi"
+      ? "Chinh sua giao dich"
+      : "Edit this transaction"
+    : copy.plannerTitle;
+  const plannerHeaderDescription = isEditMode
+    ? locale === "vi"
+      ? `Dieu chinh transaction hien tai cho ${projectName}. Khi luu, app se cap nhat dung dong ledger nay thay vi tao transaction moi.`
+      : `Adjust the current transaction for ${projectName}. Saving will update this ledger row instead of creating a duplicate.`
+    : plannerSummary;
+  const editNotice = isEditMode
+    ? locale === "vi"
+      ? "Ban dang sua mot transaction da ton tai."
+      : "You are editing an existing transaction."
+    : null;
+  const liveActionLabel = isEditMode
+    ? locale === "vi"
+      ? "Cap nhat giao dich"
+      : "Update transaction"
+    : copy.createLiveEntry;
+  const cancelEditLabel =
+    locale === "vi" ? "Quay lai dashboard" : "Back to dashboard";
   const plannerSchema = useMemo(() => getPlannerEntrySchema(locale), [locale]);
 
   const form = useForm<PlannerEntryFormValues, undefined, PlannerEntryValues>({
@@ -507,7 +536,13 @@ export function LedgerEntryPlanner({
     .map((memberId) => labelById.get(memberId))
     .filter((value): value is string => Boolean(value));
   const selectedTagNames = parseTagNames(watchedTagNamesText);
-  const liveSupported = liveModeEnabled && supportsLiveCreate(watchedEntryType);
+  const liveSupported =
+    liveModeEnabled &&
+    (isEditMode
+      ? supportsLiveEdit(watchedEntryType)
+      : supportsLiveCreate(watchedEntryType));
+  const entryTypeLocked =
+    isEditMode && editingEntryType === "profit_distribution";
   const transferHelperCopy = memberTransferHelperCopy(watchedEntryType, locale);
   const currentEntryFamily = getEntryFamily(watchedEntryType);
   const availableEntryTypes = getPlannerEntryTypesForFamily(currentEntryFamily);
@@ -525,6 +560,10 @@ export function LedgerEntryPlanner({
       : "Pending members can be selected in every person-related field now. If they join later, the history stays attached to the same project member.";
 
   function changeEntryFamily(nextFamily: EntryFamily) {
+    if (entryTypeLocked) {
+      return;
+    }
+
     const nextType = getPlannerEntryTypesForFamily(nextFamily)[0];
 
     if (!nextType || nextType === watchedEntryType) {
@@ -552,9 +591,12 @@ export function LedgerEntryPlanner({
     });
   }
 
-  function handleLiveCreate(values: PlannerEntryValues) {
+  function handleLiveSave(values: PlannerEntryValues) {
     startSavingLive(async () => {
-      const result = await createLedgerEntryAction(values);
+      const result =
+        isEditMode && editingEntryId
+          ? await updateLedgerEntryAction(editingEntryId, values)
+          : await createLedgerEntryAction(values);
       setLiveState(result);
 
       if (result.status === "success" && result.redirectTo) {
@@ -568,11 +610,22 @@ export function LedgerEntryPlanner({
     <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>{copy.plannerTitle}</CardTitle>
-          <CardDescription>{plannerSummary}</CardDescription>
+          <CardTitle>{plannerTitle}</CardTitle>
+          <CardDescription>{plannerHeaderDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-5">
+            {editNotice ? (
+              <div className="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-4 text-sm text-emerald-900 sm:flex-row sm:items-center sm:justify-between">
+                <span>{editNotice}</span>
+                <Link
+                  href={`/projects/${projectId}`}
+                  className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100"
+                >
+                  {cancelEditLabel}
+                </Link>
+              </div>
+            ) : null}
             <div className="space-y-3">
               <div className="space-y-1">
                 <Label>{copy.entryFamily}</Label>
@@ -588,6 +641,7 @@ export function LedgerEntryPlanner({
                     <button
                       key={family}
                       type="button"
+                      disabled={entryTypeLocked}
                       onClick={() => changeEntryFamily(family)}
                       className={`rounded-2xl border px-4 py-4 text-left transition ${
                         isActive
@@ -618,6 +672,7 @@ export function LedgerEntryPlanner({
                 <Label htmlFor="entryType">{copy.entryType}</Label>
                 <select
                   id="entryType"
+                  disabled={entryTypeLocked}
                   className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
                   {...form.register("entryType")}
                 >
@@ -630,6 +685,13 @@ export function LedgerEntryPlanner({
                 {currentEntryFamily === "correction" ? (
                   <p className="text-sm leading-6 text-slate-500">
                     {copy.correctionGuideHint}
+                  </p>
+                ) : null}
+                {entryTypeLocked ? (
+                  <p className="text-sm leading-6 text-slate-500">
+                    {locale === "vi"
+                      ? "Loai phan phoi loi nhuan giu nguyen trong man sua nay de khong lam sai ty le phan bo da co."
+                      : "Profit distribution keeps its existing type in edit mode so the stored split cannot drift."}
                   </p>
                 ) : null}
               </div>
@@ -880,9 +942,9 @@ export function LedgerEntryPlanner({
                 variant="outline"
                 className="w-full border-emerald-200/80 bg-emerald-50/90 text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 disabled={!liveSupported || isSavingLive}
-                onClick={form.handleSubmit(handleLiveCreate)}
+                onClick={form.handleSubmit(handleLiveSave)}
               >
-                {isSavingLive ? copy.saving : copy.createLiveEntry}
+                {isSavingLive ? copy.saving : liveActionLabel}
               </Button>
             </div>
           </form>
@@ -989,7 +1051,9 @@ export function LedgerEntryPlanner({
                 {copy.demoLiveDisabled}
               </div>
             ) : null}
-            {liveModeEnabled && !supportsLiveCreate(watchedEntryType) ? (
+            {liveModeEnabled &&
+            !isEditMode &&
+            !supportsLiveCreate(watchedEntryType) ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
                 {copy.profitDistributionPreviewOnly}
               </div>
