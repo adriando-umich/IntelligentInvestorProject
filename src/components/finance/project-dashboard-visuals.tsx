@@ -201,10 +201,10 @@ function WaterfallOverlay({
 
         const labelValue =
           row.kind === "total"
-            ? formatCurrency(row.end, currencyCode, locale)
+            ? formatCompactCurrency(row.end, currencyCode, locale)
             : row.change < 0
-              ? `(${formatCurrency(Math.abs(row.change), currencyCode, locale)})`
-              : formatCurrency(row.change, currencyCode, locale);
+              ? `(${formatCompactCurrency(Math.abs(row.change), currencyCode, locale)})`
+              : formatCompactCurrency(row.change, currencyCode, locale);
         const labelY =
           row.kind === "total" || row.change >= 0 ? top - 8 : top + height + 16;
 

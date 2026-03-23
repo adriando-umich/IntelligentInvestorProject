@@ -54,6 +54,7 @@ import {
   type EntryFamily,
   type ProjectSnapshot,
 } from "@/lib/finance/types";
+import { buildProjectCashClaimView } from "@/lib/finance/project-cash-claims";
 import { buildSharedExpenseSettlementView } from "@/lib/finance/shared-expense-settlements";
 import {
   formatCompactCurrency,
@@ -94,11 +95,32 @@ export function ProjectDashboard({
   const [activityFamilyFilter, setActivityFamilyFilter] = useState<
     "all" | EntryFamily
   >("all");
+  const overviewCashClaimView = useMemo(
+    () => buildProjectCashClaimView(snapshot),
+    [snapshot]
+  );
   const sharedExpenseSettlementView = useMemo(
     () => buildSharedExpenseSettlementView(snapshot.dataset),
     [snapshot.dataset]
   );
-  const memberSummaries = useMemo(
+  const overviewMemberSummaries = useMemo(
+    () =>
+      snapshot.memberSummaries.map((summary) => {
+        const claimRow = overviewCashClaimView.rowsByProjectMemberId.get(
+          summary.projectMember.id
+        );
+
+        return claimRow
+          ? {
+              ...summary,
+              teamOwesYou: claimRow.teamOwesYou,
+              youOweTeam: claimRow.youOweTeam,
+            }
+          : summary;
+      }),
+    [overviewCashClaimView.rowsByProjectMemberId, snapshot.memberSummaries]
+  );
+  const sharedExpenseMemberSummaries = useMemo(
     () =>
       snapshot.memberSummaries.map((summary) => {
         const settlementBalance =
@@ -118,7 +140,9 @@ export function ProjectDashboard({
       }),
     [sharedExpenseSettlementView.balancesByProjectMemberId, snapshot.memberSummaries]
   );
-  const settlementSuggestions = sharedExpenseSettlementView.settlementSuggestions;
+  const overviewSettlementSuggestions = overviewCashClaimView.settlementSuggestions;
+  const sharedExpenseSettlementSuggestions =
+    sharedExpenseSettlementView.settlementSuggestions;
   const copy =
     locale === "vi"
       ? {
@@ -252,15 +276,15 @@ export function ProjectDashboard({
           metricProfitPreviewTitle: "Estimated profit if distributed today",
           metricProfitPreviewDescription:
             "This is undistributed operating profit. It is only a preview until a manager posts a profit distribution.",
-          metricSettlementTitle: "Open settlement actions",
+          metricSettlementTitle: "Cash redistribution actions",
           metricSettlementDescription:
-            "Suggested transfers for shared expenses only. This is separate from capital and profit.",
+            "Suggested transfers based on capital still invested, profit earned so far, and who is already holding the project cash.",
           whySeparateTitle: "Why the numbers stay separate",
           whySeparateDescription:
-            "This dashboard intentionally separates project cash, teammate reimbursements, capital, and profit. That keeps the app understandable even for people who do not speak accounting.",
+            "This dashboard keeps project cash, member cash claims, shared-expense reimbursements, capital, and profit separate so each number answers one question clearly.",
           holdingMoneyTitle: "Who is holding project money",
           holdingMoneyDescription:
-            "Positive numbers mean the member is holding project money. \"Fronted own money\" means they used their own bank balance for project activity.",
+            "Positive numbers mean the member is holding project money. Team balances compare that cash against each member's current claim after capital, profit preview, and any true fronted-money reimbursement.",
           member: "Member",
           projectMoneyHeld: "Project money held",
           frontedOwnMoney: "Fronted own money",
@@ -275,10 +299,10 @@ export function ProjectDashboard({
           noReceivingMember: "No receiving member",
           inLabel: "In",
           outLabel: "Out",
-          owesWhoTitle: "Who owes whom for shared expenses",
+          owesWhoTitle: "Who should receive project cash next",
           owesWhoDescription:
-            "These suggested transfers settle only shared expenses. They do not change capital ownership.",
-          settled: "Shared-expense balances are already settled.",
+            "These suggestions compare the cash people are holding now against each member's current claim after capital and profit preview.",
+          settled: "Current cash already lines up with member claims.",
           pays: "pays",
           reconciliationHealthTitle: "Reconciliation health",
           reconciliationHealthDescription:
@@ -425,9 +449,9 @@ export function ProjectDashboard({
           />
           <MetricCard
             title={copy.metricSettlementTitle}
-            value={`${settlementSuggestions.length}`}
+            value={`${overviewSettlementSuggestions.length}`}
             description={copy.metricSettlementDescription}
-            tone={settlementSuggestions.length > 0 ? "red" : "slate"}
+            tone={overviewSettlementSuggestions.length > 0 ? "red" : "slate"}
             icon={<ArrowLeftRight className="size-5" />}
           />
         </div>
@@ -449,7 +473,7 @@ export function ProjectDashboard({
           <TabsContent value="overview" className="space-y-6">
             <ProjectOverviewVisuals
               snapshot={snapshot}
-              memberSummaries={memberSummaries}
+              memberSummaries={overviewMemberSummaries}
             />
 
             <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
@@ -472,7 +496,7 @@ export function ProjectDashboard({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {memberSummaries.map((summary) => (
+                    {overviewMemberSummaries.map((summary) => (
                       <TableRow key={summary.projectMember.id}>
                         <TableCell className="font-medium text-slate-950">
                           <Link
@@ -512,19 +536,19 @@ export function ProjectDashboard({
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {settlementSuggestions.length === 0 ? (
+                    {overviewSettlementSuggestions.length === 0 ? (
                       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
                         {copy.settled}
                       </div>
                     ) : (
-                      settlementSuggestions.map((suggestion) => (
+                      overviewSettlementSuggestions.map((suggestion) => (
                         <div
                           key={`${suggestion.fromProjectMemberId}-${suggestion.toProjectMemberId}`}
                           className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4"
                         >
                           <p className="font-medium text-slate-950">
-                            {memberSummaries.find((item) => item.projectMember.id === suggestion.fromProjectMemberId)?.profile.displayName} {copy.pays}{" "}
-                            {memberSummaries.find((item) => item.projectMember.id === suggestion.toProjectMemberId)?.profile.displayName}
+                            {overviewMemberSummaries.find((item) => item.projectMember.id === suggestion.fromProjectMemberId)?.profile.displayName} {copy.pays}{" "}
+                            {overviewMemberSummaries.find((item) => item.projectMember.id === suggestion.toProjectMemberId)?.profile.displayName}
                           </p>
                           <p className="mt-2 text-sm text-slate-600">
                             {formatCurrency(suggestion.amount, snapshot.dataset.project.currencyCode, locale)}
@@ -602,17 +626,17 @@ export function ProjectDashboard({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {settlementSuggestions.length === 0 ? (
+                    {sharedExpenseSettlementSuggestions.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="py-8 text-center text-slate-500">
                           {copy.noOutstandingSettlements}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      settlementSuggestions.map((suggestion) => (
+                      sharedExpenseSettlementSuggestions.map((suggestion) => (
                         <TableRow key={`${suggestion.fromProjectMemberId}-${suggestion.toProjectMemberId}-full`}>
-                          <TableCell>{memberSummaries.find((item) => item.projectMember.id === suggestion.fromProjectMemberId)?.profile.displayName}</TableCell>
-                          <TableCell>{memberSummaries.find((item) => item.projectMember.id === suggestion.toProjectMemberId)?.profile.displayName}</TableCell>
+                          <TableCell>{sharedExpenseMemberSummaries.find((item) => item.projectMember.id === suggestion.fromProjectMemberId)?.profile.displayName}</TableCell>
+                          <TableCell>{sharedExpenseMemberSummaries.find((item) => item.projectMember.id === suggestion.toProjectMemberId)?.profile.displayName}</TableCell>
                           <TableCell>{formatCurrency(suggestion.amount, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                           <TableCell className="text-right">
                             <Link
