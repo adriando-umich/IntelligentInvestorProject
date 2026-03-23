@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getSessionState } from "@/lib/auth/session";
+import { getLiveProjectDataset } from "@/lib/data/supabase-datasets";
 import {
   buildEqualAllocationShares,
   computeAllocationAmountPreviews,
   normalizeAllocationShares,
 } from "@/lib/finance/allocation-shares";
+import { buildProjectSnapshot } from "@/lib/finance/engine";
 import {
   getPlannerEntrySchema,
   parseTagNames,
@@ -37,12 +39,14 @@ type LedgerCopy = {
   editBlocked: string;
   voidFailed: string;
   profitDistributionPreviewOnly: string;
+  claimSettlementFailed: string;
   signInRequired: string;
   missingMigration: string;
   invalidResponse: string;
   saved: string;
   updated: string;
   voided: string;
+  claimSettled: string;
 };
 
 function getLedgerCopy(locale: "en" | "vi"): LedgerCopy {
@@ -55,6 +59,8 @@ function getLedgerCopy(locale: "en" | "vi"): LedgerCopy {
         voidFailed: "Khong the xoa mem giao dich nay.",
         profitDistributionPreviewOnly:
           "Luong chia loi nhuan van can man thao tac rieng. Tam thoi hay dung che do preview.",
+        claimSettlementFailed:
+          "Khong the tao bo giao dich settle claim nay.",
         signInRequired: "Ban can dang nhap truoc khi luu giao dich.",
         missingMigration:
           "Database live dang thieu migration ledger moi nhat. Hay apply migration Supabase moi nhat roi thu lai.",
@@ -63,6 +69,7 @@ function getLedgerCopy(locale: "en" | "vi"): LedgerCopy {
         saved: "Da luu giao dich.",
         updated: "Da cap nhat giao dich.",
         voided: "Da xoa mem giao dich.",
+        claimSettled: "Da ghi nhan bo giao dich settle claim.",
       }
     : {
         demoBlocked:
@@ -73,6 +80,8 @@ function getLedgerCopy(locale: "en" | "vi"): LedgerCopy {
         voidFailed: "Unable to void this transaction.",
         profitDistributionPreviewOnly:
           "Profit distribution still needs the dedicated distribution workflow. Use preview for now.",
+        claimSettlementFailed:
+          "Unable to create this claim-settlement bundle.",
         signInRequired: "You must be signed in before saving a transaction.",
         missingMigration:
           "The live database is missing the latest ledger migration. Apply the newest Supabase migration, then try again.",
@@ -81,7 +90,46 @@ function getLedgerCopy(locale: "en" | "vi"): LedgerCopy {
         saved: "Transaction saved.",
         updated: "Transaction updated.",
         voided: "Transaction voided.",
+        claimSettled: "Claim settlement recorded.",
       };
+}
+
+const claimSettlementSchema = z.object({
+  projectId: z.string().uuid(),
+  currencyCode: z.string().length(3),
+  effectiveDate: z.string().min(1),
+  description: z.string().trim().min(5),
+  cashOutProjectMemberId: z.string().uuid(),
+  capitalOwnerProjectMemberId: z.string().uuid(),
+  capitalReturnAmount: z.coerce.number().min(0),
+  profitPayoutAmount: z.coerce.number().min(0),
+  tagNamesText: z.string().optional(),
+  note: z.string().optional(),
+  externalCounterparty: z.string().optional(),
+}).superRefine((value, ctx) => {
+  if (value.capitalReturnAmount <= 0 && value.profitPayoutAmount <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "At least one payout amount must be greater than zero.",
+      path: ["capitalReturnAmount"],
+    });
+  }
+});
+
+type ClaimSettlementValues = z.output<typeof claimSettlementSchema>;
+
+function buildDatasetAsOfDate<T extends { entries: { effectiveAt: string }[] }>(
+  dataset: T,
+  effectiveAtIso: string
+) {
+  const cutoff = new Date(effectiveAtIso).getTime();
+
+  return {
+    ...dataset,
+    entries: dataset.entries.filter(
+      (entry) => new Date(entry.effectiveAt).getTime() <= cutoff
+    ),
+  };
 }
 
 function buildLedgerRpcPayload(values: PlannerEntryValues) {
@@ -158,6 +206,7 @@ function isMissingLedgerUpgrade(error: { code?: string; message?: string }) {
     message.includes("void_project_ledger_entry") ||
     message.includes("create_profit_distribution_entry") ||
     message.includes("update_profit_distribution_entry") ||
+    message.includes("create_project_claim_settlement") ||
     message.includes("p_allocation_amounts") ||
     message.includes("p_allocation_weight_percents")
   );
@@ -381,6 +430,130 @@ export async function createProfitDistributionEntryAction(
     validation.ledgerText,
     validation.ledgerText.saved
   );
+}
+
+export async function createClaimSettlementAction(
+  payload: ClaimSettlementValues
+): Promise<LedgerActionState> {
+  const { locale, text } = await getServerI18n();
+  const ledgerText = getLedgerCopy(locale);
+  const parsed = claimSettlementSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message:
+        parsed.error.issues[0]?.message ?? ledgerText.claimSettlementFailed,
+    };
+  }
+
+  const auth = await getAuthenticatedSupabase(
+    ledgerText,
+    text.actions.auth.supabaseMissing
+  );
+
+  if (auth.error) {
+    return auth.error;
+  }
+
+  const snapshotSource = await getLiveProjectDataset(parsed.data.projectId);
+
+  if (!snapshotSource) {
+    return {
+      status: "error",
+      message: ledgerText.claimSettlementFailed,
+    };
+  }
+
+  const snapshotAsOf = buildProjectSnapshot(
+    buildDatasetAsOfDate(
+      snapshotSource,
+      new Date(parsed.data.effectiveDate).toISOString()
+    )
+  );
+  const claimSummary = snapshotAsOf.memberSummaries.find(
+    (summary) =>
+      summary.projectMember.id === parsed.data.capitalOwnerProjectMemberId
+  );
+
+  if (!claimSummary) {
+    return {
+      status: "error",
+      message: ledgerText.claimSettlementFailed,
+    };
+  }
+
+  if (parsed.data.capitalReturnAmount - claimSummary.capitalBalance > 0.01) {
+    return {
+      status: "error",
+      message:
+        locale === "vi"
+          ? "Phan hoan von vuot qua so du von hien tai cua thanh vien nay."
+          : "Capital return exceeds this member's current invested capital.",
+    };
+  }
+
+  if (
+    parsed.data.profitPayoutAmount -
+      Math.max(claimSummary.estimatedProfitShare, 0) >
+    0.01
+  ) {
+    return {
+      status: "error",
+      message:
+        locale === "vi"
+          ? "Phan tra loi nhuan vuot qua phan loi nhuan hien dang available cho thanh vien nay."
+          : "Profit payout exceeds the member's currently available profit claim.",
+    };
+  }
+
+  const tagNames = parseTagNames(parsed.data.tagNamesText);
+  const { data, error } = await auth.supabase.rpc(
+    "create_project_claim_settlement",
+    {
+      p_project_id: parsed.data.projectId,
+      p_effective_at: new Date(parsed.data.effectiveDate).toISOString(),
+      p_description: parsed.data.description,
+      p_currency_code: parsed.data.currencyCode,
+      p_cash_out_project_member_id: parsed.data.cashOutProjectMemberId,
+      p_capital_owner_project_member_id:
+        parsed.data.capitalOwnerProjectMemberId,
+      p_capital_return_amount: parsed.data.capitalReturnAmount,
+      p_profit_payout_amount: parsed.data.profitPayoutAmount,
+      p_tag_names: tagNames.length > 0 ? tagNames : null,
+      p_note: parsed.data.note ?? null,
+      p_external_counterparty: parsed.data.externalCounterparty ?? null,
+    }
+  );
+
+  if (error) {
+    return {
+      status: "error",
+      message: isMissingLedgerUpgrade(error)
+        ? ledgerText.missingMigration
+        : error.message,
+    };
+  }
+
+  const responseSchema = z.object({
+    capital_return_entry_id: z.string().uuid().nullable().optional(),
+    owner_profit_payout_entry_id: z.string().uuid().nullable().optional(),
+  });
+
+  if (!responseSchema.safeParse(data).success) {
+    return {
+      status: "error",
+      message: ledgerText.invalidResponse,
+    };
+  }
+
+  revalidateLedgerPaths(parsed.data.projectId);
+
+  return {
+    status: "success",
+    message: ledgerText.claimSettled,
+    redirectTo: `/projects/${parsed.data.projectId}`,
+  };
 }
 
 export async function updateLedgerEntryAction(

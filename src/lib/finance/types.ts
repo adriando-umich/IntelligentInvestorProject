@@ -18,6 +18,7 @@ export type EntryFamily = (typeof entryFamilies)[number];
 export const entryTypeLabels = {
   capital_contribution: "Capital contribution",
   capital_return: "Capital return",
+  owner_profit_payout: "Owner profit payout",
   operating_income: "Operating income",
   shared_loan_drawdown: "Shared loan drawdown",
   shared_loan_repayment_principal: "Shared loan principal repayment",
@@ -35,6 +36,7 @@ export type EntryType = keyof typeof entryTypeLabels;
 export const businessEntryTypes = [
   "capital_contribution",
   "capital_return",
+  "owner_profit_payout",
   "operating_income",
   "shared_loan_drawdown",
   "shared_loan_repayment_principal",
@@ -62,6 +64,8 @@ export const entryFamilyLabels = {
 const localizedEntryTypeLabels = {
   en: entryTypeLabels,
   vi: {
+    ...entryTypeLabels,
+    owner_profit_payout: "Chi tra loi nhuan cho chu von",
     capital_contribution: "Góp vốn",
     capital_return: "Hoàn vốn",
     operating_income: "Tiền vào vận hành",
@@ -149,6 +153,7 @@ export function getReconciliationStatusLabel(
 export const entryFamilyByType = {
   capital_contribution: "business",
   capital_return: "business",
+  owner_profit_payout: "business",
   operating_income: "business",
   shared_loan_drawdown: "business",
   shared_loan_repayment_principal: "business",
@@ -347,6 +352,8 @@ export interface MemberFinanceSummary {
   capitalBalance: number;
   operatingPnlShare: number;
   profitReceivedTotal: number;
+  ownerProfitPayoutTotal: number;
+  accruedProfitBalance: number;
   estimatedProfitShare: number;
 }
 

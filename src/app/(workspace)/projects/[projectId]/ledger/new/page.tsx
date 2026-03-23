@@ -4,6 +4,7 @@ import { BookOpen, FolderTree } from "lucide-react";
 
 import { PageHeader } from "@/components/app/page-header";
 import { LedgerEntryPlanner } from "@/components/finance/ledger-entry-planner";
+import { SettleOwnerClaimPlanner } from "@/components/finance/settle-owner-claim-planner";
 import {
   Card,
   CardContent,
@@ -156,11 +157,26 @@ export default async function NewLedgerEntryPage({
   const queryFrom = getQueryValue(query, "from");
   const queryTo = getQueryValue(query, "to");
   const queryEntryId = getQueryValue(query, "entryId");
+  const queryWorkflow = getQueryValue(query, "workflow");
+  const queryMemberId = getQueryValue(query, "memberId");
   const editState = queryEntryId
     ? buildEditInitialValues(snapshot, queryEntryId)
     : null;
 
+  const settleClaimState =
+    !editState &&
+    queryWorkflow === "settle_claim" &&
+    queryMemberId
+      ? snapshot.memberSummaries.find(
+          (summary) => summary.projectMember.id === queryMemberId
+        ) ?? null
+      : null;
+
   if (queryEntryId && !editState) {
+    notFound();
+  }
+
+  if (queryWorkflow === "settle_claim" && queryMemberId && !settleClaimState) {
     notFound();
   }
 
@@ -182,10 +198,14 @@ export default async function NewLedgerEntryPage({
     locale === "vi"
       ? {
           eyebrow: editState ? "Sua giao dich" : "Form giao dich",
-          title: editState
+          title: settleClaimState
+            ? `Settle claim cho ${settleClaimState.profile.displayName}`
+            : editState
             ? `Sua giao dich cho ${snapshot.dataset.project.name}`
             : `Them giao dich cho ${snapshot.dataset.project.name}`,
-          description: editState
+          description: settleClaimState
+            ? `Dung guided flow nay de ghi nhan phan hoan von, phan tra loi nhuan, hoac ca hai cho ${settleClaimState.profile.displayName} ngay trong Add transaction.`
+            : editState
             ? "Cap nhat giao dich da co. Khi luu, he thong se ghi de len transaction hien tai thay vi tao transaction moi."
             : "Dung form nay de ghi von gop, tien vao co tag, giai ngan vay chung, tra goc vay chung, tra lai vay chung, chi phi van hanh, chuyen tien noi bo, thanh vien tra lai tien cho nhau, hoac post mot dot chia loi nhuan. Trong workspace mau, form chi o che do preview; con du an live da dang nhap co the luu truc tiep cac loai giao dich duoc ho tro len Supabase.",
           helperTitle: "Can giup chon dung loai giao dich?",
@@ -196,10 +216,14 @@ export default async function NewLedgerEntryPage({
         }
       : {
           eyebrow: editState ? "Edit transaction" : "Ledger planner",
-          title: editState
+          title: settleClaimState
+            ? `Settle claim for ${settleClaimState.profile.displayName}`
+            : editState
             ? `Edit a transaction for ${snapshot.dataset.project.name}`
             : `Add a transaction for ${snapshot.dataset.project.name}`,
-          description: editState
+          description: settleClaimState
+            ? `Use this guided mode to record capital returned, owner profit paid out, or both for ${settleClaimState.profile.displayName} without leaving Add transaction.`
+            : editState
             ? "Update an existing ledger entry here. Saving will overwrite the current transaction instead of creating a duplicate."
             : "Use this planner to record capital, tagged inflows, shared loan drawdowns, shared loan principal repayments, shared loan interest payments, operating expenses, project cash handovers, member repayments, or a posted profit distribution run. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase.",
           helperTitle: "Need help choosing the right transaction?",
@@ -217,45 +241,66 @@ export default async function NewLedgerEntryPage({
         description={pageCopy.description}
       />
 
-      <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
-        <CardHeader>
-          <CardTitle>{pageCopy.helperTitle}</CardTitle>
-          <CardDescription>{pageCopy.helperDescription}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:flex sm:flex-wrap">
-          <Link
-            href={`/projects/${snapshot.dataset.project.id}/ledger/guide`}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 sm:w-auto"
-          >
-            <BookOpen className="size-4" />
-            {pageCopy.openGuide}
-          </Link>
-          <Link
-            href={`/projects/${snapshot.dataset.project.id}/tags`}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto"
-          >
-            <FolderTree className="size-4" />
-            {pageCopy.manageTags}
-          </Link>
-        </CardContent>
-      </Card>
+      {!settleClaimState ? (
+        <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
+          <CardHeader>
+            <CardTitle>{pageCopy.helperTitle}</CardTitle>
+            <CardDescription>{pageCopy.helperDescription}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:flex sm:flex-wrap">
+            <Link
+              href={`/projects/${snapshot.dataset.project.id}/ledger/guide`}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 sm:w-auto"
+            >
+              <BookOpen className="size-4" />
+              {pageCopy.openGuide}
+            </Link>
+            <Link
+              href={`/projects/${snapshot.dataset.project.id}/tags`}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto"
+            >
+              <FolderTree className="size-4" />
+              {pageCopy.manageTags}
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
 
-      <LedgerEntryPlanner
-        projectId={snapshot.dataset.project.id}
-        projectName={snapshot.dataset.project.name}
-        currencyCode={snapshot.dataset.project.currencyCode}
-        editingEntryId={editState?.entryId}
-        editingEntryType={editState?.entryType}
-        memberOptions={snapshot.memberSummaries.map((summary) => ({
-          id: summary.projectMember.id,
-          name: summary.profile.displayName,
-          membershipStatus: summary.projectMember.membershipStatus ?? "active",
-          capitalBalance: summary.capitalBalance,
-        }))}
-        tagOptions={snapshot.dataset.tags.map((tag) => tag.name)}
-        initialValues={initialValues}
-        liveModeEnabled={!session.demoMode}
-      />
+      {settleClaimState ? (
+        <SettleOwnerClaimPlanner
+          projectId={snapshot.dataset.project.id}
+          currencyCode={snapshot.dataset.project.currencyCode}
+          claimMember={{
+            id: settleClaimState.projectMember.id,
+            name: settleClaimState.profile.displayName,
+            capitalBalance: settleClaimState.capitalBalance,
+            estimatedProfitShare: settleClaimState.estimatedProfitShare,
+          }}
+          payerOptions={snapshot.memberSummaries.map((summary) => ({
+            id: summary.projectMember.id,
+            name: summary.profile.displayName,
+            membershipStatus: summary.projectMember.membershipStatus ?? "active",
+          }))}
+          liveModeEnabled={!session.demoMode}
+        />
+      ) : (
+        <LedgerEntryPlanner
+          projectId={snapshot.dataset.project.id}
+          projectName={snapshot.dataset.project.name}
+          currencyCode={snapshot.dataset.project.currencyCode}
+          editingEntryId={editState?.entryId}
+          editingEntryType={editState?.entryType}
+          memberOptions={snapshot.memberSummaries.map((summary) => ({
+            id: summary.projectMember.id,
+            name: summary.profile.displayName,
+            membershipStatus: summary.projectMember.membershipStatus ?? "active",
+            capitalBalance: summary.capitalBalance,
+          }))}
+          tagOptions={snapshot.dataset.tags.map((tag) => tag.name)}
+          initialValues={initialValues}
+          liveModeEnabled={!session.demoMode}
+        />
+      )}
     </div>
   );
 }

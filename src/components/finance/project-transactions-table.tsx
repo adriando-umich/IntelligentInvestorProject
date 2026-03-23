@@ -55,6 +55,9 @@ function entryTone(entryType: EntryType) {
   if (entryType === "profit_distribution") {
     return "bg-violet-100 text-violet-800";
   }
+  if (entryType === "owner_profit_payout") {
+    return "bg-fuchsia-100 text-fuchsia-800";
+  }
   return "bg-slate-100 text-slate-700";
 }
 
@@ -426,7 +429,8 @@ export function ProjectTransactionsTable({
                           <div className="space-y-2">
                             <p className="font-medium text-slate-950">{entry.description}</p>
                             <div className="space-y-1 text-sm text-slate-500">
-                              {entry.entryType === "profit_distribution" ? (
+                              {entry.entryType === "profit_distribution" ||
+                              entry.entryType === "owner_profit_payout" ? (
                                 <p>
                                   {copy.recipients}:{" "}
                                   {profitRecipients.length > 0

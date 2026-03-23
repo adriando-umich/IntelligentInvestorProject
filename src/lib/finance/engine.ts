@@ -134,16 +134,108 @@ function getReimbursementShareAmount(
   return roundMoney((allocationAmount / entryAmount) * reimbursableCashDelta);
 }
 
+function allocateProfitByCapital(
+  rows: { projectMemberId: string; capitalBalance: number }[],
+  totalAmount: number
+) {
+  const positiveRows = rows.filter((row) => row.capitalBalance > 0);
+  const totalCapital = positiveRows.reduce(
+    (sum, row) => sum + row.capitalBalance,
+    0
+  );
+
+  if (Math.abs(totalAmount) <= EPSILON || totalCapital <= 0) {
+    return new Map<string, { weight: number; amount: number }>();
+  }
+
+  const previews = positiveRows.map((row) => {
+    const weight = row.capitalBalance / totalCapital;
+    return {
+      projectMemberId: row.projectMemberId,
+      capitalBalance: row.capitalBalance,
+      weight,
+      amount: roundMoney(totalAmount * weight),
+    };
+  });
+
+  const distributed = previews.reduce((sum, row) => sum + row.amount, 0);
+  const remainder = roundMoney(totalAmount - distributed);
+
+  if (Math.abs(remainder) > EPSILON) {
+    const largest = previews.reduce((best, row) =>
+      row.capitalBalance > best.capitalBalance ? row : best
+    );
+    largest.amount = roundMoney(largest.amount + remainder);
+  }
+
+  return new Map(
+    previews.map((row) => [
+      row.projectMemberId,
+      { weight: row.weight, amount: row.amount },
+    ])
+  );
+}
+
+function checkpointOutstandingProfitPool(
+  memberSummaries: MemberFinanceSummary[],
+  totals: {
+    operatingIncome: number;
+    operatingExpense: number;
+    projectWideProfitDistributed: number;
+    ownerProfitPayoutTotal: number;
+  }
+) {
+  const accruedProfitTotal = roundMoney(
+    memberSummaries.reduce(
+      (sum, summary) => sum + summary.accruedProfitBalance,
+      0
+    )
+  );
+  const openProfitPool = roundMoney(
+    totals.operatingIncome -
+      totals.operatingExpense -
+      totals.projectWideProfitDistributed -
+      totals.ownerProfitPayoutTotal -
+      accruedProfitTotal
+  );
+
+  if (Math.abs(openProfitPool) <= EPSILON) {
+    return;
+  }
+
+  const checkpointRows = allocateProfitByCapital(
+    memberSummaries.map((summary) => ({
+      projectMemberId: summary.projectMember.id,
+      capitalBalance: summary.capitalBalance,
+    })),
+    openProfitPool
+  );
+
+  for (const summary of memberSummaries) {
+    const checkpointAmount = checkpointRows.get(summary.projectMember.id)?.amount ?? 0;
+
+    if (Math.abs(checkpointAmount) <= EPSILON) {
+      continue;
+    }
+
+    summary.accruedProfitBalance = roundMoney(
+      summary.accruedProfitBalance + checkpointAmount
+    );
+  }
+}
+
 function applyEntryEffects(
   entry: LedgerEntry,
   factor: number,
   allocations: LedgerAllocation[],
+  memberSummaries: MemberFinanceSummary[],
   summariesByMemberRef: Map<string, MemberFinanceSummary>,
   projectMemberById: Map<string, ProjectMember>,
   totals: {
     operatingIncome: number;
     operatingExpense: number;
-    profitDistributed: number;
+    projectWideProfitDistributed: number;
+    ownerProfitPayoutTotal: number;
     sharedLoanDrawdown: number;
     sharedLoanPrincipalRepaid: number;
     sharedLoanInterestPaid: number;
@@ -339,8 +431,12 @@ function applyEntryEffects(
       return;
     }
     case "profit_distribution": {
-      totals.profitDistributed = roundMoney(
-        totals.profitDistributed + entry.amount * factor
+      if (factor > 0) {
+        checkpointOutstandingProfitPool(memberSummaries, totals);
+      }
+
+      totals.projectWideProfitDistributed = roundMoney(
+        totals.projectWideProfitDistributed + entry.amount * factor
       );
 
       for (const allocation of getAllocationsForEntry(
@@ -361,6 +457,45 @@ function applyEntryEffects(
         summary.profitReceivedTotal = roundMoney(
           summary.profitReceivedTotal + allocation.amount * factor
         );
+        summary.accruedProfitBalance = roundMoney(
+          summary.accruedProfitBalance - allocation.amount * factor
+        );
+      }
+      return;
+    }
+    case "owner_profit_payout": {
+      if (factor > 0) {
+        checkpointOutstandingProfitPool(memberSummaries, totals);
+      }
+
+      totals.ownerProfitPayoutTotal = roundMoney(
+        totals.ownerProfitPayoutTotal + entry.amount * factor
+      );
+
+      for (const allocation of getAllocationsForEntry(
+        entry.id,
+        allocations,
+        "profit_share"
+      )) {
+        const member = projectMemberById.get(allocation.projectMemberId);
+        if (!member) {
+          continue;
+        }
+
+        const summary = summariesByMemberRef.get(member.id);
+        if (!summary) {
+          continue;
+        }
+
+        summary.profitReceivedTotal = roundMoney(
+          summary.profitReceivedTotal + allocation.amount * factor
+        );
+        summary.ownerProfitPayoutTotal = roundMoney(
+          summary.ownerProfitPayoutTotal + allocation.amount * factor
+        );
+        summary.accruedProfitBalance = roundMoney(
+          summary.accruedProfitBalance - allocation.amount * factor
+        );
       }
       return;
     }
@@ -369,48 +504,6 @@ function applyEntryEffects(
     case "reversal":
       return;
   }
-}
-
-function allocateProfitPreview(
-  rows: { projectMemberId: string; capitalBalance: number }[],
-  totalAmount: number
-) {
-  const positiveRows = rows.filter((row) => row.capitalBalance > 0);
-  const totalCapital = positiveRows.reduce(
-    (sum, row) => sum + row.capitalBalance,
-    0
-  );
-
-  if (totalAmount <= 0 || totalCapital <= 0) {
-    return new Map<string, { weight: number; amount: number }>();
-  }
-
-  const previews = positiveRows.map((row) => {
-    const weight = row.capitalBalance / totalCapital;
-    return {
-      projectMemberId: row.projectMemberId,
-      capitalBalance: row.capitalBalance,
-      weight,
-      amount: roundMoney(totalAmount * weight),
-    };
-  });
-
-  const distributed = previews.reduce((sum, row) => sum + row.amount, 0);
-  const remainder = roundMoney(totalAmount - distributed);
-
-  if (Math.abs(remainder) > EPSILON) {
-    const largest = previews.reduce((best, row) =>
-      row.capitalBalance > best.capitalBalance ? row : best
-    );
-    largest.amount = roundMoney(largest.amount + remainder);
-  }
-
-  return new Map(
-    previews.map((row) => [
-      row.projectMemberId,
-      { weight: row.weight, amount: row.amount },
-    ])
-  );
 }
 
 export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
@@ -439,6 +532,8 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
         capitalBalance: 0,
         operatingPnlShare: 0,
         profitReceivedTotal: 0,
+        ownerProfitPayoutTotal: 0,
+        accruedProfitBalance: 0,
         estimatedProfitShare: 0,
       } satisfies MemberFinanceSummary;
     })
@@ -460,7 +555,8 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
   const totals = {
     operatingIncome: 0,
     operatingExpense: 0,
-    profitDistributed: 0,
+    projectWideProfitDistributed: 0,
+    ownerProfitPayoutTotal: 0,
     sharedLoanDrawdown: 0,
     sharedLoanPrincipalRepaid: 0,
     sharedLoanInterestPaid: 0,
@@ -474,6 +570,7 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
           reversedEntry,
           -1,
           dataset.allocations,
+          memberSummaries,
           summariesByMemberRef,
           projectMemberById,
           totals
@@ -486,6 +583,7 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
       entry,
       1,
       dataset.allocations,
+      memberSummaries,
       summariesByMemberRef,
       projectMemberById,
       totals
@@ -513,16 +611,23 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
   const sharedLoanPrincipalOutstanding = roundMoney(
     totals.sharedLoanDrawdown - totals.sharedLoanPrincipalRepaid
   );
-  const undistributedProfit = roundMoney(
-    totals.operatingIncome - totals.operatingExpense - totals.profitDistributed
+  const openProfitPool = roundMoney(
+    totals.operatingIncome -
+      totals.operatingExpense -
+      totals.projectWideProfitDistributed -
+      totals.ownerProfitPayoutTotal -
+      memberSummaries.reduce(
+        (sum, summary) => sum + summary.accruedProfitBalance,
+        0
+      )
   );
 
-  const positiveCapitalPreview = allocateProfitPreview(
+  const positiveCapitalPreview = allocateProfitByCapital(
     memberSummaries.map((summary) => ({
       projectMemberId: summary.projectMember.id,
       capitalBalance: summary.capitalBalance,
     })),
-    Math.max(undistributedProfit, 0)
+    openProfitPool
   );
 
   for (const summary of memberSummaries) {
@@ -534,9 +639,17 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
       Math.max(-summary.expenseReimbursementBalance, 0)
     );
     summary.estimatedProfitShare = roundMoney(
-      positiveCapitalPreview.get(summary.projectMember.id)?.amount ?? 0
+      summary.accruedProfitBalance +
+        (positiveCapitalPreview.get(summary.projectMember.id)?.amount ?? 0)
     );
   }
+
+  const undistributedProfit = roundMoney(
+    memberSummaries.reduce(
+      (sum, summary) => sum + summary.estimatedProfitShare,
+      0
+    )
+  );
 
   const capitalWeights = memberSummaries
     .filter((summary) => summary.capitalBalance > 0)
@@ -547,7 +660,7 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
         displayName: summary.profile.displayName,
         capitalBalance: summary.capitalBalance,
         weight: preview?.weight ?? 0,
-        estimatedProfitShare: preview?.amount ?? 0,
+        estimatedProfitShare: summary.estimatedProfitShare,
       } satisfies CapitalWeightRow;
     })
     .sort((left, right) => right.capitalBalance - left.capitalBalance);
@@ -667,7 +780,9 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
     sharedLoanPrincipalOutstanding,
     sharedLoanInterestPaidTotal: roundMoney(totals.sharedLoanInterestPaid),
     totalCapitalOutstanding,
-    totalProfitDistributed: roundMoney(totals.profitDistributed),
+      totalProfitDistributed: roundMoney(
+        totals.projectWideProfitDistributed + totals.ownerProfitPayoutTotal
+      ),
     undistributedProfit,
     settlementSuggestions,
     openReconciliation,

@@ -143,6 +143,36 @@ export function ProjectDashboard({
   const overviewSettlementSuggestions = overviewCashClaimView.settlementSuggestions;
   const sharedExpenseSettlementSuggestions =
     sharedExpenseSettlementView.settlementSuggestions;
+  const capitalWeightByMemberId = useMemo(
+    () =>
+      new Map(
+        snapshot.capitalWeights.map((row) => [row.projectMemberId, row.weight])
+      ),
+    [snapshot.capitalWeights]
+  );
+  const claimSettlementRows = useMemo(
+    () =>
+      snapshot.memberSummaries
+        .filter(
+          (summary) =>
+            summary.capitalBalance > 0 || summary.estimatedProfitShare > 0
+        )
+        .map((summary) => ({
+          projectMemberId: summary.projectMember.id,
+          displayName: summary.profile.displayName,
+          capitalBalance: summary.capitalBalance,
+          estimatedProfitShare: summary.estimatedProfitShare,
+          weight: capitalWeightByMemberId.get(summary.projectMember.id) ?? 0,
+        }))
+        .sort((left, right) => {
+          if (right.capitalBalance !== left.capitalBalance) {
+            return right.capitalBalance - left.capitalBalance;
+          }
+
+          return right.estimatedProfitShare - left.estimatedProfitShare;
+        }),
+    [capitalWeightByMemberId, snapshot.memberSummaries]
+  );
   const copy =
     locale === "vi"
       ? {
@@ -367,6 +397,8 @@ export function ProjectDashboard({
             "Profit is only paid when a manager posts a distribution.",
           ],
         };
+  const settleClaimLabel = "Settle claim";
+  const actionColumnLabel = locale === "vi" ? "Thao tac" : "Action";
   return (
     <TooltipProvider>
       <div className="space-y-8">
@@ -778,24 +810,36 @@ export function ProjectDashboard({
                 </CardHeader>
                 <CardContent>
                   <Table className="min-w-[820px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{copy.member}</TableHead>
-                        <TableHead>{copy.capitalInvested}</TableHead>
-                        <TableHead>{copy.profitWeight}</TableHead>
-                        <TableHead>{copy.estimatedProfitToday}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {snapshot.capitalWeights.map((row) => (
-                        <TableRow key={row.projectMemberId}>
-                          <TableCell>{row.displayName}</TableCell>
-                          <TableCell>{formatCurrency(row.capitalBalance, snapshot.dataset.project.currencyCode, locale)}</TableCell>
-                          <TableCell>{formatPercent(row.weight, locale)}</TableCell>
-                          <TableCell>{formatCurrency(row.estimatedProfitShare, snapshot.dataset.project.currencyCode, locale)}</TableCell>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{copy.member}</TableHead>
+                          <TableHead>{copy.capitalInvested}</TableHead>
+                          <TableHead>{copy.profitWeight}</TableHead>
+                          <TableHead>{copy.estimatedProfitToday}</TableHead>
+                          <TableHead className="text-right">{actionColumnLabel}</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
+                      </TableHeader>
+                      <TableBody>
+                        {claimSettlementRows.map((row) => (
+                          <TableRow key={row.projectMemberId}>
+                            <TableCell>{row.displayName}</TableCell>
+                            <TableCell>{formatCurrency(row.capitalBalance, snapshot.dataset.project.currencyCode, locale)}</TableCell>
+                            <TableCell>{formatPercent(row.weight, locale)}</TableCell>
+                            <TableCell>{formatCurrency(row.estimatedProfitShare, snapshot.dataset.project.currencyCode, locale)}</TableCell>
+                            <TableCell className="text-right">
+                              <Link
+                                href={`/projects/${snapshot.dataset.project.id}/ledger/new?workflow=settle_claim&memberId=${row.projectMemberId}`}
+                                className={cn(
+                                  buttonVariants({ variant: "outline", size: "sm" }),
+                                  "rounded-xl"
+                                )}
+                              >
+                                {settleClaimLabel}
+                              </Link>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
                   </Table>
                 </CardContent>
               </Card>
