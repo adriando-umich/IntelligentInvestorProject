@@ -49,7 +49,7 @@ export default async function ProjectsPage() {
           href="/projects/new"
           className={cn(
             "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium whitespace-nowrap transition-all outline-none select-none hover:bg-muted hover:text-foreground active:translate-y-px disabled:pointer-events-none disabled:opacity-50",
-            "rounded-2xl border-teal-200 bg-teal-50 text-teal-900 hover:bg-teal-100"
+            "rounded-full border-emerald-200/80 bg-emerald-50/90 text-emerald-900 hover:bg-emerald-100"
           )}
           >
             <FolderPlus className="size-4" />
@@ -84,7 +84,7 @@ export default async function ProjectsPage() {
       {projects.length === 0 ? (
         <Card className="rounded-[1.75rem] border-white/70 bg-white/90 shadow-[0_24px_80px_-45px_rgba(15,23,42,0.35)]">
           <CardHeader className="space-y-3">
-            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">
+            <span className="inline-flex w-fit items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700">
               {text.projectsPage.readyEyebrow}
             </span>
             <CardTitle className="text-2xl text-slate-950">
@@ -99,7 +99,7 @@ export default async function ProjectsPage() {
               href="/projects/new"
               className={cn(
                 "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-primary px-2.5 text-sm font-medium whitespace-nowrap text-primary-foreground transition-all outline-none select-none hover:bg-primary/80 active:translate-y-px disabled:pointer-events-none disabled:opacity-50",
-                "rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+                "rounded-full px-4"
               )}
             >
               <FolderPlus className="size-4" />
@@ -117,7 +117,7 @@ export default async function ProjectsPage() {
           >
             <CardHeader className="gap-3">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.22em] text-teal-700">
+                <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700">
                   {project.slug}
                 </span>
                 <Badge
@@ -144,7 +144,7 @@ export default async function ProjectsPage() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                <div className="rounded-[1.4rem] bg-slate-50/90 px-4 py-4">
                   <p className="text-sm text-slate-500">
                     {text.projectsPage.moneyInProjectNow}
                   </p>
@@ -152,7 +152,7 @@ export default async function ProjectsPage() {
                     {formatCurrency(project.totalProjectCash, project.currencyCode, locale)}
                   </p>
                 </div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                <div className="rounded-[1.4rem] bg-slate-50/90 px-4 py-4">
                   <p className="text-sm text-slate-500">{text.projectsPage.estimatedProfitToday}</p>
                   <p className="mt-2 text-xl font-semibold text-slate-950">
                     {formatCurrency(project.undistributedProfit, project.currencyCode, locale)}
@@ -170,7 +170,7 @@ export default async function ProjectsPage() {
                 </div>
                 <Link
                   href={`/projects/${project.id}`}
-                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-4 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
                 >
                   {text.common.openProject}
                   <ArrowRight className="size-4" />

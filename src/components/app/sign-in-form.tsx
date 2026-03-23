@@ -147,55 +147,88 @@ export function SignInForm({
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-      <Card className="overflow-hidden rounded-[2rem] border-white/70 bg-white/90 shadow-[0_26px_80px_-40px_rgba(15,23,42,0.45)]">
-        <CardContent className="grid min-h-[560px] items-stretch gap-0 p-0 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="flex flex-col justify-between bg-[radial-gradient(circle_at_top_left,_rgba(13,148,136,0.22),_transparent_38%),linear-gradient(180deg,_#0f172a_0%,_#1e293b_100%)] px-8 py-10 text-white">
-            <div className="space-y-5">
-              <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-teal-100">
+      <Card className="overflow-hidden rounded-[2.25rem] border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(247,251,249,0.86))] shadow-[0_40px_110px_-62px_rgba(15,23,42,0.4)]">
+        <CardContent className="grid min-h-[560px] items-stretch gap-0 p-0 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="relative flex flex-col justify-between overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.28),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(191,219,254,0.34),_transparent_30%),linear-gradient(180deg,_rgba(244,253,248,0.98)_0%,_rgba(235,246,241,0.94)_100%)] px-8 py-10 text-slate-950">
+            <div className="pointer-events-none absolute inset-x-6 top-6 h-36 rounded-[2rem] bg-white/40 blur-3xl" />
+            <div className="relative space-y-6">
+              <span className="inline-flex rounded-full border border-emerald-200/80 bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 shadow-[0_12px_26px_-22px_rgba(16,185,129,0.8)]">
                 Project finance
               </span>
-              <div className="space-y-3">
-                <h1 className="font-heading text-4xl font-semibold tracking-tight">
+              <div className="space-y-4">
+                <h1 className="font-heading text-4xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-[3.4rem]">
                   {APP_NAME}
                 </h1>
-                <p className="max-w-lg text-sm leading-7 text-slate-200">
+                <p className="max-w-xl text-base leading-8 text-slate-600">
                   {text.app.tagline}
                 </p>
               </div>
+              <div className="grid max-w-xl gap-3 sm:grid-cols-3">
+                <div className="rounded-[1.4rem] border border-white/80 bg-white/75 px-4 py-4 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.28)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                    Style
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-slate-900">
+                    Splitwise clarity
+                  </p>
+                </div>
+                <div className="rounded-[1.4rem] border border-white/80 bg-white/75 px-4 py-4 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.28)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                    Focus
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-slate-900">
+                    Cash and capital
+                  </p>
+                </div>
+                <div className="rounded-[1.4rem] border border-white/80 bg-white/75 px-4 py-4 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.28)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                    Feel
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-slate-900">
+                    Soft Apple surfaces
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
-                <div className="flex items-center gap-2 text-teal-100">
+            <div className="relative grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[1.6rem] border border-white/80 bg-white/78 p-5 shadow-[0_22px_40px_-32px_rgba(15,23,42,0.28)]">
+                <div className="flex items-center gap-2 text-emerald-700">
                   <WalletCards className="size-4" />
-                  <p className="text-sm font-medium">{text.signIn.plainLanguageTitle}</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {text.signIn.plainLanguageTitle}
+                  </p>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-slate-200">
+                <p className="mt-2 text-sm leading-6 text-slate-600">
                   {text.signIn.plainLanguageDescription}
                 </p>
               </div>
-              <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
-                <div className="flex items-center gap-2 text-teal-100">
+              <div className="rounded-[1.6rem] border border-white/80 bg-white/78 p-5 shadow-[0_22px_40px_-32px_rgba(15,23,42,0.28)]">
+                <div className="flex items-center gap-2 text-sky-700">
                   <HandCoins className="size-4" />
-                  <p className="text-sm font-medium">{text.signIn.settlementTitle}</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {text.signIn.settlementTitle}
+                  </p>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-slate-200">
+                <p className="mt-2 text-sm leading-6 text-slate-600">
                   {text.signIn.settlementDescription}
                 </p>
               </div>
-              <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5 sm:col-span-2">
-                <div className="flex items-center gap-2 text-teal-100">
+              <div className="rounded-[1.6rem] border border-white/80 bg-white/78 p-5 shadow-[0_22px_40px_-32px_rgba(15,23,42,0.28)] sm:col-span-2">
+                <div className="flex items-center gap-2 text-amber-700">
                   <PiggyBank className="size-4" />
-                  <p className="text-sm font-medium">{text.signIn.capitalTitle}</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {text.signIn.capitalTitle}
+                  </p>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-slate-200">
+                <p className="mt-2 text-sm leading-6 text-slate-600">
                   {text.signIn.capitalDescription}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col justify-center px-8 py-10">
+          <div className="flex flex-col justify-center bg-white/58 px-8 py-10 lg:border-l lg:border-white/80">
             <div className="space-y-5">
               <div className="space-y-2">
                 <CardTitle className="font-heading text-2xl text-slate-950">
@@ -215,7 +248,7 @@ export function SignInForm({
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-12 w-full rounded-2xl border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+                        className="h-12 w-full justify-center border-white/80 bg-white/92 text-slate-900 hover:bg-white"
                         onClick={handleGoogleSignIn}
                         disabled={oauthPending}
                       >
@@ -246,9 +279,9 @@ export function SignInForm({
                   />
                   {emailAuthAvailable ? (
                     <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
-                      <span className="h-px flex-1 bg-slate-200" />
+                      <span className="h-px flex-1 bg-slate-200/80" />
                       {text.signIn.continueWithEmail}
-                      <span className="h-px flex-1 bg-slate-200" />
+                      <span className="h-px flex-1 bg-slate-200/80" />
                     </div>
                   ) : null}
                 </div>
@@ -258,19 +291,16 @@ export function SignInForm({
                 defaultValue="sign-in"
                 className="space-y-4"
               >
-                <TabsList
-                  className="grid w-full grid-cols-2 rounded-2xl bg-slate-100 p-1"
-                  variant="default"
-                >
+                <TabsList className="grid w-full grid-cols-2" variant="default">
                   <TabsTrigger
                     value="sign-in"
-                    className="rounded-[1rem] data-active:bg-white"
+                    className="data-active:bg-white"
                   >
                     {text.signIn.signInTab}
                   </TabsTrigger>
                   <TabsTrigger
                     value="sign-up"
-                    className="rounded-[1rem] data-active:bg-white"
+                    className="data-active:bg-white"
                   >
                     {text.signIn.signUpTab}
                   </TabsTrigger>
@@ -278,7 +308,10 @@ export function SignInForm({
 
                 <TabsContent value="sign-in" className="space-y-4">
                   {isSupabaseConfigured && emailAuthAvailable ? (
-                    <form action={signInFormAction} className="space-y-4">
+                    <form
+                      action={signInFormAction}
+                      className="space-y-4 rounded-[1.7rem] border border-white/90 bg-white/72 p-5 shadow-[0_26px_50px_-40px_rgba(15,23,42,0.3)]"
+                    >
                       <input type="hidden" name="nextPath" value={safeNextPath} />
                       <div className="space-y-2">
                         <Label htmlFor="sign-in-email">{text.common.email}</Label>
@@ -303,7 +336,7 @@ export function SignInForm({
                       <MessageBanner state={signInState} />
                       <Button
                         type="submit"
-                        className="w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+                        className="w-full"
                         disabled={signInPending}
                       >
                         <LogIn className="size-4" />
@@ -321,7 +354,10 @@ export function SignInForm({
 
                 <TabsContent value="sign-up" className="space-y-4">
                   {isSupabaseConfigured && emailAuthAvailable ? (
-                    <form action={signUpFormAction} className="space-y-4">
+                    <form
+                      action={signUpFormAction}
+                      className="space-y-4 rounded-[1.7rem] border border-white/90 bg-white/72 p-5 shadow-[0_26px_50px_-40px_rgba(15,23,42,0.3)]"
+                    >
                       <input type="hidden" name="nextPath" value={safeNextPath} />
                       <div className="space-y-2">
                         <Label htmlFor="display-name">{text.common.displayName}</Label>
@@ -360,7 +396,7 @@ export function SignInForm({
                       ) : null}
                       <Button
                         type="submit"
-                        className="w-full rounded-2xl bg-teal-700 text-white hover:bg-teal-600"
+                        className="w-full"
                         disabled={signUpPending}
                       >
                         <UserPlus className="size-4" />
@@ -379,12 +415,12 @@ export function SignInForm({
                 </TabsContent>
               </Tabs>
 
-              <div className="rounded-[1.5rem] border border-teal-200 bg-teal-50 px-5 py-5">
+              <div className="rounded-[1.7rem] border border-emerald-200/80 bg-[linear-gradient(180deg,rgba(240,253,247,0.95),rgba(230,248,239,0.92))] px-5 py-5 shadow-[0_24px_50px_-38px_rgba(16,185,129,0.35)]">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-teal-950">
+                  <p className="text-sm font-medium text-emerald-950">
                     {text.signIn.demoCardTitle}
                   </p>
-                  <p className="text-sm leading-6 text-teal-900/80">
+                  <p className="text-sm leading-6 text-emerald-900/80">
                     {text.signIn.demoCardDescription}
                   </p>
                 </div>
@@ -392,7 +428,7 @@ export function SignInForm({
                   <Button
                     type="submit"
                     variant="outline"
-                    className="w-full rounded-2xl border-teal-200 bg-white text-teal-900 hover:bg-teal-100"
+                    className="w-full border-emerald-200/80 bg-white/90 text-emerald-900 hover:bg-white"
                   >
                     <ShieldCheck className="size-4" />
                     {text.common.openSampleWorkspace}

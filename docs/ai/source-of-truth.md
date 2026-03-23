@@ -17,6 +17,7 @@ The app must keep those concepts separate in both data and UI.
 - Status: live-ready onboarding plus database-backed transaction entry implemented
 - Runtime mode today: live Supabase when a real user signs in, with sample-workspace fallback through the demo cookie
 - Target stack: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui, Supabase
+- Current visual language: light Splitwise-inspired finance UI with softer Apple-style surfaces, mint primary accents, pill controls, and mobile-safe spacing
 - Current data source:
   - live Supabase reads for signed-in users
   - live ledger-entry create on supported transaction types
@@ -224,5 +225,7 @@ Only `.env.example` should be committed.
 - Added and applied `supabase/migrations/20260323040000_cash_legs_by_project_member.sql`, so cash-holder fields now persist by `project_member_id` and can safely include pending members before they join.
 - Verified on a disposable live project that a pending member can be used in `capital owner`, `cash in`, and `cash out`, then accept the invite later without changing the stored `project_member_id` on those earlier entries.
 - Pushed commit `5c3950c` to both `main` and `master`, then promoted a new production Vercel deployment from that exact commit. The first uploaded-file attempt failed because Windows path separators were preserved in the API payload; the succeeding deployment normalized file paths to forward slashes before upload.
+- Refreshed the app-wide design system toward a Splitwise-meets-Apple look by updating global tokens, buttons, cards, tabs, inputs, tables, the workspace shell, project nav, sign-in, create-project, and project-list surfaces.
+- Re-verified the refreshed UI on a production build with `next build`; the new theme keeps pill controls and full-width actions at narrow breakpoints for mobile usability.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

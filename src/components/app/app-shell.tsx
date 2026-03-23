@@ -53,7 +53,7 @@ function NavContent({
       <div className="space-y-5">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-300/60">
+            <div className="flex size-11 items-center justify-center rounded-[1.4rem] bg-[linear-gradient(180deg,#34d399_0%,#10b981_100%)] text-white shadow-[0_20px_36px_-22px_rgba(16,185,129,0.95)]">
               <ChartNoAxesColumn className="size-5" />
             </div>
             <div>
@@ -80,10 +80,10 @@ function NavContent({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-full px-4 py-3 text-sm font-medium transition-all duration-200",
                   active
-                    ? "bg-slate-950 text-white"
-                    : "bg-white/70 text-slate-600 hover:bg-white hover:text-slate-950"
+                    ? "bg-[linear-gradient(180deg,#1fc88c_0%,#14b87a_100%)] text-white shadow-[0_18px_36px_-24px_rgba(20,184,122,0.9)]"
+                    : "bg-white/75 text-slate-600 hover:bg-white hover:text-slate-950"
                 )}
               >
                 <Icon className="size-4" />
@@ -97,7 +97,7 @@ function NavContent({
           href="/projects/new"
           className={cn(
             buttonVariants({ variant: "outline", size: "lg" }),
-            "w-full rounded-2xl border-teal-200 bg-teal-50 text-teal-900 hover:bg-teal-100"
+            "w-full border-emerald-200/80 bg-emerald-50/90 text-emerald-900 hover:bg-emerald-100"
           )}
         >
           <FolderPlus className="size-4" />
@@ -124,10 +124,10 @@ function NavContent({
                 key={project.id}
                 href={href}
                 className={cn(
-                  "block rounded-2xl border px-4 py-3 text-sm transition-colors",
+                  "block rounded-[1.4rem] border px-4 py-3 text-sm transition-all duration-200",
                   active
-                    ? "border-teal-200 bg-teal-50 text-teal-900"
-                    : "border-white/70 bg-white/70 text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-950"
+                    ? "border-emerald-200 bg-emerald-50/95 text-emerald-900 shadow-[0_20px_40px_-34px_rgba(16,185,129,0.8)]"
+                    : "border-white/75 bg-white/75 text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-950"
                 )}
               >
                 <p className="font-medium">{project.name}</p>
@@ -140,16 +140,16 @@ function NavContent({
         </div>
       </div>
 
-      <div className="mt-auto space-y-4 rounded-3xl bg-slate-950 px-5 py-5 text-white shadow-[0_24px_80px_-40px_rgba(15,23,42,0.8)]">
+      <div className="mt-auto space-y-4 rounded-[1.8rem] border border-emerald-100/90 bg-[linear-gradient(180deg,rgba(241,253,248,0.96),rgba(224,247,239,0.92))] px-5 py-5 text-slate-900 shadow-[0_24px_70px_-44px_rgba(16,185,129,0.35)]">
         <div className="flex items-center gap-3">
           <ProfileAvatar
             name={viewerName}
             avatarUrl={viewerAvatarUrl}
             size="lg"
-            className="ring-2 ring-white/15 after:hidden"
+            className="ring-2 ring-white/80 after:hidden"
           />
           <div>
-            <p className="text-sm text-slate-300">{text.shell.signedInAs}</p>
+            <p className="text-sm text-slate-500">{text.shell.signedInAs}</p>
             <p className="font-medium">{viewerName}</p>
           </div>
         </div>
@@ -157,7 +157,7 @@ function NavContent({
           <Button
             type="submit"
             variant="secondary"
-            className="w-full rounded-2xl bg-white text-slate-950 hover:bg-slate-100"
+            className="w-full bg-white/90 text-slate-950 hover:bg-white"
           >
             <LogOut className="size-4" />
             {text.shell.signOut}
@@ -185,9 +185,9 @@ export function AppShell({
   const { text } = useLocale();
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(13,148,136,0.16),_transparent_28%),linear-gradient(180deg,_#fdfcf9_0%,_#f6f2ea_100%)]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.24),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(191,219,254,0.22),_transparent_26%),linear-gradient(180deg,_#f8fbfa_0%,_#eef5f2_100%)]">
       <div className="mx-auto flex min-h-screen w-full max-w-[1600px] gap-6 px-4 py-4 lg:px-6">
-        <aside className="hidden w-[320px] shrink-0 rounded-[2rem] border border-white/70 bg-white/75 p-6 shadow-[0_30px_90px_-50px_rgba(15,23,42,0.4)] backdrop-blur lg:block">
+        <aside className="hidden w-[320px] shrink-0 rounded-[2.2rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(245,250,248,0.82))] p-6 shadow-[0_34px_90px_-54px_rgba(15,23,42,0.33)] backdrop-blur lg:block">
           <NavContent
             pathname={pathname}
             projects={projects}
@@ -198,7 +198,7 @@ export function AppShell({
         </aside>
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 mb-4 flex items-center justify-between rounded-[1.75rem] border border-white/70 bg-white/85 px-4 py-3 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.45)] backdrop-blur lg:hidden">
+          <header className="sticky top-0 z-30 mb-4 flex items-center justify-between rounded-[1.9rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(245,250,248,0.88))] px-4 py-3 shadow-[0_24px_70px_-48px_rgba(15,23,42,0.34)] backdrop-blur lg:hidden">
             <div className="flex items-center gap-3">
               <ProfileAvatar
                 name={viewerName}
@@ -216,7 +216,10 @@ export function AppShell({
               <SheetTrigger render={<Button size="icon" variant="outline" />}>
                 <Menu className="size-4" />
               </SheetTrigger>
-              <SheetContent side="left" className="w-[90vw] rounded-r-[2rem] p-0">
+              <SheetContent
+                side="left"
+                className="w-[90vw] rounded-r-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(242,249,246,0.92))] p-0"
+              >
                 <SheetHeader className="sr-only">
                   <SheetTitle>{text.shell.projectNavigationTitle}</SheetTitle>
                   <SheetDescription>
@@ -236,7 +239,7 @@ export function AppShell({
             </Sheet>
           </header>
 
-          <main className="min-w-0 flex-1 rounded-[2rem] border border-white/70 bg-white/65 p-4 shadow-[0_30px_90px_-50px_rgba(15,23,42,0.4)] backdrop-blur sm:p-6 lg:p-8">
+          <main className="min-w-0 flex-1 rounded-[2.1rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(247,251,249,0.76))] p-4 shadow-[0_36px_90px_-56px_rgba(15,23,42,0.34)] backdrop-blur sm:p-6 lg:p-8">
             {children}
           </main>
         </div>

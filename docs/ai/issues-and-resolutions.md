@@ -13,6 +13,7 @@
 - The EN/VI rollout still needs one live QA pass to catch any remaining English-only strings in secondary dashboard/chart states.
 - The new table-toolbar rollout still needs one production pass with real signed-in data, not just the sample workspace and local production build.
 - The updated ledger planner layout still needs one real browser/device pass on desktop and mobile; this session added the manual checklist and passed `next build`, but it did not complete a hands-on phone test.
+- The new Splitwise/Apple visual refresh passed `next build`, but it still needs one real production pass on desktop plus phone to validate contrast, spacing, and glass-surface readability outside the local build.
 - If the same real person somehow becomes active in a project through a different path before using an older targeted invite link, the system does not yet run an automatic merge of two competing `project_members` rows; the main supported path is now stable pending-member activation through the linked invite.
 
 ## Resolved Issues
@@ -64,6 +65,7 @@
 - The ledger planner was showing `Open transaction guide` and `Manage tags` in two stacked places close together, which made the form feel repetitive and especially crowded on mobile; resolved by keeping one page-level support card above the planner and removing the duplicate CTA block from inside the form.
 - The ledger planner still showed both `Money out by` and `Money in to` for `capital_contribution`, even though only the receiving custody side is required there; resolved by showing only the cash-leg selectors relevant to the selected entry type and by adding clearer capital-specific helper copy.
 - Pending members could receive allocations and capital ownership before join, but they were still blocked from cash-holder fields because `ledger_entries` stored cash legs by joined `profiles.user_id`; resolved by adding `cash_in_project_member_id` / `cash_out_project_member_id`, widening the person selectors, and keeping history attached to the same `project_member_id` after invite acceptance.
+- The product still felt visually split between older warm cards and newer finance surfaces; resolved in code by moving the shared theme toward lighter Splitwise-inspired mint accents plus softer Apple-style surfaces across the shell, auth, cards, buttons, tabs, and primary project pages.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -77,6 +79,7 @@
 - Production UI should not surface deployment/env readiness details; keep setup guidance in docs and operator notes instead.
 - When adding new live ledger capabilities, prefer additive SQL migrations over rewriting the original base schema so already-deployed Supabase projects can upgrade safely.
 - When using the Vercel uploaded-file deployment API from Windows, normalize deployment file paths to forward slashes before creating the deployment, or the build can miss nested directories like `src/app`.
+- After a shared-theme refresh, always run a full production build because seemingly cosmetic changes in client UI primitives can cascade into many routes at once.
 - For social auth on Supabase SSR, start OAuth from a browser client and finish the PKCE code exchange in a route handler that can persist auth cookies.
 - When the ledger model is still stored as one enum in SQL, add a shared classification helper in app code instead of forcing a breaking schema rewrite mid-project.
 - When social-auth metadata should survive beyond the current session, sync it into the app's profile table and gracefully tolerate older databases that have not received the new column yet.

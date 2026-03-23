@@ -69,8 +69,8 @@ export function ProjectSectionNav({ projectId }: ProjectSectionNavProps) {
   const { text } = useLocale();
 
   return (
-    <div className="sticky top-3 z-20 -mx-1 overflow-x-auto rounded-[1.5rem] border border-white/70 bg-white/90 px-2 py-2 shadow-[0_18px_60px_-45px_rgba(15,23,42,0.45)] backdrop-blur">
-      <div className="flex min-w-max items-center gap-2">
+    <div className="sticky top-3 z-20 -mx-1 overflow-x-auto rounded-[1.7rem] border border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(248,251,250,0.88))] px-2 py-2 shadow-[0_24px_70px_-46px_rgba(15,23,42,0.35)] backdrop-blur">
+      <div className="flex min-w-max items-center gap-2 rounded-[1.3rem] bg-white/55 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
         {projectSectionItems.map((item) => {
           const active = item.isActive(pathname, view, projectId);
 
@@ -79,10 +79,10 @@ export function ProjectSectionNav({ projectId }: ProjectSectionNavProps) {
               key={item.key}
               href={item.href(projectId)}
               className={cn(
-                "inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-200",
                 active
-                  ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200"
-                  : "text-slate-500 hover:bg-white/70 hover:text-slate-900"
+                  ? "bg-[linear-gradient(180deg,#1fc88c_0%,#14b87a_100%)] text-white shadow-[0_14px_30px_-18px_rgba(20,184,122,0.95)]"
+                  : "text-slate-500 hover:bg-white hover:text-slate-900"
               )}
             >
               {text.nav[item.labelKey]}

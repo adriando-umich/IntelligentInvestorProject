@@ -44,6 +44,10 @@
   - desktop web
   - tablet
   - mobile phone
+- Run one browser/device QA pass on the new Splitwise x Apple theme:
+  - desktop dashboard, project list, and sign-in
+  - iPhone-width sign-in, ledger planner, and members screens
+  - contrast/readability check on mint accents, pills, and glass surfaces
 
 ## Next
 
@@ -129,3 +133,4 @@
 - Tightened the planner so only relevant cash-leg fields show for each entry type, especially around capital contribution vs capital return.
 - Added a project-member-backed cash-leg migration so pending members can now be selected in every person-related field, not just allocations and capital ownership, and verified that those rows still map to the same member after invite acceptance.
 - Moved the remaining work to end-to-end real-user validation, richer member management, profit-distribution write flows, and deeper tag-reporting decisions.
+- Refreshed the shared visual system toward a lighter Splitwise/Apple direction across the shell, auth, navigation, and top-level project surfaces, then re-ran `next build` successfully.

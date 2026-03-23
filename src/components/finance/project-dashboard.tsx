@@ -323,13 +323,13 @@ export function ProjectDashboard({
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href={`/projects/${snapshot.dataset.project.id}/ledger/new`}
-            className={cn(buttonVariants({ variant: "default", size: "lg" }), "rounded-2xl bg-slate-950 px-4 text-white hover:bg-slate-800")}
+            className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-4")}
           >
             {copy.addTransaction}
           </Link>
           <Link
             href={`/projects/${snapshot.dataset.project.id}/ledger/guide`}
-            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl border-teal-200 bg-teal-50 px-4 text-teal-900 hover:bg-teal-100")}
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "border-emerald-200/80 bg-emerald-50/90 px-4 text-emerald-900 hover:bg-emerald-100")}
           >
             {copy.transactionGuide}
           </Link>
@@ -409,7 +409,7 @@ export function ProjectDashboard({
         <Card className="rounded-[1.75rem] border-white/70 bg-[linear-gradient(135deg,rgba(240,253,250,0.96),rgba(255,255,255,0.94))] shadow-[0_26px_80px_-45px_rgba(15,23,42,0.35)]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-950">
-              <CircleAlert className="size-4 text-teal-700" />
+              <CircleAlert className="size-4 text-emerald-700" />
               {copy.whySeparateTitle}
             </CardTitle>
             <CardDescription className="text-slate-600">
@@ -448,7 +448,7 @@ export function ProjectDashboard({
                         <TableCell className="font-medium text-slate-950">
                           <Link
                             href={`/projects/${snapshot.dataset.project.id}/members/${summary.projectMember.id}`}
-                            className="flex items-center gap-3 hover:text-teal-700"
+                            className="flex items-center gap-3 hover:text-emerald-700"
                           >
                             <ProfileAvatar
                               name={summary.profile.displayName}
@@ -612,7 +612,7 @@ export function ProjectDashboard({
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <CardTitle className="flex items-center gap-2">
-                        <Tags className="size-4 text-teal-700" />
+                        <Tags className="size-4 text-emerald-700" />
                         {copy.taggedMoneyInTitle}
                       </CardTitle>
                     </div>

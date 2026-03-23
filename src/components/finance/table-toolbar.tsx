@@ -38,7 +38,7 @@ export function TableToolbar({
   return (
     <div
       className={cn(
-        "rounded-[1.5rem] border border-slate-200/80 bg-slate-50/90 px-4 py-4",
+        "rounded-[1.65rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,250,252,0.88))] px-4 py-4 shadow-[0_18px_54px_-42px_rgba(15,23,42,0.22)] backdrop-blur",
         className
       )}
     >
@@ -53,7 +53,7 @@ export function TableToolbar({
               value={searchValue}
               onChange={(event) => onSearchChange(event.target.value)}
               placeholder={searchPlaceholder}
-              className="flex h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 pl-10 text-sm text-slate-950 outline-none transition focus:border-teal-300"
+              className="flex h-11 w-full rounded-[1.1rem] border border-slate-200/80 bg-white/90 px-3 pl-10 text-sm text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-3 focus:ring-emerald-100"
             />
           </div>
         </label>
@@ -66,7 +66,7 @@ export function TableToolbar({
             <select
               value={filter.value}
               onChange={(event) => filter.onValueChange(event.target.value)}
-              className="flex h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300"
+              className="flex h-11 w-full rounded-[1.1rem] border border-slate-200/80 bg-white/90 px-3 text-sm text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-3 focus:ring-emerald-100"
             >
               {filter.options.map((option) => (
                 <option key={`${filter.key}-${option.value}`} value={option.value}>
@@ -95,7 +95,7 @@ export function TableSurface({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white/80",
+        "overflow-hidden rounded-[1.65rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,255,255,0.9))] shadow-[0_22px_60px_-42px_rgba(15,23,42,0.24)]",
         className
       )}
     >

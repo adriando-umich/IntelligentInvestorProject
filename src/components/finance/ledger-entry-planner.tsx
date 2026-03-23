@@ -870,7 +870,7 @@ export function LedgerEntryPlanner({
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button
                 type="button"
-                className="w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-800 sm:w-auto"
+                className="w-full sm:w-auto"
                 onClick={form.handleSubmit(handlePreview)}
               >
                 {copy.savePreview}
@@ -878,7 +878,7 @@ export function LedgerEntryPlanner({
               <Button
                 type="button"
                 variant="outline"
-                className="w-full rounded-2xl border-teal-200 bg-teal-50 text-teal-900 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                className="w-full border-emerald-200/80 bg-emerald-50/90 text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 disabled={!liveSupported || isSavingLive}
                 onClick={form.handleSubmit(handleLiveCreate)}
               >

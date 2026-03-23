@@ -34,28 +34,28 @@ export function CreateProjectForm() {
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-      <Card className="rounded-[1.75rem] border-white/70 bg-[radial-gradient(circle_at_top_left,_rgba(13,148,136,0.18),_transparent_34%),linear-gradient(180deg,_#0f172a_0%,_#1e293b_100%)] text-white shadow-[0_24px_80px_-45px_rgba(15,23,42,0.55)]">
+      <Card className="rounded-[1.9rem] border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.24),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(191,219,254,0.22),_transparent_26%),linear-gradient(180deg,_rgba(244,253,248,0.98)_0%,_rgba(233,246,240,0.94)_100%)] text-slate-950 shadow-[0_28px_90px_-50px_rgba(15,23,42,0.34)]">
         <CardHeader className="space-y-4">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-teal-100">
+          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200/80 bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700 shadow-[0_14px_28px_-22px_rgba(16,185,129,0.8)]">
             <Sparkles className="size-3.5" />
             {text.createProject.liveOnboarding}
           </div>
-          <CardTitle className="font-heading text-3xl text-white">
+          <CardTitle className="font-heading text-3xl text-slate-950">
             {text.createProject.heroTitle}
           </CardTitle>
-          <CardDescription className="max-w-xl text-slate-200">
+          <CardDescription className="max-w-xl text-slate-600">
             {text.createProject.heroDescription}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm leading-6 text-slate-200">
-            <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
-            <p className="font-medium text-teal-100">{text.createProject.whatGetsCreated}</p>
+        <CardContent className="space-y-4 text-sm leading-6 text-slate-600">
+          <div className="rounded-[1.5rem] border border-white/85 bg-white/75 p-5 shadow-[0_22px_40px_-32px_rgba(15,23,42,0.24)]">
+            <p className="font-medium text-slate-950">{text.createProject.whatGetsCreated}</p>
             <p className="mt-2">
               {text.createProject.whatGetsCreatedDescription}
             </p>
           </div>
-          <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
-            <p className="font-medium text-teal-100">{text.createProject.whatNext}</p>
+          <div className="rounded-[1.5rem] border border-white/85 bg-white/75 p-5 shadow-[0_22px_40px_-32px_rgba(15,23,42,0.24)]">
+            <p className="font-medium text-slate-950">{text.createProject.whatNext}</p>
             <p className="mt-2">
               {text.createProject.whatNextDescription}
             </p>
@@ -88,7 +88,7 @@ export function CreateProjectForm() {
                 id="currency-code"
                 name="currencyCode"
                 defaultValue="VND"
-                className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-teal-300 sm:max-w-[220px]"
+                className="flex h-11 w-full rounded-[1.15rem] border border-white/85 bg-white/90 px-3 text-sm text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100 sm:max-w-[220px]"
               >
                 <option value="VND">VND</option>
                 <option value="USD">USD</option>
@@ -112,7 +112,7 @@ export function CreateProjectForm() {
 
             <Button
               type="submit"
-              className="w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-800"
+              className="w-full"
               disabled={pending}
             >
               <FolderPlus className="size-4" />

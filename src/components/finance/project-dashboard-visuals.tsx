@@ -319,9 +319,9 @@ function FundingStackChart({ snapshot }: { snapshot: ProjectSnapshot }) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl bg-teal-50 px-4 py-4">
-          <p className="text-sm text-teal-700">{copy.capital}</p>
-          <p className="mt-2 text-lg font-semibold text-teal-950">
+        <div className="rounded-[1.4rem] bg-emerald-50/90 px-4 py-4">
+          <p className="text-sm text-emerald-700">{copy.capital}</p>
+          <p className="mt-2 text-lg font-semibold text-emerald-950">
             {formatCurrency(
               snapshot.totalCapitalOutstanding,
               snapshot.dataset.project.currencyCode,
