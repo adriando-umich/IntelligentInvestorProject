@@ -925,7 +925,14 @@ export function ProjectCapitalVisuals({ snapshot }: { snapshot: ProjectSnapshot 
     <div className="grid gap-6 xl:grid-cols-2">
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>
+          <CardTitle
+            aria-label={
+              locale === "vi"
+                ? "Cấu phần nguồn tiền đứng sau số cash hôm nay"
+                : "Funding stack behind today's cash"
+            }
+            className="text-transparent before:content-[attr(aria-label)] before:text-current"
+          >
             {locale === "vi" ? "Cấu phần nguồn tiền đứng sau số cash hôm nay" : "Funding stack behind today&apos;s cash"}
           </CardTitle>
           <CardDescription>
