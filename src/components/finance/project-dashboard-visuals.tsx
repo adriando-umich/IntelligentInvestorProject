@@ -691,62 +691,102 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
   const rows = snapshot.memberSummaries
     .map((summary) => ({
       member: summary.profile.displayName,
-      paid: summary.profitReceivedTotal,
-      availableToday: summary.estimatedProfitShare,
+      capital: Math.max(summary.capitalBalance, 0),
+      profit: Math.max(summary.estimatedProfitShare, 0),
     }))
-    .filter((row) => row.paid > 0 || row.availableToday > 0);
+    .filter((row) => row.capital > 0 || row.profit > 0)
+    .sort(
+      (left, right) =>
+        right.capital + right.profit - (left.capital + left.profit)
+    );
 
   if (!rows.length) {
     return (
       <EmptyChartState
         message={
           locale === "vi"
-            ? "Biểu đồ lợi nhuận sẽ hiện khi dự án đã có lợi nhuận trả ra hoặc có preview lợi nhuận dương."
-            : "Profit bars appear once the project has profit paid or a positive profit preview."
+            ? "Bi\u1ec3u \u0111\u1ed3 n\u00e0y s\u1ebd hi\u1ec7n khi c\u00f3 v\u1ed1n c\u00f2n \u0111ang g\u00f3p ho\u1eb7c c\u00f3 l\u1ee3i nhu\u1eadn ch\u01b0a chia."
+            : "This chart appears once the project has capital still invested or positive profit still undistributed."
         }
       />
     );
   }
 
   return (
-    <div className="h-[290px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={rows} margin={{ top: 8, right: 18, left: 8, bottom: 8 }}>
-          <CartesianGrid stroke="#e2e8f0" vertical={false} />
-          <XAxis dataKey="member" tickLine={false} axisLine={false} />
-          <YAxis
-            tickFormatter={(value: number) =>
-              formatCompactCurrency(value, snapshot.dataset.project.currencyCode, locale)
-            }
-          />
-          <RechartsTooltip
-            content={
-              <MoneyTooltip
-                currencyCode={snapshot.dataset.project.currencyCode}
-                locale={locale}
-              />
-            }
-          />
-          <Bar
-            dataKey="paid"
-            name={locale === "vi" ? "Lợi nhuận đã trả" : "Profit already paid"}
-            stackId="profit"
-            fill="#0f766e"
-            radius={[8, 8, 0, 0]}
-          />
-          <Bar
-            dataKey="availableToday"
-            name={
-              locale === "vi"
-                ? "Còn có thể nhận nếu chia hôm nay"
-                : "Still available if distributed today"
-            }
-            stackId="profit"
-            fill="#14b8a6"
-            radius={[8, 8, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="space-y-4">
+      <div className="h-[290px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={rows}
+            margin={{ top: 8, right: 18, left: 8, bottom: 8 }}
+          >
+            <CartesianGrid stroke="#e2e8f0" vertical={false} />
+            <XAxis dataKey="member" tickLine={false} axisLine={false} />
+            <YAxis
+              tickFormatter={(value: number) =>
+                formatCompactCurrency(
+                  value,
+                  snapshot.dataset.project.currencyCode,
+                  locale
+                )
+              }
+            />
+            <RechartsTooltip
+              content={
+                <MoneyTooltip
+                  currencyCode={snapshot.dataset.project.currencyCode}
+                  locale={locale}
+                />
+              }
+            />
+            <Bar
+              dataKey="capital"
+              name={locale === "vi" ? "V\u1ed1n c\u00f2n \u0111ang g\u00f3p" : "Capital still invested"}
+              stackId="claim"
+              fill="#0f766e"
+              radius={[8, 8, 0, 0]}
+            />
+            <Bar
+              dataKey="profit"
+              name={
+                locale === "vi"
+                  ? "L\u1ee3i nhu\u1eadn c\u00f2n gi\u1eef l\u1ea1i"
+                  : "Profit still undistributed"
+              }
+              stackId="claim"
+              fill="#14b8a6"
+              radius={[8, 8, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl bg-emerald-50/90 px-4 py-4">
+          <p className="text-sm text-emerald-700">
+            {locale === "vi" ? "V\u1ed1n c\u00f2n \u0111ang g\u00f3p" : "Capital still invested"}
+          </p>
+          <p className="mt-2 text-lg font-semibold text-emerald-950">
+            {formatCurrency(
+              snapshot.totalCapitalOutstanding,
+              snapshot.dataset.project.currencyCode,
+              locale
+            )}
+          </p>
+        </div>
+        <div className="rounded-2xl bg-teal-50 px-4 py-4">
+          <p className="text-sm text-teal-700">
+            {locale === "vi" ? "L\u1ee3i nhu\u1eadn c\u00f2n gi\u1eef l\u1ea1i" : "Profit still undistributed"}
+          </p>
+          <p className="mt-2 text-lg font-semibold text-teal-950">
+            {formatCurrency(
+              Math.max(snapshot.undistributedProfit, 0),
+              snapshot.dataset.project.currencyCode,
+              locale
+            )}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -949,12 +989,14 @@ export function ProjectCapitalVisuals({ snapshot }: { snapshot: ProjectSnapshot 
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
           <CardTitle>
-            {locale === "vi" ? "Lợi nhuận đã trả so với phần còn có thể chia" : "Profit already paid vs still available"}
+            {locale === "vi"
+              ? "V\u1ed1n v\u00e0 l\u1ee3i nhu\u1eadn theo t\u1eebng ng\u01b0\u1eddi"
+              : "Capital and profit by member"}
           </CardTitle>
           <CardDescription>
             {locale === "vi"
-              ? "Phần cột dưới là lợi nhuận đã trả. Phần cột trên là số mỗi thành viên còn có thể nhận nếu chia lợi nhuận hôm nay."
-              : "Lower bars show profit already paid. Upper bars show what each member could still receive if profit were distributed today."}
+              ? "M\u1ed7i c\u1ed9t x\u1ebfp ch\u1ed3ng ph\u1ea7n v\u1ed1n c\u00f2n \u0111ang g\u1eafn v\u1edbi d\u1ef1 \u00e1n v\u00e0 ph\u1ea7n l\u1ee3i nhu\u1eadn c\u00f2n gi\u1eef l\u1ea1i c\u1ee7a t\u1eebng th\u00e0nh vi\u00ean. Kh\u00f4ng hi\u1ec3n th\u1ecb ph\u1ea7n \u0111\u00e3 tr\u1ea3."
+              : "Each member bar stacks capital still invested with profit still undistributed today. Already-paid profit is intentionally left out here."}
           </CardDescription>
         </CardHeader>
         <CardContent>
