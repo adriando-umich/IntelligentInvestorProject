@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
-
 import {
   Bar,
   BarChart,
   Cell,
   CartesianGrid,
+  Customized,
   LabelList,
   Pie,
   PieChart,
@@ -39,7 +38,6 @@ import {
   roundMoney,
 } from "@/lib/format";
 import { type EntryFamily, type ProjectSnapshot } from "@/lib/finance/types";
-import { buildSharedExpenseSettlementView } from "@/lib/finance/shared-expense-settlements";
 
 const MEMBER_COLORS = [
   "#0f766e",
@@ -56,6 +54,25 @@ const FAMILY_COLORS: Record<EntryFamily, string> = {
 };
 
 type ActivityFamilyFilter = "all" | EntryFamily;
+
+type WaterfallRow = {
+  label: string;
+  start: number;
+  end: number;
+  change: number;
+  offset: number;
+  span: number;
+  fill: string;
+  kind: "movement" | "total";
+};
+
+type WaterfallOverlayProps = {
+  chartData: WaterfallRow[];
+  currencyCode: string;
+  locale: "en" | "vi";
+  xAxisMap?: Record<string, { scale?: ((value: string) => number) & { bandwidth?: () => number } }>;
+  yAxisMap?: Record<string, { scale?: (value: number) => number }>;
+};
 
 function EmptyChartState({ message }: { message: string }) {
   return (
@@ -119,6 +136,101 @@ function MoneyTooltip({
         })}
       </div>
     </div>
+  );
+}
+
+function WaterfallOverlay({
+  chartData,
+  currencyCode,
+  locale,
+  xAxisMap,
+  yAxisMap,
+}: WaterfallOverlayProps) {
+  const xAxis = xAxisMap ? Object.values(xAxisMap)[0] : undefined;
+  const yAxis = yAxisMap ? Object.values(yAxisMap)[0] : undefined;
+
+  if (!xAxis?.scale || !yAxis?.scale) {
+    return null;
+  }
+
+  const xScale = xAxis.scale as ((value: string) => number) & {
+    bandwidth?: () => number;
+  };
+  const yScale = yAxis.scale as (value: number) => number;
+  const bandwidth = typeof xScale.bandwidth === "function" ? xScale.bandwidth() : 0;
+  const barWidth = bandwidth > 0 ? Math.max(Math.min(bandwidth * 0.64, 56), 26) : 30;
+  const waterfallRows = chartData.filter((row) => row.kind === "movement");
+
+  return (
+    <g pointerEvents="none">
+      {waterfallRows.slice(0, -1).map((row, index) => {
+        const nextRow = waterfallRows[index + 1];
+        const currentX = Number(xScale(row.label)) + (bandwidth - barWidth) / 2;
+        const nextX = Number(xScale(nextRow.label)) + (bandwidth - barWidth) / 2;
+        const connectorY = Number(yScale(row.end));
+
+        return (
+          <line
+            key={`${row.label}-${nextRow.label}`}
+            x1={currentX + barWidth}
+            y1={connectorY}
+            x2={nextX}
+            y2={connectorY}
+            stroke="#cbd5e1"
+            strokeDasharray="4 4"
+            strokeWidth={1.25}
+          />
+        );
+      })}
+
+      {chartData.map((row) => {
+        const x = Number(xScale(row.label)) + (bandwidth - barWidth) / 2;
+        const startY = Number(yScale(row.kind === "total" ? 0 : row.start));
+        const endY = Number(yScale(row.end));
+        const top = Math.min(startY, endY);
+        const bottom = Math.max(startY, endY);
+        const height = Math.max(bottom - top, 0);
+
+        if (!Number.isFinite(x) || !Number.isFinite(top) || !Number.isFinite(height)) {
+          return null;
+        }
+
+        if (height <= 0.5) {
+          return null;
+        }
+
+        const labelValue =
+          row.kind === "total"
+            ? formatCurrency(row.end, currencyCode, locale)
+            : row.change < 0
+              ? `(${formatCurrency(Math.abs(row.change), currencyCode, locale)})`
+              : formatCurrency(row.change, currencyCode, locale);
+        const labelY =
+          row.kind === "total" || row.change >= 0 ? top - 8 : top + height + 16;
+
+        return (
+          <g key={row.label}>
+            <rect
+              x={x}
+              y={top}
+              width={barWidth}
+              height={height}
+              rx={8}
+              ry={8}
+              fill={row.fill}
+            />
+            <text
+              x={x + barWidth / 2}
+              y={labelY}
+              textAnchor="middle"
+              className="fill-slate-500 text-[11px]"
+            >
+              {labelValue}
+            </text>
+          </g>
+        );
+      })}
+    </g>
   );
 }
 
@@ -450,8 +562,8 @@ function ReimbursementChart({
       <EmptyChartState
         message={
           locale === "vi"
-            ? "Số dư chi phí chung sẽ hiện ở đây khi team bắt đầu ghi nhận các khoản có hoàn trả."
-            : "Shared-expense balances will show here once the team records reimbursable expenses."
+            ? "Cân đối cash giữa các thành viên sẽ hiện ở đây sau khi app so sánh tiền đang giữ với quyền lợi hiện tại."
+            : "Member cash balances appear here after the app compares current cash held with each person's current claim."
         }
       />
     );
@@ -547,16 +659,7 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
     });
   }
 
-  const chartData: Array<{
-    label: string;
-    start: number;
-    end: number;
-    change: number;
-    offset: number;
-    span: number;
-    fill: string;
-    kind: "movement" | "total";
-  }> = [];
+  const chartData: WaterfallRow[] = [];
 
   let runningTotal = 0;
 
@@ -593,31 +696,6 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
   const minValue = Math.min(...chartExtents);
   const maxValue = Math.max(...chartExtents);
   const chartPadding = Math.max((maxValue - minValue) * 0.08, 1);
-  const movementRows = chartData.filter((row) => row.kind === "movement");
-  const connectorSegments = movementRows.slice(0, -1).map((row, index) => ({
-    key: `${row.label}-${movementRows[index + 1].label}`,
-    segment: [
-      { x: row.label, y: row.end },
-      { x: movementRows[index + 1].label, y: row.end },
-    ] as const,
-  }));
-  const formatWaterfallLabel = (row: (typeof chartData)[number]) => {
-    if (row.kind === "total") {
-      return formatCompactCurrency(
-        row.end,
-        snapshot.dataset.project.currencyCode,
-        locale
-      );
-    }
-
-    const compactAmount = formatCompactCurrency(
-      Math.abs(row.change),
-      snapshot.dataset.project.currencyCode,
-      locale
-    );
-
-    return row.change < 0 ? `(${compactAmount})` : compactAmount;
-  };
 
   return (
     <div className="space-y-4">
@@ -661,14 +739,6 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
               }
             />
             <ReferenceLine y={0} stroke="#94a3b8" />
-            {connectorSegments.map((connector) => (
-              <ReferenceLine
-                key={connector.key}
-                segment={connector.segment}
-                stroke="#94a3b8"
-                strokeDasharray="3 3"
-              />
-            ))}
             <RechartsTooltip
               content={({ active, payload, label }) => {
                 const row =
@@ -727,46 +797,23 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
               dataKey="offset"
               stackId="waterfall"
               fill="transparent"
+              stroke="transparent"
               isAnimationActive={false}
             />
-            <Bar dataKey="span" stackId="waterfall" radius={4}>
+            <Bar dataKey="span" stackId="waterfall" fill="transparent" stroke="transparent" isAnimationActive={false}>
               {chartData.map((entry) => (
-                <Cell key={entry.label} fill={entry.fill} />
+                <Cell key={entry.label} fill="transparent" stroke="transparent" />
               ))}
-              <LabelList
-                dataKey="span"
-                content={(props) => {
-                  const {
-                    index = 0,
-                    x = 0,
-                    y = 0,
-                    width = 0,
-                    height = 0,
-                  } = props;
-                  const row = chartData[index];
-
-                  if (!row || row.span === 0) {
-                    return null;
-                  }
-
-                  const labelY =
-                    row.kind === "total" || row.change >= 0
-                      ? Number(y) - 8
-                      : Number(y) + Number(height) + 16;
-
-                  return (
-                    <text
-                      x={Number(x) + Number(width) / 2}
-                      y={labelY}
-                      textAnchor="middle"
-                      className="fill-slate-500 text-[11px]"
-                    >
-                      {formatWaterfallLabel(row)}
-                    </text>
-                  );
-                }}
-              />
             </Bar>
+            <Customized
+              component={
+                <WaterfallOverlay
+                  chartData={chartData}
+                  currencyCode={snapshot.dataset.project.currencyCode}
+                  locale={locale}
+                />
+              }
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -941,40 +988,12 @@ function TagPieChart({
 
 export function ProjectOverviewVisuals({
   snapshot,
-  memberSummaries,
+  memberSummaries = snapshot.memberSummaries,
 }: {
   snapshot: ProjectSnapshot;
   memberSummaries?: MemberFinanceSummary[];
 }) {
   const { locale } = useLocale();
-  const sharedExpenseSettlementView = useMemo(
-    () => buildSharedExpenseSettlementView(snapshot.dataset),
-    [snapshot.dataset]
-  );
-  const displayedMemberSummaries = useMemo(
-    () =>
-      (memberSummaries ?? snapshot.memberSummaries).map((summary) => {
-        const settlementBalance =
-          sharedExpenseSettlementView.balancesByProjectMemberId.get(
-            summary.projectMember.id
-          );
-
-        return settlementBalance
-          ? {
-              ...summary,
-              expenseReimbursementBalance:
-                settlementBalance.expenseReimbursementBalance,
-              teamOwesYou: settlementBalance.teamOwesYou,
-              youOweTeam: settlementBalance.youOweTeam,
-            }
-          : summary;
-      }),
-    [
-      memberSummaries,
-      sharedExpenseSettlementView.balancesByProjectMemberId,
-      snapshot.memberSummaries,
-    ]
-  );
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
@@ -1009,16 +1028,16 @@ export function ProjectOverviewVisuals({
 
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
         <CardHeader>
-          <CardTitle>{locale === "vi" ? "Ai còn đang nợ ai" : "Who still owes whom"}</CardTitle>
+          <CardTitle>{locale === "vi" ? "Ai nên nhận tiền dự án tiếp theo" : "Who should receive project cash next"}</CardTitle>
           <CardDescription>
             {locale === "vi"
-              ? "Biểu đồ này chỉ nói về hoàn trả chi phí chung. Nó tách riêng khỏi vốn, tiền dự án và lợi nhuận."
-              : "This chart is only about shared-expense reimbursement. It is separate from capital, project cash, and profit."}
+              ? "Biểu đồ này so sánh tiền đang giữ với quyền lợi hiện tại sau khi tính vốn, lợi nhuận tạm tính, và phần cash dự trữ còn phải giữ lại trong dự án."
+              : "This compares the cash people are holding now with each member's current claim after capital, profit preview, and any cash reserve that still needs to stay in the project."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <ReimbursementChart
-            memberSummaries={displayedMemberSummaries}
+            memberSummaries={memberSummaries}
             snapshot={snapshot}
           />
         </CardContent>
