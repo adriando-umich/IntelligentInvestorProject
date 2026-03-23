@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { ProjectSectionNav } from "@/components/finance/project-section-nav";
 import { getProjectSnapshot } from "@/lib/data/repository";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function ProjectLayout({
   children,
   params,

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { unstable_noStore as noStore } from "next/cache";
+
 import { DEMO_VIEWER_USER_ID } from "@/lib/app-config";
 import { demoProjectDatasets } from "@/lib/data/demo-projects";
 import {
@@ -15,6 +17,8 @@ import {
 import { type ProjectSnapshot } from "@/lib/finance/types";
 
 export async function listProjectSnapshots() {
+  noStore();
+
   if (!(await shouldUseDemoData())) {
     const liveProjectIds = await listLiveProjectIds();
 
@@ -37,6 +41,8 @@ export async function listProjectSnapshots() {
 }
 
 export async function getProjectSnapshot(projectId: string) {
+  noStore();
+
   if (!(await shouldUseDemoData())) {
     const liveDataset = await getLiveProjectDataset(projectId);
     if (liveDataset) {
@@ -52,6 +58,8 @@ export async function getMemberStatement(
   projectId: string,
   projectMemberId: string
 ) {
+  noStore();
+
   if (!(await shouldUseDemoData())) {
     const liveDataset = await getLiveProjectDataset(projectId);
     return liveDataset ? buildMemberStatement(liveDataset, projectMemberId) : null;
@@ -62,6 +70,8 @@ export async function getMemberStatement(
 }
 
 export async function getViewerProfile() {
+  noStore();
+
   if (!(await shouldUseDemoData())) {
     const liveProfile = await getLiveViewerProfile();
     if (liveProfile) {
@@ -77,6 +87,8 @@ export async function getViewerProfile() {
 }
 
 export async function getProjectCards() {
+  noStore();
+
   const projects = await listProjectSnapshots();
   return projects.map((snapshot) => toProjectCard(snapshot));
 }

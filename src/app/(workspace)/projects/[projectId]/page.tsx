@@ -3,6 +3,10 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header";
 import { ProjectDashboard } from "@/components/finance/project-dashboard";
 import { getProjectSnapshot } from "@/lib/data/repository";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const dashboardViews = [
   "overview",
   "settlements",
