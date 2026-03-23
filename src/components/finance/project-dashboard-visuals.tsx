@@ -542,24 +542,50 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
 
   const chartData: Array<{
     label: string;
-    amount: number;
+    start: number;
+    end: number;
+    change: number;
+    offset: number;
+    span: number;
     fill: string;
     kind: "movement" | "total";
-  }> = steps.map((step) => {
-    return {
+  }> = [];
+
+  let runningTotal = 0;
+
+  for (const step of steps) {
+    const start = runningTotal;
+    const end = roundMoney(start + step.value);
+
+    chartData.push({
       label: step.label,
-      amount: step.value,
+      start,
+      end,
+      change: step.value,
+      offset: Math.min(start, end),
+      span: Math.abs(end - start),
       fill: step.fill,
       kind: "movement" as const,
-    };
-  });
+    });
+
+    runningTotal = end;
+  }
 
   chartData.push({
     label: locale === "vi" ? "Tiền hiện có" : "Cash now",
-    amount: snapshot.totalProjectCash,
+    start: 0,
+    end: snapshot.totalProjectCash,
+    change: snapshot.totalProjectCash,
+    offset: Math.min(0, snapshot.totalProjectCash),
+    span: Math.abs(snapshot.totalProjectCash),
     fill: "#0f172a",
     kind: "total" as const,
   });
+
+  const chartExtents = chartData.flatMap((row) => [row.start, row.end, 0]);
+  const minValue = Math.min(...chartExtents);
+  const maxValue = Math.max(...chartExtents);
+  const chartPadding = Math.max((maxValue - minValue) * 0.08, 1);
 
   return (
     <div className="space-y-4">
@@ -572,6 +598,7 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
             <CartesianGrid stroke="#e2e8f0" vertical={false} />
             <XAxis dataKey="label" tickLine={false} axisLine={false} />
             <YAxis
+              domain={[minValue - chartPadding, maxValue + chartPadding]}
               tickFormatter={(value: number) =>
                 formatCompactCurrency(value, snapshot.dataset.project.currencyCode, locale)
               }
@@ -579,7 +606,9 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
             <ReferenceLine y={0} stroke="#94a3b8" />
             <RechartsTooltip
               content={({ active, payload, label }) => {
-                const row = payload?.[0]?.payload;
+                const row =
+                  payload?.find((item) => item.dataKey === "span")?.payload ??
+                  payload?.[payload.length - 1]?.payload;
 
                 if (!active || !row) {
                   return null;
@@ -591,42 +620,72 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
                       {label}
                     </p>
                     <p className="mt-2 text-sm text-slate-600">
-                      {formatSignedCurrency(
-                        Number(row.amount ?? 0),
-                        snapshot.dataset.project.currencyCode,
-                        locale
-                      )}
+                      {row.kind === "total"
+                        ? formatCurrency(
+                            Number(row.end ?? 0),
+                            snapshot.dataset.project.currencyCode,
+                            locale
+                          )
+                        : formatSignedCurrency(
+                            Number(row.change ?? 0),
+                            snapshot.dataset.project.currencyCode,
+                            locale
+                          )}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
                       {row.kind === "total"
                         ? locale === "vi"
                           ? "Đây là tổng tiền dự án hiện có sau tất cả các biến động đã ghi."
-                          : "Current project cash after all recorded movements."
+                          : "This is the ending project cash balance after all steps."
                         : locale === "vi"
                           ? "Cột này chỉ thể hiện đúng số tiền của bước đó, không phải chiều cao cộng dồn."
-                          : "This bar shows only this step's own amount, not a cumulative height."}
+                          : "This step changes cash by the amount above, then lands on the running balance below."}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-slate-700">
+                      {row.kind === "total"
+                        ? `Current cash: ${formatCurrency(
+                            Number(row.end ?? 0),
+                            snapshot.dataset.project.currencyCode,
+                            locale
+                          )}`
+                        : `Running total: ${formatCurrency(
+                            Number(row.end ?? 0),
+                            snapshot.dataset.project.currencyCode,
+                            locale
+                          )}`}
                     </p>
                   </div>
                 );
               }}
             />
-            <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
+            <Bar
+              dataKey="offset"
+              stackId="waterfall"
+              fill="transparent"
+              isAnimationActive={false}
+            />
+            <Bar dataKey="span" stackId="waterfall" radius={[8, 8, 0, 0]}>
               {chartData.map((entry) => (
                 <Cell key={entry.label} fill={entry.fill} />
               ))}
               <LabelList
-                dataKey="amount"
+                dataKey="end"
                 content={(props) => {
                   const {
                     x = 0,
                     y = 0,
                     width = 0,
                     height = 0,
-                    value,
                   } = props;
-                  const numericValue = Number(value ?? 0);
+                  const row = (
+                    props as {
+                      payload?: { start?: number; end?: number };
+                    }
+                  ).payload;
+                  const start = Number(row?.start ?? 0);
+                  const end = Number(row?.end ?? 0);
                   const labelY =
-                    numericValue >= 0 ? Number(y) - 8 : Number(y) + Number(height) + 16;
+                    end >= start ? Number(y) - 8 : Number(y) + Number(height) + 16;
 
                   return (
                     <text
@@ -636,7 +695,7 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
                       className="fill-slate-500 text-[11px]"
                     >
                       {formatCompactCurrency(
-                        numericValue,
+                        end,
                         snapshot.dataset.project.currencyCode,
                         locale
                       )}
@@ -652,7 +711,7 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
       <div className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-600">
         {locale === "vi"
           ? "Mỗi cột biến động chỉ thể hiện đúng số tiền của riêng bước đó. Cột Tiền hiện có cuối cùng là tổng số tiền sau các bước này. Cách hiển thị này giúp đọc cash dễ hơn mà không trộn lẫn khoản hoàn trả, tỷ trọng vốn hay logic chia lợi nhuận vào một con số."
-          : "Each movement bar shows its own amount only. The final Cash now bar is the current total after those movements. This keeps cash readable without merging reimbursement, capital weights, or profit payout logic into one number."}
+          : "Each step starts from the previous running balance and lands on the next one. The final Cash now bar restates the ending cash total."}
       </div>
     </div>
   );
