@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { type AllocationShareInput } from "@/lib/finance/allocation-shares";
 import {
   getEntryTypeLabel,
   type EntryFamily,
@@ -28,6 +29,13 @@ const stringArray = z.preprocess((value) => {
 
   return [];
 }, z.array(z.string()).default([]));
+
+const allocationSplitModes = ["equal", "custom"] as const;
+
+const allocationShareSchema = z.object({
+  projectMemberId: z.string().min(1),
+  weightPercent: z.coerce.number(),
+});
 
 export function parseTagNames(value: string | undefined | null) {
   if (!value) {
@@ -155,6 +163,14 @@ function createPlannerEntrySchemaForLocale(locale: AppLocale) {
           chooseCapitalOwner: "Hay chon nguoi co so du von can thay doi.",
           chooseAllocationMembers:
             "Hay chon cac thanh vien cung chia khoan chi phi nay.",
+          allocationWeightsRequired:
+            "Hay nhap ty le chia cho cac thanh vien da chon.",
+          allocationWeightsMismatch:
+            "Danh sach thanh vien duoc chon va ty le chia dang khong khop nhau.",
+          allocationWeightsTotal:
+            "Tong ty le chia chi phi phai bang 100%.",
+          allocationWeightsPositive:
+            "Moi thanh vien duoc chon phai co ty le chia lon hon 0%.",
           chooseOneAdjustmentSide:
             "Hay chon mot ben de dieu chinh tien du an ky vong.",
           correctionOneSideOnly:
@@ -174,6 +190,14 @@ function createPlannerEntrySchemaForLocale(locale: AppLocale) {
           chooseCapitalOwner: "Choose whose capital balance should change.",
           chooseAllocationMembers:
             "Choose the members who should share this expense.",
+          allocationWeightsRequired:
+            "Add a percentage split for the selected members.",
+          allocationWeightsMismatch:
+            "The selected members and split rows do not match.",
+          allocationWeightsTotal:
+            "Expense split percentages must total 100%.",
+          allocationWeightsPositive:
+            "Each selected member must have a percentage greater than 0%.",
           chooseOneAdjustmentSide:
             "Choose one side to adjust expected project cash.",
           correctionOneSideOnly:
@@ -192,6 +216,8 @@ function createPlannerEntrySchemaForLocale(locale: AppLocale) {
     cashOutProjectMemberId: optionalString,
     capitalOwnerProjectMemberId: optionalString,
     allocationProjectMemberIds: stringArray,
+    allocationSplitMode: z.enum(allocationSplitModes).default("equal"),
+    allocationShares: z.array(allocationShareSchema).default([]),
     tagNamesText: optionalString,
     externalCounterparty: optionalString,
     note: optionalString,
@@ -254,6 +280,52 @@ function createPlannerEntrySchemaForLocale(locale: AppLocale) {
       });
     }
 
+    if (needsAllocation) {
+      const normalizedMemberIds = [...new Set(value.allocationProjectMemberIds)];
+      const normalizedShareIds = [
+        ...new Set(value.allocationShares.map((share) => share.projectMemberId)),
+      ];
+      const totalWeight = value.allocationShares.reduce(
+        (sum, share) => sum + share.weightPercent,
+        0
+      );
+      const sameMembership =
+        normalizedMemberIds.length === normalizedShareIds.length &&
+        normalizedMemberIds.every((memberId) =>
+          normalizedShareIds.includes(memberId)
+        );
+
+      if (value.allocationShares.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: validation.allocationWeightsRequired,
+          path: ["allocationShares"],
+        });
+      } else if (!sameMembership) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: validation.allocationWeightsMismatch,
+          path: ["allocationShares"],
+        });
+      } else if (
+        value.allocationShares.some(
+          (share) => !Number.isFinite(share.weightPercent) || share.weightPercent <= 0
+        )
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: validation.allocationWeightsPositive,
+          path: ["allocationShares"],
+        });
+      } else if (Math.abs(totalWeight - 100) > 0.01) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: validation.allocationWeightsTotal,
+          path: ["allocationShares"],
+        });
+      }
+    }
+
     if (
       needsSingleCashSide &&
       !value.cashInProjectMemberId &&
@@ -290,6 +362,8 @@ export function getPlannerEntrySchema(locale: AppLocale) {
 
 export type PlannerEntryFormValues = z.input<typeof plannerEntrySchema>;
 export type PlannerEntryValues = z.output<typeof plannerEntrySchema>;
+export type PlannerAllocationSplitMode = (typeof allocationSplitModes)[number];
+export type PlannerAllocationShare = AllocationShareInput;
 
 export function isCapitalEntryType(entryType: PlannerEntryType) {
   return (

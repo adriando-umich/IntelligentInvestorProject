@@ -14,6 +14,10 @@ import {
 import { getSessionState } from "@/lib/auth/session";
 import { getProjectSnapshot } from "@/lib/data/repository";
 import {
+  buildAllocationSharesFromAllocations,
+  inferAllocationSplitMode,
+} from "@/lib/finance/allocation-shares";
+import {
   isPlannerEntryType,
   type PlannerEntryFormValues,
   type PlannerEntryType,
@@ -70,6 +74,21 @@ function buildEditInitialValues(
         )
         .map((allocation) => allocation.projectMemberId)
     : [];
+  const allocationRows = allocationType
+    ? snapshot.dataset.allocations.filter(
+        (allocation) =>
+          allocation.ledgerEntryId === entry.id &&
+          allocation.allocationType === allocationType
+      )
+    : [];
+  const allocationShares = allocationType
+    ? buildAllocationSharesFromAllocations(
+        allocationProjectMemberIds,
+        entry.amount,
+        allocationRows
+      )
+    : [];
+  const allocationSplitMode = inferAllocationSplitMode(allocationShares);
 
   const entryTagIds = snapshot.dataset.entryTags
     .filter((entryTag) => entryTag.ledgerEntryId === entry.id)
@@ -94,6 +113,8 @@ function buildEditInitialValues(
       cashOutProjectMemberId: entry.cashOutMemberId ?? "",
       capitalOwnerProjectMemberId,
       allocationProjectMemberIds,
+      allocationSplitMode,
+      allocationShares,
       tagNamesText,
       externalCounterparty: entry.externalCounterparty ?? "",
       note: entry.note ?? "",

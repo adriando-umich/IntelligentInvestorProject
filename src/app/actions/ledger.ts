@@ -5,6 +5,11 @@ import { z } from "zod";
 
 import { getSessionState } from "@/lib/auth/session";
 import {
+  buildEqualAllocationShares,
+  computeAllocationAmountPreviews,
+  normalizeAllocationShares,
+} from "@/lib/finance/allocation-shares";
+import {
   getPlannerEntrySchema,
   parseTagNames,
   supportsLiveCreate,
@@ -81,6 +86,16 @@ function getLedgerCopy(locale: "en" | "vi"): LedgerCopy {
 
 function buildLedgerRpcPayload(values: PlannerEntryValues) {
   const tagNames = parseTagNames(values.tagNamesText);
+  const allocationShares =
+    values.allocationProjectMemberIds.length === 0
+      ? []
+      : values.allocationSplitMode === "equal"
+        ? buildEqualAllocationShares(values.allocationProjectMemberIds)
+        : normalizeAllocationShares(values.allocationShares);
+  const allocationAmountRows = computeAllocationAmountPreviews(
+    values.amount,
+    allocationShares
+  );
 
   return {
     p_project_id: values.projectId,
@@ -94,8 +109,18 @@ function buildLedgerRpcPayload(values: PlannerEntryValues) {
     p_capital_owner_project_member_id:
       values.capitalOwnerProjectMemberId ?? null,
     p_allocation_project_member_ids:
-      values.allocationProjectMemberIds.length > 0
-        ? values.allocationProjectMemberIds
+      allocationAmountRows.length > 0
+        ? allocationAmountRows.map((row) => row.projectMemberId)
+        : null,
+    p_allocation_amounts:
+      allocationAmountRows.length > 0
+        ? allocationAmountRows.map((row) => row.amount)
+        : null,
+    p_allocation_weight_percents:
+      allocationAmountRows.length > 0
+        ? allocationAmountRows.map((row) =>
+            Number((row.weightPercent / 100).toFixed(5))
+          )
         : null,
     p_tag_names: tagNames.length > 0 ? tagNames : null,
     p_note: values.note ?? null,
@@ -114,7 +139,9 @@ function isMissingLedgerUpgrade(error: { code?: string; message?: string }) {
     message.includes("shared_loan_interest_payment") ||
     message.includes("shared_loan_repayment_principal") ||
     message.includes("update_project_ledger_entry") ||
-    message.includes("void_project_ledger_entry")
+    message.includes("void_project_ledger_entry") ||
+    message.includes("p_allocation_amounts") ||
+    message.includes("p_allocation_weight_percents")
   );
 }
 

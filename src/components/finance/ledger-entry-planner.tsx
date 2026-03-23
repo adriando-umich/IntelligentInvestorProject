@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
@@ -34,6 +34,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  areAllocationSharesEqual,
+  buildEqualAllocationShares,
+  computeAllocationAmountPreviews,
+  reconcileCustomAllocationShares,
+} from "@/lib/finance/allocation-shares";
+import {
   entryTypeNeedsAllocation,
   entryTypeNeedsCapitalOwner,
   entryTypeNeedsCashIn,
@@ -45,6 +51,8 @@ import {
   parseTagNames,
   supportsLiveCreate,
   supportsLiveEdit,
+  type PlannerAllocationShare,
+  type PlannerAllocationSplitMode,
   type PlannerEntryFormValues,
   type PlannerEntryType,
   type PlannerEntryValues,
@@ -61,6 +69,22 @@ type MemberOption = {
   name: string;
   membershipStatus: "active" | "pending_invite";
 };
+
+function roundToTwoDecimals(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function buildRawAllocationAmountPreviewRows(
+  totalAmount: number,
+  shares: PlannerAllocationShare[]
+) {
+  const safeAmount = Math.max(totalAmount, 0);
+
+  return shares.map((share) => ({
+    ...share,
+    amount: roundToTwoDecimals((safeAmount * share.weightPercent) / 100),
+  }));
+}
 
 function cashOutLabel(entryType: PlannerEntryType, locale: "en" | "vi") {
   if (entryType === "capital_return") {
@@ -333,7 +357,22 @@ export function LedgerEntryPlanner({
           chooseCapitalOwner: "Chọn người sở hữu phần vốn",
           allocationMembers: "Những người cùng chia khoản này",
           allocationHint:
-            "Khi lưu live, hệ thống sẽ chia đều khoản này cho các thành viên bạn chọn.",
+            "Mặc định là chia đều. Nếu cần, bạn có thể chuyển sang custom split để điều chỉnh tỷ lệ của từng người.",
+          allocationMode: "Che do chia",
+          allocationModeHint:
+            "Chia deu giu cung mot ty le cho moi nguoi. Custom split cho phep sua tung ty le phan tram.",
+          allocationEqual: "Chia deu",
+          allocationCustom: "Custom split",
+          allocationPercent: "Ty le",
+          allocationAmount: "So tien",
+          allocationRunningTotal: "Tong hien tai",
+          allocationTotalRequired:
+            "Custom split phai cong dung 100% truoc khi luu.",
+          allocationEqualHint:
+            "Moi thanh vien dang duoc chia deu khoan chi phi nay.",
+          allocationCustomHint:
+            "Sua ty le phan tram cua tung thanh vien. Tong phai bang 100%.",
+          allocationSplitSummary: "Cach chia hien tai",
           tags: "Tag",
           tagsHint:
             "Dùng tag cách nhau bằng dấu phẩy như legal, deposit, bank-loan để sau này nhóm tiền vào và chi phí dễ hơn.",
@@ -400,7 +439,22 @@ export function LedgerEntryPlanner({
           chooseCapitalOwner: "Choose the capital owner",
           allocationMembers: "Members sharing this expense",
           allocationHint:
-            "The live save splits this expense equally across the selected members.",
+            "Equal split is the default. Switch to custom if this expense should use different percentages.",
+          allocationMode: "Split mode",
+          allocationModeHint:
+            "Equal keeps everyone on the same percentage. Custom lets you edit each member's share.",
+          allocationEqual: "Equal split",
+          allocationCustom: "Custom split",
+          allocationPercent: "Share %",
+          allocationAmount: "Amount",
+          allocationRunningTotal: "Current total",
+          allocationTotalRequired:
+            "Custom split must total 100% before saving.",
+          allocationEqualHint:
+            "Each selected member is currently carrying the same share of this expense.",
+          allocationCustomHint:
+            "Edit each selected member's percentage. The total must stay at 100%.",
+          allocationSplitSummary: "Current split",
           tags: "Tags",
           tagsHint:
             "Use comma-separated tags like legal, deposit, bank-loan so you can group inflows and expenses later.",
@@ -485,6 +539,8 @@ export function LedgerEntryPlanner({
       capitalOwnerProjectMemberId:
         initialValues.capitalOwnerProjectMemberId ?? "",
       allocationProjectMemberIds: initialValues.allocationProjectMemberIds ?? [],
+      allocationSplitMode: initialValues.allocationSplitMode ?? "equal",
+      allocationShares: initialValues.allocationShares ?? [],
       tagNamesText: initialValues.tagNamesText ?? "",
       externalCounterparty: initialValues.externalCounterparty ?? "",
       note: initialValues.note ?? "",
@@ -519,6 +575,18 @@ export function LedgerEntryPlanner({
   const selectedAllocationIds = Array.isArray(watched.allocationProjectMemberIds)
     ? watched.allocationProjectMemberIds
     : [];
+  const watchedAllocationSplitMode: PlannerAllocationSplitMode =
+    watched.allocationSplitMode === "custom" ? "custom" : "equal";
+  const watchedAllocationShares = Array.isArray(watched.allocationShares)
+    ? watched.allocationShares.filter(
+        (share): share is PlannerAllocationShare =>
+          Boolean(share) &&
+          typeof share.projectMemberId === "string" &&
+          share.projectMemberId.length > 0 &&
+          typeof share.weightPercent === "number" &&
+          Number.isFinite(share.weightPercent)
+      )
+    : [];
   const pendingMemberSuffix = locale === "vi" ? " (cho chap nhan)" : " (pending)";
   const labelById = useMemo(
     () =>
@@ -532,9 +600,39 @@ export function LedgerEntryPlanner({
       ),
     [memberOptions, pendingMemberSuffix]
   );
-  const selectedAllocationNames = selectedAllocationIds
-    .map((memberId) => labelById.get(memberId))
+  const allocationShareByMemberId = useMemo(
+    () =>
+      new Map(
+        watchedAllocationShares.map((share) => [
+          share.projectMemberId,
+          share.weightPercent,
+        ])
+      ),
+    [watchedAllocationShares]
+  );
+  const selectedAllocationShareRows = selectedAllocationIds.map((memberId) => ({
+    projectMemberId: memberId,
+    weightPercent: allocationShareByMemberId.get(memberId) ?? 0,
+  }));
+  const selectedAllocationNames = selectedAllocationShareRows
+    .map((share) => labelById.get(share.projectMemberId))
     .filter((value): value is string => Boolean(value));
+  const selectedAllocationWeightTotal = roundToTwoDecimals(
+    selectedAllocationShareRows.reduce(
+      (sum, share) => sum + share.weightPercent,
+      0
+    )
+  );
+  const allocationWeightsValid =
+    selectedAllocationShareRows.length === 0 ||
+    Math.abs(selectedAllocationWeightTotal - 100) <= 0.01;
+  const selectedAllocationAmountRows =
+    watchedAllocationSplitMode === "custom" && !allocationWeightsValid
+      ? buildRawAllocationAmountPreviewRows(
+          currentAmount,
+          selectedAllocationShareRows
+        )
+      : computeAllocationAmountPreviews(currentAmount, selectedAllocationShareRows);
   const selectedTagNames = parseTagNames(watchedTagNamesText);
   const liveSupported =
     liveModeEnabled &&
@@ -558,6 +656,51 @@ export function LedgerEntryPlanner({
     locale === "vi"
       ? "Pending member co the duoc chon o tat ca cac field lien quan den nguoi. Neu ho join sau, lich su van gan dung vao cung project member."
       : "Pending members can be selected in every person-related field now. If they join later, the history stays attached to the same project member.";
+  const formatPercent = (value: number) =>
+    `${Number(value.toFixed(2)).toLocaleString(
+      locale === "vi" ? "vi-VN" : "en-US",
+      { maximumFractionDigits: 2 }
+    )}%`;
+
+  useEffect(() => {
+    const hasSameCustomMembership =
+      watchedAllocationShares.length === selectedAllocationIds.length &&
+      selectedAllocationIds.every((memberId) =>
+        watchedAllocationShares.some(
+          (share) => share.projectMemberId === memberId
+        )
+      );
+    const nextShares =
+      selectedAllocationIds.length === 0
+        ? []
+        : watchedAllocationSplitMode === "equal"
+          ? buildEqualAllocationShares(selectedAllocationIds)
+          : hasSameCustomMembership
+            ? selectedAllocationIds.map((memberId) => ({
+                projectMemberId: memberId,
+                weightPercent: allocationShareByMemberId.get(memberId) ?? 0,
+              }))
+            : reconcileCustomAllocationShares(
+                selectedAllocationIds,
+                watchedAllocationShares
+              );
+
+    if (areAllocationSharesEqual(watchedAllocationShares, nextShares)) {
+      return;
+    }
+
+    form.setValue("allocationShares", nextShares, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  }, [
+    form,
+    allocationShareByMemberId,
+    selectedAllocationIds,
+    watchedAllocationShares,
+    watchedAllocationSplitMode,
+  ]);
 
   function changeEntryFamily(nextFamily: EntryFamily) {
     if (entryTypeLocked) {
@@ -588,6 +731,36 @@ export function LedgerEntryPlanner({
     form.setValue("tagNamesText", nextTags.join(", "), {
       shouldDirty: true,
       shouldTouch: true,
+    });
+  }
+
+  function changeAllocationSplitMode(nextMode: PlannerAllocationSplitMode) {
+    form.setValue("allocationSplitMode", nextMode, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  }
+
+  function updateAllocationShare(
+    projectMemberId: string,
+    nextWeightPercent: number
+  ) {
+    const safeWeightPercent = Number.isFinite(nextWeightPercent)
+      ? nextWeightPercent
+      : 0;
+    const nextShares = selectedAllocationIds.map((memberId) => ({
+      projectMemberId: memberId,
+      weightPercent:
+        memberId === projectMemberId
+          ? safeWeightPercent
+          : allocationShareByMemberId.get(memberId) ?? 0,
+    }));
+
+    form.setValue("allocationShares", nextShares, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
     });
   }
 
@@ -836,6 +1009,118 @@ export function LedgerEntryPlanner({
                     );
                   })}
                 </div>
+                {selectedAllocationIds.length > 0 ? (
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <Label className="text-sm font-medium text-slate-900">
+                          {copy.allocationMode}
+                        </Label>
+                        <Badge className="rounded-full bg-white text-slate-700">
+                          {copy.allocationRunningTotal}:{" "}
+                          {formatPercent(selectedAllocationWeightTotal)}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-slate-500">
+                        {copy.allocationModeHint}
+                      </p>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {(
+                        [
+                          ["equal", copy.allocationEqual],
+                          ["custom", copy.allocationCustom],
+                        ] as const
+                      ).map(([mode, label]) => {
+                        const isActive = watchedAllocationSplitMode === mode;
+
+                        return (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => changeAllocationSplitMode(mode)}
+                            className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
+                              isActive
+                                ? "border-teal-300 bg-teal-50 text-teal-950"
+                                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                            }`}
+                          >
+                            <div className="font-medium">{label}</div>
+                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                              {mode === "equal"
+                                ? copy.allocationEqualHint
+                                : copy.allocationCustomHint}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="space-y-3">
+                      {selectedAllocationShareRows.map((shareRow) => {
+                        const amountRow =
+                          selectedAllocationAmountRows.find(
+                            (row) =>
+                              row.projectMemberId === shareRow.projectMemberId
+                          ) ?? null;
+
+                        return (
+                          <div
+                            key={shareRow.projectMemberId}
+                            className="grid gap-3 rounded-2xl border border-white/70 bg-white px-4 py-4 sm:grid-cols-[minmax(0,1fr)_132px_160px] sm:items-center"
+                          >
+                            <div>
+                              <p className="font-medium text-slate-950">
+                                {labelById.get(shareRow.projectMemberId) ??
+                                  shareRow.projectMemberId}
+                              </p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor={`allocation-share-${shareRow.projectMemberId}`}
+                                className="text-xs uppercase tracking-[0.24em] text-slate-400"
+                              >
+                                {copy.allocationPercent}
+                              </Label>
+                              <Input
+                                id={`allocation-share-${shareRow.projectMemberId}`}
+                                type="number"
+                                min="0.01"
+                                max="100"
+                                step="0.01"
+                                disabled={watchedAllocationSplitMode === "equal"}
+                                value={shareRow.weightPercent}
+                                onChange={(event) =>
+                                  updateAllocationShare(
+                                    shareRow.projectMemberId,
+                                    Number(event.target.value)
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                                {copy.allocationAmount}
+                              </p>
+                              <p className="mt-2 font-medium text-slate-950">
+                                {formatCurrency(
+                                  amountRow?.amount ?? 0,
+                                  currencyCode,
+                                  locale
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {watchedAllocationSplitMode === "custom" &&
+                    !allocationWeightsValid ? (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        {copy.allocationTotalRequired}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
@@ -926,6 +1211,11 @@ export function LedgerEntryPlanner({
             {form.formState.errors.allocationProjectMemberIds ? (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {form.formState.errors.allocationProjectMemberIds.message}
+              </div>
+            ) : null}
+            {form.formState.errors.allocationShares ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {form.formState.errors.allocationShares.message}
               </div>
             ) : null}
 
@@ -1021,12 +1311,58 @@ export function LedgerEntryPlanner({
             ) : null}
             {showAllocationField ? (
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-sm text-slate-500">{copy.selectedAllocationMembers}</p>
-                <p className="mt-2 font-medium text-slate-950">
-                  {selectedAllocationNames.length > 0
-                    ? selectedAllocationNames.join(", ")
-                    : copy.noMembersSelected}
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-slate-500">
+                    {copy.selectedAllocationMembers}
+                  </p>
+                  {selectedAllocationNames.length > 0 ? (
+                    <Badge className="rounded-full bg-white text-slate-700">
+                      {copy.allocationSplitSummary}:{" "}
+                      {watchedAllocationSplitMode === "equal"
+                        ? copy.allocationEqual
+                        : copy.allocationCustom}
+                    </Badge>
+                  ) : null}
+                </div>
+                {selectedAllocationNames.length > 0 ? (
+                  <div className="mt-3 space-y-3">
+                    {selectedAllocationAmountRows.map((row) => (
+                      <div
+                        key={row.projectMemberId}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white px-4 py-3"
+                      >
+                        <div>
+                          <p className="font-medium text-slate-950">
+                            {labelById.get(row.projectMemberId) ??
+                              row.projectMemberId}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {formatPercent(row.weightPercent)}
+                          </p>
+                        </div>
+                        <p className="font-medium text-slate-950">
+                          {formatCurrency(row.amount, currencyCode, locale)}
+                        </p>
+                      </div>
+                    ))}
+                    <p className="text-sm text-slate-500">
+                      {copy.allocationRunningTotal}:{" "}
+                      <span
+                        className={
+                          allocationWeightsValid
+                            ? "font-medium text-slate-700"
+                            : "font-medium text-amber-700"
+                        }
+                      >
+                        {formatPercent(selectedAllocationWeightTotal)}
+                      </span>
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-2 font-medium text-slate-950">
+                    {copy.noMembersSelected}
+                  </p>
+                )}
               </div>
             ) : null}
             <div className="rounded-2xl bg-slate-50 px-4 py-4">
