@@ -9,6 +9,7 @@
 - Profit distribution still has no dedicated live post flow.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
 - Vercel git-source API deployments currently fail with `git_info_fail` for this project; the working deployment path for the latest release is manual uploaded-file deployment through the Vercel API.
+- Without explicit release docs, it is easy to work in one tree and accidentally deploy from another or skip a required Supabase ledger migration.
 - Live sign-up/login behavior can still vary based on Supabase Auth settings such as email confirmation requirements.
 - The EN/VI rollout still needs one live QA pass to catch any remaining English-only strings in secondary dashboard/chart states.
 - The new table-toolbar rollout still needs one production pass with real signed-in data, not just the sample workspace and local production build.
@@ -67,6 +68,7 @@
 - Pending members could receive allocations and capital ownership before join, but they were still blocked from cash-holder fields because `ledger_entries` stored cash legs by joined `profiles.user_id`; resolved by adding `cash_in_project_member_id` / `cash_out_project_member_id`, widening the person selectors, and keeping history attached to the same `project_member_id` after invite acceptance.
 - The product still felt visually split between older warm cards and newer finance surfaces; resolved in code by moving the shared theme toward lighter Splitwise-inspired mint accents plus softer Apple-style surfaces across the shell, auth, cards, buttons, tabs, and primary project pages.
 - The refreshed theme initially appeared “done locally but not on production” because pushing to GitHub did not trigger a usable production release and git-source API deployments still failed with `git_info_fail`; resolved by creating a Vercel uploaded-files production deployment from the committed source snapshot, which successfully promoted the new theme live.
+- Deployment knowledge had been trapped in session context, which increased the risk of deploying the wrong code tree or forgetting the app-vs-migration order; resolved by adding `docs/operations/deployment-runbook.md`, `docs/operations/release-checklist.md`, and a README pointer to them.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -77,6 +79,7 @@
 - With `react-hook-form` plus `z.coerce`, keep input and output types explicit to satisfy production type checking.
 - For live Supabase writes that span ledger entries plus allocations, prefer one SQL RPC over multiple client-side inserts.
 - When deploying from local with the Vercel CLI, ensure `.vercelignore` excludes `.env*` so local tokens are not uploaded as source files.
+- For this repo, never deploy from the same dirty worktree where development is happening; create a clean deploy worktree from the exact committed SHA and use that as the only release source.
 - Production UI should not surface deployment/env readiness details; keep setup guidance in docs and operator notes instead.
 - When adding new live ledger capabilities, prefer additive SQL migrations over rewriting the original base schema so already-deployed Supabase projects can upgrade safely.
 - When using the Vercel uploaded-file deployment API from Windows, normalize deployment file paths to forward slashes before creating the deployment, or the build can miss nested directories like `src/app`.
@@ -143,3 +146,5 @@
 - Found a follow-up planner confusion on capital entries while validating the production link: `capital_contribution` was still rendering an unnecessary `Money out by` field. Fixed the UI to show only the relevant cash legs and kept the validation helpers shared between schema and planner.
 - Added and applied `20260323040000_cash_legs_by_project_member.sql`, then verified on a disposable live project that pending members can now be selected in every person-related field, including cash-holder fields, without losing the same `project_member_id` when the invite is accepted later.
 - Pushed `5c3950c` to `main` and `master`, then promoted a new production deployment from that commit after correcting the Windows path-separator packaging bug in the uploaded-file Vercel API flow.
+- Clarified the overview balance model so `Team owes you / You owe team` now means current project-cash claim after capital and profit preview, while the dedicated Settlements tab remains the shared-expense reimbursement surface.
+- Added operator docs for deploy order, clean deploy worktrees, and post-release verification so future sessions do not repeat the same production mismatch problem.

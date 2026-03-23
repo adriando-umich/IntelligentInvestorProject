@@ -106,6 +106,13 @@ If the provider is not configured yet, the button will still appear but Supabase
 5. Deploy the Next.js app to Vercel.
 6. Verify sign-in, project dashboard, settlement suggestions, and reconciliation screens in preview.
 
+For the actual production release workflow in this repo, use:
+
+- [docs/operations/deployment-runbook.md](docs/operations/deployment-runbook.md)
+- [docs/operations/release-checklist.md](docs/operations/release-checklist.md)
+
+Those files define the required deploy order for app code versus Supabase ledger migrations, and the rule that production releases must come from a clean deploy worktree created from an exact committed SHA.
+
 ## Product Notes
 
 - Shared-expense settlement is separate from profit distribution.

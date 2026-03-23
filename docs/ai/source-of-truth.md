@@ -120,6 +120,8 @@ Only `.env.example` should be committed.
 ## Deployment State
 
 - GitHub-safe env template: created
+- Canonical deployment runbook: `docs/operations/deployment-runbook.md`
+- Canonical release checklist: `docs/operations/release-checklist.md`
 - Supabase runtime wiring: partial but now supports live reads plus live create on main ledger entry types
 - Supabase SQL migration: created at `supabase/migrations/20260321153000_finance_app_schema.sql`
 - Additional live onboarding migration: `supabase/migrations/20260322101500_project_bootstrap.sql`
@@ -137,7 +139,9 @@ Only `.env.example` should be committed.
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
 - Live Supabase database: migrated through `20260323040000_cash_legs_by_project_member.sql`
-- Latest production deployment for commit `5c3950c`: ready and promoted on Vercel
+- Release policy: production deploys must come from a clean deploy worktree created from an exact committed SHA
+- Current reliable Vercel path: uploaded-file API deployment from a clean commit snapshot
+- Latest production deployment for commit `de0b36b`: ready and promoted on Vercel as `dpl_BdXgcnDAQwdHNAU3FJHJyQT6qWf4`
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
 - Live Supabase Auth redirect allow-list now includes:
@@ -156,7 +160,8 @@ Only `.env.example` should be committed.
 ## Product Guardrails
 
 - Never merge cash custody, reimbursement, capital, P&L share, and profit paid into one unexplained number.
-- Settlement UI must be labeled as shared-expense settlement.
+- The dedicated Settlements tab must be labeled as shared-expense settlement.
+- Overview cash-transfer suggestions must be labeled as project-cash redistribution or cash-claim balancing, not as shared-expense settlement.
 - Default dashboard language must be non-accounting-first.
 - Every user-facing UI surface should ship in both English and Vietnamese.
 - Vietnamese copy should stay natural and plain-language-first, not literal accounting jargon.
@@ -229,5 +234,13 @@ Only `.env.example` should be committed.
 - Re-verified the refreshed UI on a production build with `next build`; the new theme keeps pill controls and full-width actions at narrow breakpoints for mobile usability.
 - Pushed the theme refresh commit `ffb036c` to GitHub, confirmed git-based Vercel production deploys still fail with `git_info_fail`, then created a production uploaded-files deployment `dpl_kDd6adcCQ3Vs8Sh83JhhG367vjWo` that reached `READY` / `PROMOTED`.
 - Verified both the preview deployment and `https://intelligent-investor-project.vercel.app/sign-in` now render the new theme markers from the refreshed sign-in hero, confirming production is serving the Splitwise/Apple visual update.
+- Clarified that overview `Team owes you / You owe team` must represent current member cash claims after capital and profit preview, not only shared-expense reimbursement.
+- Added an overview-specific cash-claim read model in `src/lib/finance/project-cash-claims.ts`, updated the overview dashboard copy, and kept the dedicated Settlements tab on shared-expense reimbursement logic.
+- Promoted production deployment `dpl_BdXgcnDAQwdHNAU3FJHJyQT6qWf4` for commit `de0b36b`.
+- Added `docs/operations/deployment-runbook.md` plus `docs/operations/release-checklist.md`, then linked them from `README.md` so future sessions know:
+  - what counts as an app-only release
+  - when Supabase ledger migrations must ship first
+  - that releases must come from a clean deploy worktree built from an exact committed SHA
+  - which real projects and screens to verify after deploy
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

@@ -58,6 +58,7 @@
 - Add a dedicated reversal flow that lets a user choose the original entry instead of keeping reversal guide-only
 - Decide whether tag analytics should support multi-tag faceting only or one strict reporting category plus optional tags
 - Repair or replace the Vercel git-based deployment path; current git-source API deploy attempts fail with `git_info_fail`, while uploaded-file API deploys work
+- Add a small scripted release helper around the new deployment runbook so exact-commit deploys and clean deploy worktrees become harder to skip
 
 ## Blocked
 
@@ -135,3 +136,4 @@
 - Moved the remaining work to end-to-end real-user validation, richer member management, profit-distribution write flows, and deeper tag-reporting decisions.
 - Refreshed the shared visual system toward a lighter Splitwise/Apple direction across the shell, auth, navigation, and top-level project surfaces, then re-ran `next build` successfully.
 - Pushed the theme refresh commit `ffb036c`, then shipped it to production through a Vercel uploaded-files deployment after confirming the git-source deployment path still fails with `git_info_fail`.
+- Added canonical deployment docs in `docs/operations/deployment-runbook.md` and `docs/operations/release-checklist.md`, then linked them from `README.md` so future releases know exactly what to deploy, in what order, and from which clean worktree.
