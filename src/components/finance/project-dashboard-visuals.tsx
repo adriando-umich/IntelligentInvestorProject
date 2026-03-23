@@ -829,7 +829,7 @@ export function ProjectOverviewVisuals({ snapshot }: { snapshot: ProjectSnapshot
           <CardDescription>
             {locale === "vi"
               ? "Cầu tiền theo ngôn ngữ dễ hiểu: vốn, gốc vay chung và biến động vận hành đều được tách thành từng bước."
-              : "A plain-language cash bridge: capital, shared loan principal, and operating movement are kept visible as separate steps."}
+              : "This cash bridge shows how project cash reached its current balance, step by step."}
           </CardDescription>
         </CardHeader>
         <CardContent>

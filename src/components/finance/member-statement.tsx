@@ -182,7 +182,7 @@ export function MemberStatement({
           <CardDescription>
             {locale === "vi"
               ? "Bản xem ưu tiên sự dễ hiểu cho thành viên này. Khoản hoàn trả chi phí chung, tiền dự án đang giữ, vốn góp và lợi nhuận luôn được tách riêng có chủ đích."
-              : "Friendly-first view for this member. Shared-expense reimbursement, project cash custody, capital, and profit stay separated on purpose."}
+              : "This member view keeps project cash, reimbursements, capital, and profit separate so the numbers stay easy to follow."}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -444,7 +444,7 @@ export function MemberStatement({
               <CardDescription>
                 {locale === "vi"
                   ? "Dùng phần này khi team muốn xem cách diễn giải kỹ thuật. Các thẻ dễ hiểu ở phía trên vẫn là mặc định."
-                  : "Use this when the team wants the technical wording. The friendly cards above remain the default presentation."}
+                  : "Use this view when the team wants the technical wording behind the member balances."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm leading-7 text-slate-600">
@@ -456,7 +456,7 @@ export function MemberStatement({
               <p>
                 {locale === "vi"
                   ? "`expense_reimbursement_balance` được tính từ chi phí chung và các khoản thanh toán đối trừ, dùng bộ ghép chủ nợ/người nợ kiểu Splitwise ở cấp dự án."
-                  : "`expense_reimbursement_balance` is derived from shared expenses and settlement payments, using the Splitwise-style creditor/debtor matcher at project level."}
+                  : "`expense_reimbursement_balance` is derived from shared expenses and settlement payments, using the project-level creditor and debtor matcher."}
               </p>
               <p>
                 {locale === "vi"

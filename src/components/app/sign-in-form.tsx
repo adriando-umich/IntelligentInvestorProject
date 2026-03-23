@@ -87,7 +87,7 @@ export function SignInForm({
 }: {
   authSettings: PublicAuthSettings;
 }) {
-  const { text } = useLocale();
+  const { locale, text } = useLocale();
   const searchParams = useSearchParams();
   const [signInState, signInFormAction, signInPending] = useActionState(
     signInAction,
@@ -114,6 +114,48 @@ export function SignInForm({
 
     return nextPath;
   })();
+  const heroCopy =
+    locale === "vi"
+      ? {
+          eyebrow: "Workspace dự án",
+          highlights: [
+            {
+              title: "Theo dõi tiền dự án",
+              description:
+                "Biết ngay tiền dự án đang nằm ở ai và còn bao nhiêu để dùng.",
+            },
+            {
+              title: "Đối trừ chi tiêu chung",
+              description:
+                "Ghi chi phí chung rõ ràng để biết ai cần hoàn lại cho ai.",
+            },
+            {
+              title: "Giữ rõ phần vốn",
+              description:
+                "Vốn góp, lãi lỗ vận hành và lợi nhuận chia ra luôn được tách riêng.",
+            },
+          ],
+        }
+      : {
+          eyebrow: "Project workspace",
+          highlights: [
+            {
+              title: "Track project cash",
+              description:
+                "See who is holding project money right now and how much is still available.",
+            },
+            {
+              title: "Settle shared spending",
+              description:
+                "Record shared costs clearly so the team knows who should reimburse whom.",
+            },
+            {
+              title: "Keep ownership clear",
+              description:
+                "Capital, operating activity, and profit distributions stay separated on purpose.",
+            },
+          ],
+        };
 
   async function handleGoogleSignIn() {
     if (!isSupabaseConfigured) {
@@ -153,7 +195,7 @@ export function SignInForm({
             <div className="pointer-events-none absolute inset-x-6 top-6 h-36 rounded-[2rem] bg-white/40 blur-3xl" />
             <div className="relative space-y-6">
               <span className="inline-flex rounded-full border border-emerald-200/80 bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 shadow-[0_12px_26px_-22px_rgba(16,185,129,0.8)]">
-                Project finance
+                {heroCopy.eyebrow}
               </span>
               <div className="space-y-4">
                 <h1 className="font-heading text-[3.2rem] font-semibold tracking-[-0.05em] text-slate-950 sm:text-[3.45rem]">
@@ -163,32 +205,6 @@ export function SignInForm({
                   {text.app.tagline}
                 </p>
               </div>
-              <div className="grid max-w-xl gap-3 sm:grid-cols-3">
-                <div className="rounded-[1.4rem] border border-white/80 bg-white/75 px-4 py-4 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.28)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    Style
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-slate-900">
-                    Splitwise clarity
-                  </p>
-                </div>
-                <div className="rounded-[1.4rem] border border-white/80 bg-white/75 px-4 py-4 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.28)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    Focus
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-slate-900">
-                    Cash and capital
-                  </p>
-                </div>
-                <div className="rounded-[1.4rem] border border-white/80 bg-white/75 px-4 py-4 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.28)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    Feel
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-slate-900">
-                    Soft Apple surfaces
-                  </p>
-                </div>
-              </div>
             </div>
 
             <div className="relative grid gap-4 sm:grid-cols-2">
@@ -196,33 +212,33 @@ export function SignInForm({
                 <div className="flex items-center gap-2 text-emerald-700">
                   <WalletCards className="size-4" />
                   <p className="text-sm font-medium text-slate-900">
-                    {text.signIn.plainLanguageTitle}
+                    {heroCopy.highlights[0].title}
                   </p>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {text.signIn.plainLanguageDescription}
+                  {heroCopy.highlights[0].description}
                 </p>
               </div>
               <div className="rounded-[1.6rem] border border-white/80 bg-white/78 p-5 shadow-[0_22px_40px_-32px_rgba(15,23,42,0.28)]">
                 <div className="flex items-center gap-2 text-sky-700">
                   <HandCoins className="size-4" />
                   <p className="text-sm font-medium text-slate-900">
-                    {text.signIn.settlementTitle}
+                    {heroCopy.highlights[1].title}
                   </p>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {text.signIn.settlementDescription}
+                  {heroCopy.highlights[1].description}
                 </p>
               </div>
               <div className="rounded-[1.6rem] border border-white/80 bg-white/78 p-5 shadow-[0_22px_40px_-32px_rgba(15,23,42,0.28)] sm:col-span-2">
                 <div className="flex items-center gap-2 text-amber-700">
                   <PiggyBank className="size-4" />
                   <p className="text-sm font-medium text-slate-900">
-                    {text.signIn.capitalTitle}
+                    {heroCopy.highlights[2].title}
                   </p>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {text.signIn.capitalDescription}
+                  {heroCopy.highlights[2].description}
                 </p>
               </div>
             </div>

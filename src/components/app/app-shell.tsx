@@ -60,7 +60,6 @@ function NavContent({
               <p className="font-heading text-lg font-semibold text-slate-950">
                 {APP_NAME}
               </p>
-              <p className="text-sm text-slate-500">{text.shell.cockpit}</p>
             </div>
           </div>
           {demoMode ? (
