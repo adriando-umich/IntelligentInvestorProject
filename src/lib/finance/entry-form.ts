@@ -122,7 +122,6 @@ export function entryTypeNeedsCapitalOwner(entryType: PlannerEntryType) {
 
 export function entryTypeNeedsAllocation(entryType: PlannerEntryType) {
   return (
-    entryType === "operating_income" ||
     entryType === "operating_expense" ||
     entryType === "shared_loan_interest_payment"
   );
@@ -155,7 +154,7 @@ function createPlannerEntrySchemaForLocale(locale: AppLocale) {
             "Khoan thanh vien tra lai tien can 1 nguoi tra va 1 nguoi nhan khac nhau.",
           chooseCapitalOwner: "Hay chon nguoi co so du von can thay doi.",
           chooseAllocationMembers:
-            "Hay chon cac thanh vien cung chia khoan nay.",
+            "Hay chon cac thanh vien cung chia khoan chi phi nay.",
           chooseOneAdjustmentSide:
             "Hay chon mot ben de dieu chinh tien du an ky vong.",
           correctionOneSideOnly:
@@ -174,7 +173,7 @@ function createPlannerEntrySchemaForLocale(locale: AppLocale) {
             "Member repayment needs a payer and a receiver that are different members.",
           chooseCapitalOwner: "Choose whose capital balance should change.",
           chooseAllocationMembers:
-            "Choose the members who should share this amount.",
+            "Choose the members who should share this expense.",
           chooseOneAdjustmentSide:
             "Choose one side to adjust expected project cash.",
           correctionOneSideOnly:
@@ -300,7 +299,6 @@ export function isCapitalEntryType(entryType: PlannerEntryType) {
 
 export function isAllocationEntryType(entryType: PlannerEntryType) {
   return (
-    entryType === "operating_income" ||
     entryType === "operating_expense" ||
     entryType === "shared_loan_interest_payment"
   );

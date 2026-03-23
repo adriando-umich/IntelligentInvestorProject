@@ -44,12 +44,10 @@ function buildEditInitialValues(
   }
 
   const allocationType =
-    entry.entryType === "operating_income"
-      ? "income_share"
-      : entry.entryType === "operating_expense" ||
-          entry.entryType === "shared_loan_interest_payment"
-        ? "expense_share"
-        : null;
+    entry.entryType === "operating_expense" ||
+    entry.entryType === "shared_loan_interest_payment"
+      ? "expense_share"
+      : null;
 
   const capitalOwnerProjectMemberId =
     entry.entryType === "capital_contribution" ||

@@ -375,7 +375,7 @@ export function LedgerEntryPlanner({
       : {
           plannerTitle: "Plan a new ledger entry",
           plannerDescription:
-            "Start by choosing whether you are recording a real business event or a ledger correction for this project. Shared income and expense lines are split equally across the selected members, and tags can be attached for later aggregation.",
+            "Start by choosing whether you are recording a real business event or a ledger correction for this project. Operating expenses and shared loan interest can be split equally across selected members, and tags can be attached for later aggregation.",
           fullGuide: "Need the full guide?",
           guideHint:
             "Keep this planner compact here, then open the separate guide page for the full business-versus-correction matrix.",
@@ -398,9 +398,9 @@ export function LedgerEntryPlanner({
           noReceiverSelected: "No receiver selected",
           capitalOwner: "Capital owner",
           chooseCapitalOwner: "Choose the capital owner",
-          allocationMembers: "Members sharing this amount",
+          allocationMembers: "Members sharing this expense",
           allocationHint:
-            "The live save splits this amount equally across the selected members.",
+            "The live save splits this expense equally across the selected members.",
           tags: "Tags",
           tagsHint:
             "Use comma-separated tags like legal, deposit, bank-loan so you can group inflows and expenses later.",
@@ -442,7 +442,7 @@ export function LedgerEntryPlanner({
   const plannerDescription =
     locale === "vi"
       ? `Bắt đầu bằng việc chọn đây là nghiệp vụ thật hay điều chỉnh sổ cho ${projectName}. Các dòng tiền vào và chi phí chung sẽ được chia đều cho những thành viên bạn chọn, còn tag sẽ giúp tổng hợp báo cáo về sau.`
-      : `Start by choosing whether you are recording a real business event or a ledger correction for ${projectName}. Shared income and expense lines are split equally across the selected members, and tags can be attached for later aggregation.`;
+      : `Start by choosing whether you are recording a real business event or a ledger correction for ${projectName}. Operating expenses and shared loan interest can be split equally across selected members, and tags can be attached for later aggregation.`;
   const plannerSummary =
     locale === "vi"
       ? `Chọn nhóm giao dịch, điền luồng tiền, rồi preview hoặc lưu live cho ${projectName}.`
@@ -805,7 +805,7 @@ export function LedgerEntryPlanner({
             {showAllocationField ? (
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label>Members sharing this amount</Label>
+                  <Label>{copy.allocationMembers}</Label>
                   <p className="text-sm text-slate-500">
                     {copy.allocationHint}
                   </p>

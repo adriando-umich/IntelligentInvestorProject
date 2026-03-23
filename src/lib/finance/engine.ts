@@ -182,26 +182,6 @@ function applyEntryEffects(
       totals.operatingIncome = roundMoney(
         totals.operatingIncome + entry.amount * factor
       );
-
-      for (const allocation of getAllocationsForEntry(
-        entry.id,
-        allocations,
-        "income_share"
-      )) {
-        const member = projectMemberById.get(allocation.projectMemberId);
-        if (!member) {
-          continue;
-        }
-
-        const summary = summariesByMemberRef.get(member.id);
-        if (!summary) {
-          continue;
-        }
-
-        summary.operatingPnlShare = roundMoney(
-          summary.operatingPnlShare + allocation.amount * factor
-        );
-      }
       return;
     }
     case "operating_expense": {

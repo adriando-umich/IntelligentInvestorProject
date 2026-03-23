@@ -358,7 +358,7 @@ export function MemberStatement({
                     <TableCell>
                       {locale === "vi"
                         ? "Tiền vào vận hành được phân bổ trừ chi phí vận hành được phân bổ."
-                        : "Allocated operating income minus allocated operating expenses."}
+                        : "Operating expenses and shared loan interest allocated to this member."}
                     </TableCell>
                   </TableRow>
                   <TableRow>
