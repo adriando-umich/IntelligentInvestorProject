@@ -14,7 +14,7 @@ export default async function SignInPage() {
   const authSettings = await getPublicAuthSettings();
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-1 items-center px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto flex w-full max-w-[1240px] flex-1 items-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="w-full">
         <SignInForm authSettings={authSettings} />
       </div>

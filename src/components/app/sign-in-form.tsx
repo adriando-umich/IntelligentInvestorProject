@@ -146,17 +146,17 @@ export function SignInForm({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+    <div className="mx-auto w-full max-w-[1180px]">
       <Card className="overflow-hidden rounded-[2.25rem] border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(247,251,249,0.86))] shadow-[0_40px_110px_-62px_rgba(15,23,42,0.4)]">
-        <CardContent className="grid min-h-[560px] items-stretch gap-0 p-0 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="relative flex flex-col justify-between overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.28),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(191,219,254,0.34),_transparent_30%),linear-gradient(180deg,_rgba(244,253,248,0.98)_0%,_rgba(235,246,241,0.94)_100%)] px-8 py-10 text-slate-950">
+        <CardContent className="grid min-h-[560px] items-stretch gap-0 p-0 lg:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.92fr)]">
+          <div className="relative flex flex-col justify-between overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.28),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(191,219,254,0.34),_transparent_30%),linear-gradient(180deg,_rgba(244,253,248,0.98)_0%,_rgba(235,246,241,0.94)_100%)] px-6 py-8 text-slate-950 sm:px-8 sm:py-10">
             <div className="pointer-events-none absolute inset-x-6 top-6 h-36 rounded-[2rem] bg-white/40 blur-3xl" />
             <div className="relative space-y-6">
               <span className="inline-flex rounded-full border border-emerald-200/80 bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 shadow-[0_12px_26px_-22px_rgba(16,185,129,0.8)]">
                 Project finance
               </span>
               <div className="space-y-4">
-                <h1 className="font-heading text-4xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-[3.4rem]">
+                <h1 className="font-heading text-[3.2rem] font-semibold tracking-[-0.05em] text-slate-950 sm:text-[3.45rem]">
                   {APP_NAME}
                 </h1>
                 <p className="max-w-xl text-base leading-8 text-slate-600">
@@ -228,8 +228,8 @@ export function SignInForm({
             </div>
           </div>
 
-          <div className="flex flex-col justify-center bg-white/58 px-8 py-10 lg:border-l lg:border-white/80">
-            <div className="space-y-5">
+          <div className="flex flex-col justify-center bg-white/58 px-6 py-8 lg:border-l lg:border-white/80 lg:px-8 lg:py-10">
+            <div className="mx-auto w-full max-w-[430px] space-y-5">
               <div className="space-y-2">
                 <CardTitle className="font-heading text-2xl text-slate-950">
                   {text.signIn.accessWorkspaceTitle}
