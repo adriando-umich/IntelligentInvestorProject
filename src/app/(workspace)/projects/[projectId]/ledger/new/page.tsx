@@ -88,7 +88,15 @@ function buildEditInitialValues(
         allocationRows
       )
     : [];
-  const allocationSplitMode = inferAllocationSplitMode(allocationShares);
+  const capitalBalancesByMemberId = new Map(
+    snapshot.memberSummaries.map((summary) => [
+      summary.projectMember.id,
+      summary.capitalBalance,
+    ])
+  );
+  const allocationSplitMode = inferAllocationSplitMode(allocationShares, {
+    capitalBalancesByMemberId,
+  });
 
   const entryTagIds = snapshot.dataset.entryTags
     .filter((entryTag) => entryTag.ledgerEntryId === entry.id)
@@ -240,6 +248,7 @@ export default async function NewLedgerEntryPage({
           id: summary.projectMember.id,
           name: summary.profile.displayName,
           membershipStatus: summary.projectMember.membershipStatus ?? "active",
+          capitalBalance: summary.capitalBalance,
         }))}
         tagOptions={snapshot.dataset.tags.map((tag) => tag.name)}
         initialValues={initialValues}

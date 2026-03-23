@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   areAllocationSharesEqual,
+  buildCapitalAllocationShares,
   buildEqualAllocationShares,
   computeAllocationAmountPreviews,
   reconcileCustomAllocationShares,
@@ -68,6 +69,7 @@ type MemberOption = {
   id: string;
   name: string;
   membershipStatus: "active" | "pending_invite";
+  capitalBalance: number;
 };
 
 function roundToTwoDecimals(value: number) {
@@ -332,7 +334,7 @@ export function LedgerEntryPlanner({
       ? {
           plannerTitle: "Lập giao dịch mới",
           plannerDescription:
-            "Hãy chọn trước đây là nghiệp vụ thật hay điều chỉnh sổ cho dự án này. Các dòng tiền vào và chi phí chung sẽ được chia đều cho những thành viên bạn chọn, còn tag sẽ giúp tổng hợp báo cáo về sau.",
+            "Hãy chọn trước đây là nghiệp vụ thật hay điều chỉnh sổ cho dự án này. Chi phí chung và lãi vay chung mặc định sẽ chia theo tỷ lệ vốn hiện tại, còn tag sẽ giúp tổng hợp báo cáo về sau.",
           fullGuide: "Cần xem hướng dẫn đầy đủ?",
           guideHint:
             "Giữ form này gọn để nhập nhanh, còn ma trận đầy đủ giữa nghiệp vụ thật và điều chỉnh đã nằm ở trang hướng dẫn riêng.",
@@ -357,10 +359,11 @@ export function LedgerEntryPlanner({
           chooseCapitalOwner: "Chọn người sở hữu phần vốn",
           allocationMembers: "Những người cùng chia khoản này",
           allocationHint:
-            "Mặc định là chia đều. Nếu cần, bạn có thể chuyển sang custom split để điều chỉnh tỷ lệ của từng người.",
+            "Mặc định là chia theo tỷ lệ vốn hiện tại. Nếu cần, bạn vẫn có thể chuyển sang chia đều hoặc custom split.",
           allocationMode: "Che do chia",
           allocationModeHint:
-            "Chia deu giu cung mot ty le cho moi nguoi. Custom split cho phep sua tung ty le phan tram.",
+            "Ty le von bam theo so du von hien tai. Chia deu giu cung mot ty le cho moi nguoi. Custom split cho phep sua tung ty le phan tram.",
+          allocationCapital: "Theo ty le von",
           allocationEqual: "Chia deu",
           allocationCustom: "Custom split",
           allocationPercent: "Ty le",
@@ -370,8 +373,14 @@ export function LedgerEntryPlanner({
             "Custom split phai cong dung 100% truoc khi luu.",
           allocationEqualHint:
             "Moi thanh vien dang duoc chia deu khoan chi phi nay.",
+          allocationCapitalHint:
+            "Lay so du von hien tai cua nhung thanh vien da chon de dat ty le chia mac dinh.",
           allocationCustomHint:
             "Sua ty le phan tram cua tung thanh vien. Tong phai bang 100%.",
+          allocationCapitalFallback:
+            "Nhung thanh vien dang chon chua co so du von duong, nen he thong tam thoi chia deu de ban co the tiep tuc.",
+          allocationCapitalZeroMember:
+            "Co thanh vien duoc chon chua co so du von duong. Neu van muon tinh cho ho, hay chuyen sang chia deu hoac custom split.",
           allocationSplitSummary: "Cach chia hien tai",
           tags: "Tag",
           tagsHint:
@@ -414,7 +423,7 @@ export function LedgerEntryPlanner({
       : {
           plannerTitle: "Plan a new ledger entry",
           plannerDescription:
-            "Start by choosing whether you are recording a real business event or a ledger correction for this project. Operating expenses and shared loan interest can be split equally across selected members, and tags can be attached for later aggregation.",
+            "Start by choosing whether you are recording a real business event or a ledger correction for this project. Operating expenses and shared loan interest default to the current capital ratio, and tags can be attached for later aggregation.",
           fullGuide: "Need the full guide?",
           guideHint:
             "Keep this planner compact here, then open the separate guide page for the full business-versus-correction matrix.",
@@ -439,10 +448,11 @@ export function LedgerEntryPlanner({
           chooseCapitalOwner: "Choose the capital owner",
           allocationMembers: "Members sharing this expense",
           allocationHint:
-            "Equal split is the default. Switch to custom if this expense should use different percentages.",
+            "Capital ratio is the default. Switch to equal or custom if this expense should use a different split.",
           allocationMode: "Split mode",
           allocationModeHint:
-            "Equal keeps everyone on the same percentage. Custom lets you edit each member's share.",
+            "Capital ratio follows the selected members' current capital balances. Equal keeps everyone on the same percentage. Custom lets you edit each member's share.",
+          allocationCapital: "By capital ratio",
           allocationEqual: "Equal split",
           allocationCustom: "Custom split",
           allocationPercent: "Share %",
@@ -452,8 +462,14 @@ export function LedgerEntryPlanner({
             "Custom split must total 100% before saving.",
           allocationEqualHint:
             "Each selected member is currently carrying the same share of this expense.",
+          allocationCapitalHint:
+            "Use the selected members' current capital balances to set the default split.",
           allocationCustomHint:
             "Edit each selected member's percentage. The total must stay at 100%.",
+          allocationCapitalFallback:
+            "The selected members do not have positive capital yet, so this automatic split falls back to equal for now.",
+          allocationCapitalZeroMember:
+            "One or more selected members do not currently have positive capital. Switch modes if they should still carry part of this expense.",
           allocationSplitSummary: "Current split",
           tags: "Tags",
           tagsHint:
@@ -495,8 +511,8 @@ export function LedgerEntryPlanner({
         };
   const plannerDescription =
     locale === "vi"
-      ? `Bắt đầu bằng việc chọn đây là nghiệp vụ thật hay điều chỉnh sổ cho ${projectName}. Các dòng tiền vào và chi phí chung sẽ được chia đều cho những thành viên bạn chọn, còn tag sẽ giúp tổng hợp báo cáo về sau.`
-      : `Start by choosing whether you are recording a real business event or a ledger correction for ${projectName}. Operating expenses and shared loan interest can be split equally across selected members, and tags can be attached for later aggregation.`;
+      ? `Bắt đầu bằng việc chọn đây là nghiệp vụ thật hay điều chỉnh sổ cho ${projectName}. Chi phí chung và lãi vay chung mặc định sẽ chia theo tỷ lệ vốn hiện tại, còn tag sẽ giúp tổng hợp báo cáo về sau.`
+      : `Start by choosing whether you are recording a real business event or a ledger correction for ${projectName}. Operating expenses and shared loan interest default to the current capital ratio, and tags can be attached for later aggregation.`;
   const plannerSummary =
     locale === "vi"
       ? `Chọn nhóm giao dịch, điền luồng tiền, rồi preview hoặc lưu live cho ${projectName}.`
@@ -539,7 +555,7 @@ export function LedgerEntryPlanner({
       capitalOwnerProjectMemberId:
         initialValues.capitalOwnerProjectMemberId ?? "",
       allocationProjectMemberIds: initialValues.allocationProjectMemberIds ?? [],
-      allocationSplitMode: initialValues.allocationSplitMode ?? "equal",
+      allocationSplitMode: initialValues.allocationSplitMode ?? "capital",
       allocationShares: initialValues.allocationShares ?? [],
       tagNamesText: initialValues.tagNamesText ?? "",
       externalCounterparty: initialValues.externalCounterparty ?? "",
@@ -576,7 +592,11 @@ export function LedgerEntryPlanner({
     ? watched.allocationProjectMemberIds
     : [];
   const watchedAllocationSplitMode: PlannerAllocationSplitMode =
-    watched.allocationSplitMode === "custom" ? "custom" : "equal";
+    watched.allocationSplitMode === "equal"
+      ? "equal"
+      : watched.allocationSplitMode === "custom"
+        ? "custom"
+        : "capital";
   const watchedAllocationShares = Array.isArray(watched.allocationShares)
     ? watched.allocationShares.filter(
         (share): share is PlannerAllocationShare =>
@@ -599,6 +619,13 @@ export function LedgerEntryPlanner({
         ])
       ),
     [memberOptions, pendingMemberSuffix]
+  );
+  const capitalBalanceByMemberId = useMemo(
+    () =>
+      new Map(
+        memberOptions.map((member) => [member.id, member.capitalBalance])
+      ),
+    [memberOptions]
   );
   const allocationShareByMemberId = useMemo(
     () =>
@@ -623,6 +650,22 @@ export function LedgerEntryPlanner({
       0
     )
   );
+  const selectedAllocationCapitalTotal = roundToTwoDecimals(
+    selectedAllocationIds.reduce(
+      (sum, memberId) =>
+        sum + Math.max(capitalBalanceByMemberId.get(memberId) ?? 0, 0),
+      0
+    )
+  );
+  const hasSelectedZeroCapitalMember =
+    watchedAllocationSplitMode === "capital" &&
+    selectedAllocationIds.some(
+      (memberId) => (capitalBalanceByMemberId.get(memberId) ?? 0) <= 0
+    );
+  const capitalModeFallsBackToEqual =
+    watchedAllocationSplitMode === "capital" &&
+    selectedAllocationIds.length > 0 &&
+    selectedAllocationCapitalTotal <= 0.01;
   const allocationWeightsValid =
     selectedAllocationShareRows.length === 0 ||
     Math.abs(selectedAllocationWeightTotal - 100) <= 0.01;
@@ -673,7 +716,12 @@ export function LedgerEntryPlanner({
     const nextShares =
       selectedAllocationIds.length === 0
         ? []
-        : watchedAllocationSplitMode === "equal"
+        : watchedAllocationSplitMode === "capital"
+          ? buildCapitalAllocationShares(
+              selectedAllocationIds,
+              capitalBalanceByMemberId
+            )
+          : watchedAllocationSplitMode === "equal"
           ? buildEqualAllocationShares(selectedAllocationIds)
           : hasSameCustomMembership
             ? selectedAllocationIds.map((memberId) => ({
@@ -697,6 +745,7 @@ export function LedgerEntryPlanner({
   }, [
     form,
     allocationShareByMemberId,
+    capitalBalanceByMemberId,
     selectedAllocationIds,
     watchedAllocationShares,
     watchedAllocationSplitMode,
@@ -1025,9 +1074,10 @@ export function LedgerEntryPlanner({
                         {copy.allocationModeHint}
                       </p>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid gap-2 sm:grid-cols-3">
                       {(
                         [
+                          ["capital", copy.allocationCapital],
                           ["equal", copy.allocationEqual],
                           ["custom", copy.allocationCustom],
                         ] as const
@@ -1047,14 +1097,26 @@ export function LedgerEntryPlanner({
                           >
                             <div className="font-medium">{label}</div>
                             <p className="mt-1 text-xs leading-5 text-slate-500">
-                              {mode === "equal"
-                                ? copy.allocationEqualHint
-                                : copy.allocationCustomHint}
+                              {mode === "capital"
+                                ? copy.allocationCapitalHint
+                                : mode === "equal"
+                                  ? copy.allocationEqualHint
+                                  : copy.allocationCustomHint}
                             </p>
                           </button>
                         );
                       })}
                     </div>
+                    {capitalModeFallsBackToEqual ? (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        {copy.allocationCapitalFallback}
+                      </div>
+                    ) : null}
+                    {!capitalModeFallsBackToEqual && hasSelectedZeroCapitalMember ? (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        {copy.allocationCapitalZeroMember}
+                      </div>
+                    ) : null}
                     <div className="space-y-3">
                       {selectedAllocationShareRows.map((shareRow) => {
                         const amountRow =
@@ -1087,7 +1149,7 @@ export function LedgerEntryPlanner({
                                 min="0.01"
                                 max="100"
                                 step="0.01"
-                                disabled={watchedAllocationSplitMode === "equal"}
+                                disabled={watchedAllocationSplitMode !== "custom"}
                                 value={shareRow.weightPercent}
                                 onChange={(event) =>
                                   updateAllocationShare(
@@ -1318,9 +1380,11 @@ export function LedgerEntryPlanner({
                   {selectedAllocationNames.length > 0 ? (
                     <Badge className="rounded-full bg-white text-slate-700">
                       {copy.allocationSplitSummary}:{" "}
-                      {watchedAllocationSplitMode === "equal"
-                        ? copy.allocationEqual
-                        : copy.allocationCustom}
+                      {watchedAllocationSplitMode === "capital"
+                        ? copy.allocationCapital
+                        : watchedAllocationSplitMode === "equal"
+                          ? copy.allocationEqual
+                          : copy.allocationCustom}
                     </Badge>
                   ) : null}
                 </div>

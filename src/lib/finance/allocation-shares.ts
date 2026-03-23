@@ -50,6 +50,32 @@ export function buildEqualAllocationShares(
   }));
 }
 
+export function buildCapitalAllocationShares(
+  projectMemberIds: string[],
+  capitalBalancesByMemberId: Map<string, number>
+): AllocationShareInput[] {
+  if (projectMemberIds.length === 0) {
+    return [];
+  }
+
+  const capitalWeightedShares = projectMemberIds.map((projectMemberId) => ({
+    projectMemberId,
+    weightPercent: sanitizePositiveNumber(
+      capitalBalancesByMemberId.get(projectMemberId) ?? 0
+    ),
+  }));
+  const totalCapital = capitalWeightedShares.reduce(
+    (sum, share) => sum + share.weightPercent,
+    0
+  );
+
+  if (totalCapital <= SHARE_EPSILON) {
+    return buildEqualAllocationShares(projectMemberIds);
+  }
+
+  return normalizeAllocationShares(capitalWeightedShares);
+}
+
 export function normalizeAllocationShares(
   shares: AllocationShareInput[]
 ): AllocationShareInput[] {
@@ -212,9 +238,14 @@ export function buildAllocationSharesFromAllocations(
   return normalizeAllocationShares(shares);
 }
 
-export function inferAllocationSplitMode(shares: AllocationShareInput[]) {
+export function inferAllocationSplitMode(
+  shares: AllocationShareInput[],
+  options?: {
+    capitalBalancesByMemberId?: Map<string, number>;
+  }
+) {
   if (shares.length <= 1) {
-    return "equal" as const;
+    return "capital" as const;
   }
 
   const equalShares = buildEqualAllocationShares(
@@ -229,7 +260,30 @@ export function inferAllocationSplitMode(shares: AllocationShareInput[]) {
     );
   });
 
-  return isEqual ? ("equal" as const) : ("custom" as const);
+  if (isEqual) {
+    return "equal" as const;
+  }
+
+  if (options?.capitalBalancesByMemberId) {
+    const capitalShares = buildCapitalAllocationShares(
+      shares.map((share) => share.projectMemberId),
+      options.capitalBalancesByMemberId
+    );
+    const matchesCapital = shares.every((share, index) => {
+      const capitalShare = capitalShares[index];
+      return (
+        capitalShare?.projectMemberId === share.projectMemberId &&
+        Math.abs(capitalShare.weightPercent - share.weightPercent) <=
+          SHARE_EPSILON
+      );
+    });
+
+    if (matchesCapital) {
+      return "capital" as const;
+    }
+  }
+
+  return "custom" as const;
 }
 
 export function areAllocationSharesEqual(

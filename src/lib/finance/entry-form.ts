@@ -30,7 +30,7 @@ const stringArray = z.preprocess((value) => {
   return [];
 }, z.array(z.string()).default([]));
 
-const allocationSplitModes = ["equal", "custom"] as const;
+const allocationSplitModes = ["capital", "equal", "custom"] as const;
 
 const allocationShareSchema = z.object({
   projectMemberId: z.string().min(1),
@@ -216,7 +216,7 @@ function createPlannerEntrySchemaForLocale(locale: AppLocale) {
     cashOutProjectMemberId: optionalString,
     capitalOwnerProjectMemberId: optionalString,
     allocationProjectMemberIds: stringArray,
-    allocationSplitMode: z.enum(allocationSplitModes).default("equal"),
+    allocationSplitMode: z.enum(allocationSplitModes).default("capital"),
     allocationShares: z.array(allocationShareSchema).default([]),
     tagNamesText: optionalString,
     externalCounterparty: optionalString,
