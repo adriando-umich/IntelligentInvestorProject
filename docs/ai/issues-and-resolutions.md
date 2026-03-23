@@ -66,6 +66,7 @@
 - The ledger planner still showed both `Money out by` and `Money in to` for `capital_contribution`, even though only the receiving custody side is required there; resolved by showing only the cash-leg selectors relevant to the selected entry type and by adding clearer capital-specific helper copy.
 - Pending members could receive allocations and capital ownership before join, but they were still blocked from cash-holder fields because `ledger_entries` stored cash legs by joined `profiles.user_id`; resolved by adding `cash_in_project_member_id` / `cash_out_project_member_id`, widening the person selectors, and keeping history attached to the same `project_member_id` after invite acceptance.
 - The product still felt visually split between older warm cards and newer finance surfaces; resolved in code by moving the shared theme toward lighter Splitwise-inspired mint accents plus softer Apple-style surfaces across the shell, auth, cards, buttons, tabs, and primary project pages.
+- The refreshed theme initially appeared “done locally but not on production” because pushing to GitHub did not trigger a usable production release and git-source API deployments still failed with `git_info_fail`; resolved by creating a Vercel uploaded-files production deployment from the committed source snapshot, which successfully promoted the new theme live.
 
 ## Repeated Pitfalls / Prevention Notes
 

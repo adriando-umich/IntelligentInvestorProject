@@ -227,5 +227,7 @@ Only `.env.example` should be committed.
 - Pushed commit `5c3950c` to both `main` and `master`, then promoted a new production Vercel deployment from that exact commit. The first uploaded-file attempt failed because Windows path separators were preserved in the API payload; the succeeding deployment normalized file paths to forward slashes before upload.
 - Refreshed the app-wide design system toward a Splitwise-meets-Apple look by updating global tokens, buttons, cards, tabs, inputs, tables, the workspace shell, project nav, sign-in, create-project, and project-list surfaces.
 - Re-verified the refreshed UI on a production build with `next build`; the new theme keeps pill controls and full-width actions at narrow breakpoints for mobile usability.
+- Pushed the theme refresh commit `ffb036c` to GitHub, confirmed git-based Vercel production deploys still fail with `git_info_fail`, then created a production uploaded-files deployment `dpl_kDd6adcCQ3Vs8Sh83JhhG367vjWo` that reached `READY` / `PROMOTED`.
+- Verified both the preview deployment and `https://intelligent-investor-project.vercel.app/sign-in` now render the new theme markers from the refreshed sign-in hero, confirming production is serving the Splitwise/Apple visual update.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

@@ -134,3 +134,4 @@
 - Added a project-member-backed cash-leg migration so pending members can now be selected in every person-related field, not just allocations and capital ownership, and verified that those rows still map to the same member after invite acceptance.
 - Moved the remaining work to end-to-end real-user validation, richer member management, profit-distribution write flows, and deeper tag-reporting decisions.
 - Refreshed the shared visual system toward a lighter Splitwise/Apple direction across the shell, auth, navigation, and top-level project surfaces, then re-ran `next build` successfully.
+- Pushed the theme refresh commit `ffb036c`, then shipped it to production through a Vercel uploaded-files deployment after confirming the git-source deployment path still fails with `git_info_fail`.
