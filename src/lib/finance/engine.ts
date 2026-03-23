@@ -116,6 +116,24 @@ function applyCashMovement(
   }
 }
 
+function getFrontedOwnMoneyDelta(beforeCashCustody: number, afterCashCustody: number) {
+  return roundMoney(
+    Math.max(-afterCashCustody, 0) - Math.max(-beforeCashCustody, 0)
+  );
+}
+
+function getReimbursementShareAmount(
+  allocationAmount: number,
+  reimbursableCashDelta: number,
+  entryAmount: number
+) {
+  if (Math.abs(reimbursableCashDelta) <= EPSILON || entryAmount <= EPSILON) {
+    return 0;
+  }
+
+  return roundMoney((allocationAmount / entryAmount) * reimbursableCashDelta);
+}
+
 function applyEntryEffects(
   entry: LedgerEntry,
   factor: number,
@@ -131,7 +149,18 @@ function applyEntryEffects(
     sharedLoanInterestPaid: number;
   }
 ) {
+  const payerCashCustodyBefore = entry.cashOutMemberId
+    ? summariesByMemberRef.get(entry.cashOutMemberId)?.projectCashCustody ?? 0
+    : 0;
+
   applyCashMovement(summariesByMemberRef, entry, factor);
+
+  const payerCashCustodyAfter = entry.cashOutMemberId
+    ? summariesByMemberRef.get(entry.cashOutMemberId)?.projectCashCustody ?? 0
+    : 0;
+  const payerReimbursableCashDelta = entry.cashOutMemberId
+    ? getFrontedOwnMoneyDelta(payerCashCustodyBefore, payerCashCustodyAfter)
+    : 0;
 
   switch (entry.entryType) {
     case "capital_contribution": {
@@ -189,11 +218,11 @@ function applyEntryEffects(
         totals.operatingExpense + entry.amount * factor
       );
 
-      if (entry.cashOutMemberId) {
+      if (entry.cashOutMemberId && Math.abs(payerReimbursableCashDelta) > EPSILON) {
         const payer = summariesByMemberRef.get(entry.cashOutMemberId);
         if (payer) {
           payer.expenseReimbursementBalance = roundMoney(
-            payer.expenseReimbursementBalance + entry.amount * factor
+            payer.expenseReimbursementBalance + payerReimbursableCashDelta
           );
         }
       }
@@ -216,9 +245,17 @@ function applyEntryEffects(
         summary.operatingPnlShare = roundMoney(
           summary.operatingPnlShare - allocation.amount * factor
         );
-        summary.expenseReimbursementBalance = roundMoney(
-          summary.expenseReimbursementBalance - allocation.amount * factor
+        const reimbursementShareAmount = getReimbursementShareAmount(
+          allocation.amount,
+          payerReimbursableCashDelta,
+          entry.amount
         );
+
+        if (Math.abs(reimbursementShareAmount) > EPSILON) {
+          summary.expenseReimbursementBalance = roundMoney(
+            summary.expenseReimbursementBalance - reimbursementShareAmount
+          );
+        }
       }
       return;
     }
@@ -240,11 +277,11 @@ function applyEntryEffects(
         totals.sharedLoanInterestPaid + entry.amount * factor
       );
 
-      if (entry.cashOutMemberId) {
+      if (entry.cashOutMemberId && Math.abs(payerReimbursableCashDelta) > EPSILON) {
         const payer = summariesByMemberRef.get(entry.cashOutMemberId);
         if (payer) {
           payer.expenseReimbursementBalance = roundMoney(
-            payer.expenseReimbursementBalance + entry.amount * factor
+            payer.expenseReimbursementBalance + payerReimbursableCashDelta
           );
         }
       }
@@ -267,9 +304,17 @@ function applyEntryEffects(
         summary.operatingPnlShare = roundMoney(
           summary.operatingPnlShare - allocation.amount * factor
         );
-        summary.expenseReimbursementBalance = roundMoney(
-          summary.expenseReimbursementBalance - allocation.amount * factor
+        const reimbursementShareAmount = getReimbursementShareAmount(
+          allocation.amount,
+          payerReimbursableCashDelta,
+          entry.amount
         );
+
+        if (Math.abs(reimbursementShareAmount) > EPSILON) {
+          summary.expenseReimbursementBalance = roundMoney(
+            summary.expenseReimbursementBalance - reimbursementShareAmount
+          );
+        }
       }
       return;
     }
