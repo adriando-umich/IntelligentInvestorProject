@@ -128,6 +128,22 @@ function buildLedgerRpcPayload(values: PlannerEntryValues) {
   };
 }
 
+function buildProfitDistributionRpcPayload(values: PlannerEntryValues) {
+  const tagNames = parseTagNames(values.tagNamesText);
+
+  return {
+    p_project_id: values.projectId,
+    p_effective_at: new Date(values.effectiveDate).toISOString(),
+    p_description: values.description,
+    p_amount: values.amount,
+    p_currency_code: values.currencyCode,
+    p_cash_out_project_member_id: values.cashOutProjectMemberId ?? null,
+    p_tag_names: tagNames.length > 0 ? tagNames : null,
+    p_note: values.note ?? null,
+    p_external_counterparty: values.externalCounterparty ?? null,
+  };
+}
+
 function isMissingLedgerUpgrade(error: { code?: string; message?: string }) {
   const message = error.message?.toLowerCase() ?? "";
 
@@ -140,6 +156,8 @@ function isMissingLedgerUpgrade(error: { code?: string; message?: string }) {
     message.includes("shared_loan_repayment_principal") ||
     message.includes("update_project_ledger_entry") ||
     message.includes("void_project_ledger_entry") ||
+    message.includes("create_profit_distribution_entry") ||
+    message.includes("update_profit_distribution_entry") ||
     message.includes("p_allocation_amounts") ||
     message.includes("p_allocation_weight_percents")
   );
@@ -318,6 +336,53 @@ export async function createLedgerEntryAction(
   );
 }
 
+export async function createProfitDistributionEntryAction(
+  payload: PlannerEntryValues
+): Promise<LedgerActionState> {
+  const validation = await validatePlannerPayload(payload, {});
+
+  if (validation.error) {
+    return validation.error;
+  }
+
+  if (validation.data.entryType !== "profit_distribution") {
+    return {
+      status: "error",
+      message: validation.ledgerText.saveFailed,
+    };
+  }
+
+  const auth = await getAuthenticatedSupabase(
+    validation.ledgerText,
+    validation.text.actions.auth.supabaseMissing
+  );
+
+  if (auth.error) {
+    return auth.error;
+  }
+
+  const { data, error } = await auth.supabase.rpc(
+    "create_profit_distribution_entry",
+    buildProfitDistributionRpcPayload(validation.data)
+  );
+
+  if (error) {
+    return {
+      status: "error",
+      message: isMissingLedgerUpgrade(error)
+        ? validation.ledgerText.missingMigration
+        : error.message,
+    };
+  }
+
+  return finalizeLedgerMutation(
+    validation.data.projectId,
+    data,
+    validation.ledgerText,
+    validation.ledgerText.saved
+  );
+}
+
 export async function updateLedgerEntryAction(
   ledgerEntryId: string,
   payload: PlannerEntryValues
@@ -350,6 +415,64 @@ export async function updateLedgerEntryAction(
     p_ledger_entry_id: ledgerEntryId,
     ...buildLedgerRpcPayload(validation.data),
   });
+
+  if (error) {
+    return {
+      status: "error",
+      message: isMissingLedgerUpgrade(error)
+        ? validation.ledgerText.missingMigration
+        : error.message,
+    };
+  }
+
+  return finalizeLedgerMutation(
+    validation.data.projectId,
+    data,
+    validation.ledgerText,
+    validation.ledgerText.updated
+  );
+}
+
+export async function updateProfitDistributionEntryAction(
+  ledgerEntryId: string,
+  payload: PlannerEntryValues
+): Promise<LedgerActionState> {
+  const validation = await validatePlannerPayload(payload, {});
+
+  if (validation.error) {
+    return validation.error;
+  }
+
+  if (validation.data.entryType !== "profit_distribution") {
+    return {
+      status: "error",
+      message: validation.ledgerText.saveFailed,
+    };
+  }
+
+  if (!uuidResponseSchema.safeParse(ledgerEntryId).success) {
+    return {
+      status: "error",
+      message: validation.ledgerText.saveFailed,
+    };
+  }
+
+  const auth = await getAuthenticatedSupabase(
+    validation.ledgerText,
+    validation.text.actions.auth.supabaseMissing
+  );
+
+  if (auth.error) {
+    return auth.error;
+  }
+
+  const { data, error } = await auth.supabase.rpc(
+    "update_profit_distribution_entry",
+    {
+      p_ledger_entry_id: ledgerEntryId,
+      ...buildProfitDistributionRpcPayload(validation.data),
+    }
+  );
 
   if (error) {
     return {

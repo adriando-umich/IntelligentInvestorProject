@@ -102,7 +102,9 @@ export function ProjectTransactionsTable({
           amount: "So tien",
           directionIn: "Vao",
           directionOut: "Ra",
+          recipients: "Nguoi nhan",
           noReceivingMember: "Chua co nguoi nhan tien",
+          noRecipients: "Chua co nguoi nhan loi nhuan",
           noTags: "Chua gan tag",
           noOutgoingMember: "Chua co nguoi chi tien",
           edit: "Sua",
@@ -137,7 +139,9 @@ export function ProjectTransactionsTable({
           amount: "Amount",
           directionIn: "In",
           directionOut: "Out",
+          recipients: "Recipients",
           noReceivingMember: "No receiving member",
+          noRecipients: "No profit recipients",
           noTags: "No tags",
           noOutgoingMember: "No outgoing member",
           edit: "Edit",
@@ -179,6 +183,24 @@ export function ProjectTransactionsTable({
 
     return map;
   }, [snapshot.dataset.entryTags, tagNameById]);
+
+  const profitRecipientsByEntryId = useMemo(() => {
+    const map = new Map<string, string[]>();
+
+    for (const allocation of snapshot.dataset.allocations) {
+      if (allocation.allocationType !== "profit_share") {
+        continue;
+      }
+
+      const current = map.get(allocation.ledgerEntryId) ?? [];
+      current.push(
+        profileNames.get(allocation.projectMemberId) ?? allocation.projectMemberId
+      );
+      map.set(allocation.ledgerEntryId, current);
+    }
+
+    return map;
+  }, [profileNames, snapshot.dataset.allocations]);
 
   const typeOptions = useMemo(
     () => [
@@ -229,6 +251,7 @@ export function ProjectTransactionsTable({
           getEntryFamilyLabel(getEntryFamily(entry.entryType), locale),
           profileNames.get(entry.cashInMemberId ?? "") ?? "",
           profileNames.get(entry.cashOutMemberId ?? "") ?? "",
+          ...(profitRecipientsByEntryId.get(entry.id) ?? []),
           ...(tagNamesByEntryId.get(entry.id) ?? []),
         ];
 
@@ -261,6 +284,7 @@ export function ProjectTransactionsTable({
     familyFilter,
     locale,
     profileNames,
+    profitRecipientsByEntryId,
     search,
     snapshot.dataset.entries,
     sortOrder,
@@ -377,6 +401,7 @@ export function ProjectTransactionsTable({
                 const tags = tagNamesByEntryId.get(entry.id) ?? [];
                 const inName = profileNames.get(entry.cashInMemberId ?? "");
                 const outName = profileNames.get(entry.cashOutMemberId ?? "");
+                const profitRecipients = profitRecipientsByEntryId.get(entry.id) ?? [];
                 const canEdit = isPlannerEntryType(entry.entryType);
                 const isRowVoiding = isVoiding && voidingEntryId === entry.id;
 
@@ -401,9 +426,18 @@ export function ProjectTransactionsTable({
                           <div className="space-y-2">
                             <p className="font-medium text-slate-950">{entry.description}</p>
                             <div className="space-y-1 text-sm text-slate-500">
-                              <p>
-                                {copy.directionIn}: {inName ?? copy.noReceivingMember}
-                              </p>
+                              {entry.entryType === "profit_distribution" ? (
+                                <p>
+                                  {copy.recipients}:{" "}
+                                  {profitRecipients.length > 0
+                                    ? profitRecipients.join(", ")
+                                    : copy.noRecipients}
+                                </p>
+                              ) : (
+                                <p>
+                                  {copy.directionIn}: {inName ?? copy.noReceivingMember}
+                                </p>
+                              )}
                               <p>
                                 {copy.directionOut}: {outName ?? copy.noOutgoingMember}
                               </p>

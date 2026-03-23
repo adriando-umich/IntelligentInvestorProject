@@ -16,7 +16,9 @@ import {
 } from "lucide-react";
 
 import {
+  createProfitDistributionEntryAction,
   createLedgerEntryAction,
+  updateProfitDistributionEntryAction,
   updateLedgerEntryAction,
   type LedgerActionState,
 } from "@/app/actions/ledger";
@@ -295,7 +297,7 @@ function effectCopy(entryType: PlannerEntryType, locale: "en" | "vi") {
     description:
       locale === "vi"
         ? "Luồng này cần màn thao tác riêng vì nó phụ thuộc vào tỷ trọng vốn và từng đợt chia lợi nhuận."
-        : "This flow will need a dedicated distribution action because it depends on capital weights and distribution runs.",
+        : "Choose who is paying the profit out, then review the recipients suggested from the current capital weights.",
   };
 }
 
@@ -627,6 +629,13 @@ export function LedgerEntryPlanner({
       ),
     [memberOptions]
   );
+  const defaultProfitDistributionShares = useMemo(() => {
+    const memberIds = memberOptions
+      .filter((member) => member.capitalBalance > 0)
+      .map((member) => member.id);
+
+    return buildCapitalAllocationShares(memberIds, capitalBalanceByMemberId);
+  }, [capitalBalanceByMemberId, memberOptions]);
   const allocationShareByMemberId = useMemo(
     () =>
       new Map(
@@ -677,16 +686,18 @@ export function LedgerEntryPlanner({
         )
       : computeAllocationAmountPreviews(currentAmount, selectedAllocationShareRows);
   const selectedTagNames = parseTagNames(watchedTagNamesText);
-  const liveSupported =
-    liveModeEnabled &&
-    (isEditMode
-      ? supportsLiveEdit(watchedEntryType)
-      : supportsLiveCreate(watchedEntryType));
   const entryTypeLocked =
     isEditMode && editingEntryType === "profit_distribution";
   const transferHelperCopy = memberTransferHelperCopy(watchedEntryType, locale);
   const currentEntryFamily = getEntryFamily(watchedEntryType);
-  const availableEntryTypes = getPlannerEntryTypesForFamily(currentEntryFamily);
+  const availableEntryTypes = getPlannerEntryTypesForFamily(
+    currentEntryFamily
+  ).filter(
+    (entryType) =>
+      !isEditMode ||
+      editingEntryType === "profit_distribution" ||
+      entryType !== "profit_distribution"
+  );
   const showCashInField =
     entryTypeNeedsCashIn(watchedEntryType) ||
     entryTypeNeedsSingleCashSide(watchedEntryType);
@@ -695,15 +706,57 @@ export function LedgerEntryPlanner({
     entryTypeNeedsSingleCashSide(watchedEntryType);
   const showCapitalOwnerField = entryTypeNeedsCapitalOwner(watchedEntryType);
   const showAllocationField = entryTypeNeedsAllocation(watchedEntryType);
+  const showProfitDistributionField = watchedEntryType === "profit_distribution";
   const pendingAllocationHelper =
     locale === "vi"
       ? "Pending member co the duoc chon o tat ca cac field lien quan den nguoi. Neu ho join sau, lich su van gan dung vao cung project member."
       : "Pending members can be selected in every person-related field now. If they join later, the history stays attached to the same project member.";
+  const profitRecipientsLabel =
+    locale === "vi" ? "Nguoi nhan loi nhuan" : "Profit recipients";
+  const profitRecipientsHint =
+    locale === "vi"
+      ? "He thong se de xuat danh sach nguoi nhan va so tien theo ty le von hien tai. Khi sua mot dot da post, app giu nguyen split da luu de lich su khong bi drift."
+      : "The app suggests recipients from the current capital weights. When you edit a posted run, it keeps the stored split so history does not drift.";
+  const profitRecipientsEmpty =
+    locale === "vi"
+      ? "Chua co thanh vien nao co von duong de nhan loi nhuan o ngay nay."
+      : "No member currently has positive capital for this distribution date.";
+  const profitRecipientsLockedHint =
+    locale === "vi"
+      ? "Split nguoi nhan cua dot da post nay duoc giu nguyen trong man sua."
+      : "This posted run keeps its stored recipient split while you edit the rest of the entry.";
   const formatPercent = (value: number) =>
     `${Number(value.toFixed(2)).toLocaleString(
       locale === "vi" ? "vi-VN" : "en-US",
       { maximumFractionDigits: 2 }
     )}%`;
+  const profitDistributionShareRows =
+    showProfitDistributionField &&
+    isEditMode &&
+    editingEntryType === "profit_distribution" &&
+    selectedAllocationShareRows.length > 0
+      ? selectedAllocationShareRows
+      : defaultProfitDistributionShares;
+  const profitDistributionAmountRows = computeAllocationAmountPreviews(
+    currentAmount,
+    profitDistributionShareRows
+  );
+  const profitDistributionWeightTotal = roundToTwoDecimals(
+    profitDistributionShareRows.reduce(
+      (sum, share) => sum + share.weightPercent,
+      0
+    )
+  );
+  const liveSupported =
+    liveModeEnabled &&
+    !(
+      showProfitDistributionField && profitDistributionShareRows.length === 0
+    ) &&
+    (showProfitDistributionField
+      ? true
+      : isEditMode
+        ? supportsLiveEdit(watchedEntryType)
+        : supportsLiveCreate(watchedEntryType));
 
   useEffect(() => {
     const hasSameCustomMembership =
@@ -816,9 +869,13 @@ export function LedgerEntryPlanner({
   function handleLiveSave(values: PlannerEntryValues) {
     startSavingLive(async () => {
       const result =
-        isEditMode && editingEntryId
-          ? await updateLedgerEntryAction(editingEntryId, values)
-          : await createLedgerEntryAction(values);
+        values.entryType === "profit_distribution"
+          ? isEditMode && editingEntryId
+            ? await updateProfitDistributionEntryAction(editingEntryId, values)
+            : await createProfitDistributionEntryAction(values)
+          : isEditMode && editingEntryId
+            ? await updateLedgerEntryAction(editingEntryId, values)
+            : await createLedgerEntryAction(values);
       setLiveState(result);
 
       if (result.status === "success" && result.redirectTo) {
@@ -1186,6 +1243,71 @@ export function LedgerEntryPlanner({
               </div>
             ) : null}
 
+            {showProfitDistributionField ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label>{profitRecipientsLabel}</Label>
+                  <p className="text-sm text-slate-500">{profitRecipientsHint}</p>
+                  <p className="text-sm text-slate-500">
+                    {pendingAllocationHelper}
+                  </p>
+                </div>
+                {entryTypeLocked ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    {profitRecipientsLockedHint}
+                  </div>
+                ) : null}
+                {profitDistributionAmountRows.length > 0 ? (
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Label className="text-sm font-medium text-slate-900">
+                        {profitRecipientsLabel}
+                      </Label>
+                      <Badge className="rounded-full bg-white text-slate-700">
+                        {copy.allocationRunningTotal}:{" "}
+                        {formatPercent(profitDistributionWeightTotal)}
+                      </Badge>
+                    </div>
+                    <div className="space-y-3">
+                      {profitDistributionAmountRows.map((row) => (
+                        <div
+                          key={row.projectMemberId}
+                          className="grid gap-3 rounded-2xl border border-white/70 bg-white px-4 py-4 sm:grid-cols-[minmax(0,1fr)_132px_160px] sm:items-center"
+                          >
+                            <div>
+                              <p className="font-medium text-slate-950">
+                                {labelById.get(row.projectMemberId) ??
+                                  row.projectMemberId}
+                              </p>
+                            </div>
+                          <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                              {copy.allocationPercent}
+                            </p>
+                            <p className="mt-2 font-medium text-slate-950">
+                              {formatPercent(row.weightPercent)}
+                            </p>
+                          </div>
+                          <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                              {copy.allocationAmount}
+                            </p>
+                            <p className="mt-2 font-medium text-slate-950">
+                              {formatCurrency(row.amount, currencyCode, locale)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    {profitRecipientsEmpty}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
             <div className="space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="tagNamesText">Tags</Label>
@@ -1429,6 +1551,46 @@ export function LedgerEntryPlanner({
                 )}
               </div>
             ) : null}
+            {showProfitDistributionField ? (
+              <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-slate-500">{profitRecipientsLabel}</p>
+                  {profitDistributionAmountRows.length > 0 ? (
+                    <Badge className="rounded-full bg-white text-slate-700">
+                      {copy.allocationRunningTotal}:{" "}
+                      {formatPercent(profitDistributionWeightTotal)}
+                    </Badge>
+                  ) : null}
+                </div>
+                {profitDistributionAmountRows.length > 0 ? (
+                  <div className="mt-3 space-y-3">
+                    {profitDistributionAmountRows.map((row) => (
+                      <div
+                        key={row.projectMemberId}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white px-4 py-3"
+                      >
+                        <div>
+                          <p className="font-medium text-slate-950">
+                            {labelById.get(row.projectMemberId) ??
+                              row.projectMemberId}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {formatPercent(row.weightPercent)}
+                          </p>
+                        </div>
+                        <p className="font-medium text-slate-950">
+                          {formatCurrency(row.amount, currencyCode, locale)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 font-medium text-amber-800">
+                    {profitRecipientsEmpty}
+                  </p>
+                )}
+              </div>
+            ) : null}
             <div className="rounded-2xl bg-slate-50 px-4 py-4">
               <p className="text-sm text-slate-500">{copy.tags}</p>
               <p className="mt-2 font-medium text-slate-950">
@@ -1452,7 +1614,15 @@ export function LedgerEntryPlanner({
               </div>
             ) : null}
             {liveModeEnabled &&
+            showProfitDistributionField &&
+            profitDistributionAmountRows.length === 0 ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
+                {profitRecipientsEmpty}
+              </div>
+            ) : null}
+            {liveModeEnabled &&
             !isEditMode &&
+            !showProfitDistributionField &&
             !supportsLiveCreate(watchedEntryType) ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
                 {copy.profitDistributionPreviewOnly}

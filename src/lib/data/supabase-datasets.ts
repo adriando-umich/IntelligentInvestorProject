@@ -104,7 +104,8 @@ type DbProfitDistributionRunRow = {
   as_of: string;
   distribution_date: string;
   total_amount: number | string;
-  cash_out_member_id: string;
+  cash_out_member_id: string | null;
+  cash_out_project_member_id: string | null;
   ledger_entry_id: string;
   created_by: string;
   created_at: string;
@@ -261,6 +262,7 @@ function mapProfitDistributionRun(
     distributionDate: row.distribution_date,
     totalAmount: toNumber(row.total_amount),
     cashOutMemberId: row.cash_out_member_id,
+    cashOutProjectMemberId: row.cash_out_project_member_id,
     ledgerEntryId: row.ledger_entry_id,
     createdBy: row.created_by,
     createdAt: row.created_at,

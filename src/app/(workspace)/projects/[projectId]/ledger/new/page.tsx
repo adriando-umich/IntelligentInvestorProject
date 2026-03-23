@@ -51,6 +51,8 @@ function buildEditInitialValues(
     entry.entryType === "operating_expense" ||
     entry.entryType === "shared_loan_interest_payment"
       ? "expense_share"
+      : entry.entryType === "profit_distribution"
+        ? "profit_share"
       : null;
 
   const capitalOwnerProjectMemberId =
@@ -185,7 +187,7 @@ export default async function NewLedgerEntryPage({
             : `Them giao dich cho ${snapshot.dataset.project.name}`,
           description: editState
             ? "Cap nhat giao dich da co. Khi luu, he thong se ghi de len transaction hien tai thay vi tao transaction moi."
-            : "Dung form nay de ghi von gop, tien vao co tag, giai ngan vay chung, tra goc vay chung, tra lai vay chung, chi phi van hanh, chuyen tien noi bo hoac thanh vien tra lai tien cho nhau. Trong workspace mau, form chi o che do preview; con du an live da dang nhap co the luu truc tiep cac loai giao dich duoc ho tro len Supabase.",
+            : "Dung form nay de ghi von gop, tien vao co tag, giai ngan vay chung, tra goc vay chung, tra lai vay chung, chi phi van hanh, chuyen tien noi bo, thanh vien tra lai tien cho nhau, hoac post mot dot chia loi nhuan. Trong workspace mau, form chi o che do preview; con du an live da dang nhap co the luu truc tiep cac loai giao dich duoc ho tro len Supabase.",
           helperTitle: "Can giup chon dung loai giao dich?",
           helperDescription:
             "Form nay giu tap trung vao viec nhap lieu. Mo huong dan neu ban chua chac nen ghi loai giao dich nao, hoac sang trang tag neu can don nhom bao cao truoc.",
@@ -199,7 +201,7 @@ export default async function NewLedgerEntryPage({
             : `Add a transaction for ${snapshot.dataset.project.name}`,
           description: editState
             ? "Update an existing ledger entry here. Saving will overwrite the current transaction instead of creating a duplicate."
-            : "Use this planner to record capital, tagged inflows, shared loan drawdowns, shared loan principal repayments, shared loan interest payments, operating expenses, project cash handovers, or member repayments. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase.",
+            : "Use this planner to record capital, tagged inflows, shared loan drawdowns, shared loan principal repayments, shared loan interest payments, operating expenses, project cash handovers, member repayments, or a posted profit distribution run. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase.",
           helperTitle: "Need help choosing the right transaction?",
           helperDescription:
             "Keep the planner focused here. Open the guide if you are unsure which transaction type to record, or jump to tag management before posting if the reporting labels need cleanup.",

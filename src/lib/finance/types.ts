@@ -277,7 +277,8 @@ export interface ProfitDistributionRun {
   asOf: string;
   distributionDate: string;
   totalAmount: number;
-  cashOutMemberId: string;
+  cashOutMemberId?: string | null;
+  cashOutProjectMemberId?: string | null;
   ledgerEntryId: string;
   createdBy: string;
   createdAt: string;
