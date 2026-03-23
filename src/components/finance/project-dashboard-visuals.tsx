@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import {
   Bar,
   BarChart,
@@ -26,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   getEntryFamilyLabel,
   getEntryFamily,
+  type MemberFinanceSummary,
 } from "@/lib/finance/types";
 import { useLocale } from "@/components/app/locale-provider";
 import {
@@ -36,6 +39,7 @@ import {
   roundMoney,
 } from "@/lib/format";
 import { type EntryFamily, type ProjectSnapshot } from "@/lib/finance/types";
+import { buildSharedExpenseSettlementView } from "@/lib/finance/shared-expense-settlements";
 
 const MEMBER_COLORS = [
   "#0f766e",
@@ -422,9 +426,15 @@ function CashCustodyChart({ snapshot }: { snapshot: ProjectSnapshot }) {
   );
 }
 
-function ReimbursementChart({ snapshot }: { snapshot: ProjectSnapshot }) {
+function ReimbursementChart({
+  memberSummaries,
+  snapshot,
+}: {
+  memberSummaries: MemberFinanceSummary[];
+  snapshot: ProjectSnapshot;
+}) {
   const { locale } = useLocale();
-  const rows = snapshot.memberSummaries
+  const rows = memberSummaries
     .map((summary) => ({
       member: summary.profile.displayName,
       owedToYou: summary.teamOwesYou,
@@ -929,8 +939,42 @@ function TagPieChart({
   );
 }
 
-export function ProjectOverviewVisuals({ snapshot }: { snapshot: ProjectSnapshot }) {
+export function ProjectOverviewVisuals({
+  snapshot,
+  memberSummaries,
+}: {
+  snapshot: ProjectSnapshot;
+  memberSummaries?: MemberFinanceSummary[];
+}) {
   const { locale } = useLocale();
+  const sharedExpenseSettlementView = useMemo(
+    () => buildSharedExpenseSettlementView(snapshot.dataset),
+    [snapshot.dataset]
+  );
+  const displayedMemberSummaries = useMemo(
+    () =>
+      (memberSummaries ?? snapshot.memberSummaries).map((summary) => {
+        const settlementBalance =
+          sharedExpenseSettlementView.balancesByProjectMemberId.get(
+            summary.projectMember.id
+          );
+
+        return settlementBalance
+          ? {
+              ...summary,
+              expenseReimbursementBalance:
+                settlementBalance.expenseReimbursementBalance,
+              teamOwesYou: settlementBalance.teamOwesYou,
+              youOweTeam: settlementBalance.youOweTeam,
+            }
+          : summary;
+      }),
+    [
+      memberSummaries,
+      sharedExpenseSettlementView.balancesByProjectMemberId,
+      snapshot.memberSummaries,
+    ]
+  );
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
@@ -973,7 +1017,10 @@ export function ProjectOverviewVisuals({ snapshot }: { snapshot: ProjectSnapshot
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ReimbursementChart snapshot={snapshot} />
+          <ReimbursementChart
+            memberSummaries={displayedMemberSummaries}
+            snapshot={snapshot}
+          />
         </CardContent>
       </Card>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
@@ -54,6 +54,7 @@ import {
   type EntryFamily,
   type ProjectSnapshot,
 } from "@/lib/finance/types";
+import { buildSharedExpenseSettlementView } from "@/lib/finance/shared-expense-settlements";
 import {
   formatCompactCurrency,
   formatCurrency,
@@ -93,6 +94,31 @@ export function ProjectDashboard({
   const [activityFamilyFilter, setActivityFamilyFilter] = useState<
     "all" | EntryFamily
   >("all");
+  const sharedExpenseSettlementView = useMemo(
+    () => buildSharedExpenseSettlementView(snapshot.dataset),
+    [snapshot.dataset]
+  );
+  const memberSummaries = useMemo(
+    () =>
+      snapshot.memberSummaries.map((summary) => {
+        const settlementBalance =
+          sharedExpenseSettlementView.balancesByProjectMemberId.get(
+            summary.projectMember.id
+          );
+
+        return settlementBalance
+          ? {
+              ...summary,
+              expenseReimbursementBalance:
+                settlementBalance.expenseReimbursementBalance,
+              teamOwesYou: settlementBalance.teamOwesYou,
+              youOweTeam: settlementBalance.youOweTeam,
+            }
+          : summary;
+      }),
+    [sharedExpenseSettlementView.balancesByProjectMemberId, snapshot.memberSummaries]
+  );
+  const settlementSuggestions = sharedExpenseSettlementView.settlementSuggestions;
   const copy =
     locale === "vi"
       ? {
@@ -399,9 +425,9 @@ export function ProjectDashboard({
           />
           <MetricCard
             title={copy.metricSettlementTitle}
-            value={`${snapshot.settlementSuggestions.length}`}
+            value={`${settlementSuggestions.length}`}
             description={copy.metricSettlementDescription}
-            tone={snapshot.settlementSuggestions.length > 0 ? "red" : "slate"}
+            tone={settlementSuggestions.length > 0 ? "red" : "slate"}
             icon={<ArrowLeftRight className="size-5" />}
           />
         </div>
@@ -421,7 +447,10 @@ export function ProjectDashboard({
         <Tabs value={activeView} className="gap-6">
 
           <TabsContent value="overview" className="space-y-6">
-            <ProjectOverviewVisuals snapshot={snapshot} />
+            <ProjectOverviewVisuals
+              snapshot={snapshot}
+              memberSummaries={memberSummaries}
+            />
 
             <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
               <CardHeader>
@@ -443,7 +472,7 @@ export function ProjectDashboard({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {snapshot.memberSummaries.map((summary) => (
+                    {memberSummaries.map((summary) => (
                       <TableRow key={summary.projectMember.id}>
                         <TableCell className="font-medium text-slate-950">
                           <Link
@@ -483,19 +512,19 @@ export function ProjectDashboard({
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {snapshot.settlementSuggestions.length === 0 ? (
+                    {settlementSuggestions.length === 0 ? (
                       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
                         {copy.settled}
                       </div>
                     ) : (
-                      snapshot.settlementSuggestions.map((suggestion) => (
+                      settlementSuggestions.map((suggestion) => (
                         <div
                           key={`${suggestion.fromProjectMemberId}-${suggestion.toProjectMemberId}`}
                           className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4"
                         >
                           <p className="font-medium text-slate-950">
-                            {snapshot.memberSummaries.find((item) => item.projectMember.id === suggestion.fromProjectMemberId)?.profile.displayName} {copy.pays}{" "}
-                            {snapshot.memberSummaries.find((item) => item.projectMember.id === suggestion.toProjectMemberId)?.profile.displayName}
+                            {memberSummaries.find((item) => item.projectMember.id === suggestion.fromProjectMemberId)?.profile.displayName} {copy.pays}{" "}
+                            {memberSummaries.find((item) => item.projectMember.id === suggestion.toProjectMemberId)?.profile.displayName}
                           </p>
                           <p className="mt-2 text-sm text-slate-600">
                             {formatCurrency(suggestion.amount, snapshot.dataset.project.currencyCode, locale)}
@@ -573,17 +602,17 @@ export function ProjectDashboard({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {snapshot.settlementSuggestions.length === 0 ? (
+                    {settlementSuggestions.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="py-8 text-center text-slate-500">
                           {copy.noOutstandingSettlements}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      snapshot.settlementSuggestions.map((suggestion) => (
+                      settlementSuggestions.map((suggestion) => (
                         <TableRow key={`${suggestion.fromProjectMemberId}-${suggestion.toProjectMemberId}-full`}>
-                          <TableCell>{snapshot.memberSummaries.find((item) => item.projectMember.id === suggestion.fromProjectMemberId)?.profile.displayName}</TableCell>
-                          <TableCell>{snapshot.memberSummaries.find((item) => item.projectMember.id === suggestion.toProjectMemberId)?.profile.displayName}</TableCell>
+                          <TableCell>{memberSummaries.find((item) => item.projectMember.id === suggestion.fromProjectMemberId)?.profile.displayName}</TableCell>
+                          <TableCell>{memberSummaries.find((item) => item.projectMember.id === suggestion.toProjectMemberId)?.profile.displayName}</TableCell>
                           <TableCell>{formatCurrency(suggestion.amount, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                           <TableCell className="text-right">
                             <Link

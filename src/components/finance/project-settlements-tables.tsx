@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { type ProjectSnapshot } from "@/lib/finance/types";
+import { buildSharedExpenseSettlementView } from "@/lib/finance/shared-expense-settlements";
 import { formatCurrency, formatSignedCurrency } from "@/lib/format";
 import { normalizeSearchText } from "@/lib/search";
 
@@ -31,6 +32,31 @@ export function ProjectSettlementsTables({
   const [settlementSort, setSettlementSort] = useState<
     "amount_desc" | "debtor_asc" | "creditor_asc"
   >("amount_desc");
+  const sharedExpenseSettlementView = useMemo(
+    () => buildSharedExpenseSettlementView(snapshot.dataset),
+    [snapshot.dataset]
+  );
+  const memberSummaries = useMemo(
+    () =>
+      snapshot.memberSummaries.map((summary) => {
+        const settlementBalance =
+          sharedExpenseSettlementView.balancesByProjectMemberId.get(
+            summary.projectMember.id
+          );
+
+        return settlementBalance
+          ? {
+              ...summary,
+              expenseReimbursementBalance:
+                settlementBalance.expenseReimbursementBalance,
+              teamOwesYou: settlementBalance.teamOwesYou,
+              youOweTeam: settlementBalance.youOweTeam,
+            }
+          : summary;
+      }),
+    [sharedExpenseSettlementView.balancesByProjectMemberId, snapshot.memberSummaries]
+  );
+  const settlementSuggestions = sharedExpenseSettlementView.settlementSuggestions;
 
   const copy =
     locale === "vi"
@@ -72,7 +98,7 @@ export function ProjectSettlementsTables({
   const displayedMembers = useMemo(() => {
     const normalizedSearch = normalizeSearchText(memberSearch);
 
-    return [...snapshot.memberSummaries]
+    return [...memberSummaries]
       .filter((summary) =>
         normalizedSearch
           ? normalizeSearchText(summary.profile.displayName).includes(
@@ -90,23 +116,23 @@ export function ProjectSettlementsTables({
           locale
         );
       });
-  }, [locale, memberSearch, memberSort, snapshot.memberSummaries]);
+  }, [locale, memberSearch, memberSort, memberSummaries]);
 
   const displayedSuggestions = useMemo(() => {
     const normalizedSearch = normalizeSearchText(settlementSearch);
 
-    return [...snapshot.settlementSuggestions]
+    return [...settlementSuggestions]
       .filter((suggestion) => {
         if (!normalizedSearch) {
           return true;
         }
 
         const debtorName =
-          snapshot.memberSummaries.find(
+          memberSummaries.find(
             (item) => item.projectMember.id === suggestion.fromProjectMemberId
           )?.profile.displayName ?? "";
         const creditorName =
-          snapshot.memberSummaries.find(
+          memberSummaries.find(
             (item) => item.projectMember.id === suggestion.toProjectMemberId
           )?.profile.displayName ?? "";
 
@@ -117,19 +143,19 @@ export function ProjectSettlementsTables({
       })
       .sort((left, right) => {
         const leftDebtor =
-          snapshot.memberSummaries.find(
+          memberSummaries.find(
             (item) => item.projectMember.id === left.fromProjectMemberId
           )?.profile.displayName ?? "";
         const rightDebtor =
-          snapshot.memberSummaries.find(
+          memberSummaries.find(
             (item) => item.projectMember.id === right.fromProjectMemberId
           )?.profile.displayName ?? "";
         const leftCreditor =
-          snapshot.memberSummaries.find(
+          memberSummaries.find(
             (item) => item.projectMember.id === left.toProjectMemberId
           )?.profile.displayName ?? "";
         const rightCreditor =
-          snapshot.memberSummaries.find(
+          memberSummaries.find(
             (item) => item.projectMember.id === right.toProjectMemberId
           )?.profile.displayName ?? "";
 
@@ -143,7 +169,7 @@ export function ProjectSettlementsTables({
 
         return right.amount - left.amount;
       });
-  }, [locale, settlementSearch, settlementSort, snapshot.memberSummaries, snapshot.settlementSuggestions]);
+  }, [locale, settlementSearch, settlementSort, memberSummaries, settlementSuggestions]);
 
   return (
     <div className="space-y-8">
@@ -285,10 +311,10 @@ export function ProjectSettlementsTables({
                 </TableRow>
               ) : (
                 displayedSuggestions.map((suggestion) => {
-                  const from = snapshot.memberSummaries.find(
+                  const from = memberSummaries.find(
                     (item) => item.projectMember.id === suggestion.fromProjectMemberId
                   );
-                  const to = snapshot.memberSummaries.find(
+                  const to = memberSummaries.find(
                     (item) => item.projectMember.id === suggestion.toProjectMemberId
                   );
                   return (
