@@ -7,6 +7,7 @@ import {
   BanknoteArrowDown,
   BanknoteArrowUp,
   CircleAlert,
+  FileSpreadsheet,
   HandCoins,
   Landmark,
   PiggyBank,
@@ -399,6 +400,7 @@ export function ProjectDashboard({
         };
   const settleClaimLabel = "Settle claim";
   const actionColumnLabel = locale === "vi" ? "Thao tac" : "Action";
+  const exportExcelLabel = locale === "vi" ? "Xuat Excel" : "Export Excel";
   return (
     <TooltipProvider>
       <div className="space-y-8">
@@ -420,6 +422,17 @@ export function ProjectDashboard({
             className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-2xl px-4")}
           >
             {copy.inviteMembers}
+          </Link>
+          <Link
+            href={`/projects/${snapshot.dataset.project.id}/export`}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "lg" }),
+              "rounded-2xl px-4"
+            )}
+            prefetch={false}
+          >
+            <FileSpreadsheet className="mr-2 size-4" />
+            {exportExcelLabel}
           </Link>
         </div>
 

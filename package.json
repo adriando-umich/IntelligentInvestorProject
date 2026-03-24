@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "verify:audit-workbook": "node scripts/verify-audit-workbook.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -16,6 +17,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "exceljs": "^4.4.0",
     "lucide-react": "^0.577.0",
     "next": "16.2.1",
     "react": "19.2.4",
@@ -24,7 +26,6 @@
     "react-hook-form": "^7.72.0",
     "recharts": "^3.8.0",
     "server-only": "^0.0.1",
-    "shadcn": "^4.1.0",
     "tailwind-merge": "^3.5.0",
     "tw-animate-css": "^1.4.0",
     "zod": "^4.3.6"
@@ -34,8 +35,6 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

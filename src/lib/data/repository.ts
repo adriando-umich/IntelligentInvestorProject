@@ -14,7 +14,7 @@ import {
   buildMemberStatement,
   buildProjectSnapshot,
 } from "@/lib/finance/engine";
-import { type ProjectSnapshot } from "@/lib/finance/types";
+import { type ProjectDataset, type ProjectSnapshot } from "@/lib/finance/types";
 
 export async function listProjectSnapshots() {
   noStore();
@@ -52,6 +52,18 @@ export async function getProjectSnapshot(projectId: string) {
 
   const dataset = demoProjectDatasets.find((item) => item.project.id === projectId);
   return dataset ? buildProjectSnapshot(dataset) : null;
+}
+
+export async function getProjectDataset(
+  projectId: string
+): Promise<ProjectDataset | null> {
+  noStore();
+
+  if (!(await shouldUseDemoData())) {
+    return getLiveProjectDataset(projectId);
+  }
+
+  return demoProjectDatasets.find((item) => item.project.id === projectId) ?? null;
 }
 
 export async function getMemberStatement(
