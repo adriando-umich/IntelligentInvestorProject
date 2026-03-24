@@ -41,6 +41,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -92,10 +93,6 @@ export function ProjectManagementMenu({
     initialState
   );
 
-  if (!canManageProject) {
-    return null;
-  }
-
   const copy =
     locale === "vi"
       ? {
@@ -112,6 +109,7 @@ export function ProjectManagementMenu({
           duplicateDescription:
             "Tao mot project moi tu metadata co ban cua project nay. Lich su ledger khong duoc copy sang ban moi.",
           duplicateSuffix: "Ban sao",
+          restrictedTitle: "Chi owner/manager moi duoc quan ly project nay.",
           archiveTitle: "An project nay?",
           archiveDescription:
             "Project se bien khoi danh sach active nhung van co the mo lai va restore sau.",
@@ -144,6 +142,7 @@ export function ProjectManagementMenu({
           duplicateDescription:
             "Create a new project from this project's basic metadata. Ledger history does not carry into the duplicate.",
           duplicateSuffix: "Copy",
+          restrictedTitle: "Only owners and managers can manage this project.",
           archiveTitle: "Hide this project?",
           archiveDescription:
             "The project will disappear from active lists, but it can still be opened and restored later.",
@@ -198,33 +197,60 @@ export function ProjectManagementMenu({
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuItem onClick={() => setRenameOpen(true)}>
-            <Pencil className="size-4" />
-            {copy.rename}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
-            <CopyPlus className="size-4" />
-            {copy.duplicate}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          {projectStatus !== "active" ? (
-            <DropdownMenuItem onClick={() => setArchiveOpen(true)}>
-              <RotateCcw className="size-4" />
-              {copy.restore}
-            </DropdownMenuItem>
+          {canManageProject ? (
+            <>
+              <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+                <Pencil className="size-4" />
+                {copy.rename}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                <CopyPlus className="size-4" />
+                {copy.duplicate}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {projectStatus !== "active" ? (
+                <DropdownMenuItem onClick={() => setArchiveOpen(true)}>
+                  <RotateCcw className="size-4" />
+                  {copy.restore}
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => setArchiveOpen(true)}>
+                  <Archive className="size-4" />
+                  {copy.archive}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="size-4" />
+                {copy.delete}
+              </DropdownMenuItem>
+            </>
           ) : (
-            <DropdownMenuItem onClick={() => setArchiveOpen(true)}>
-              <Archive className="size-4" />
-              {copy.archive}
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuLabel className="max-w-[220px] px-2 py-2 text-xs leading-5 text-slate-500">
+                {copy.restrictedTitle}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>
+                <Pencil className="size-4" />
+                {copy.rename}
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                <CopyPlus className="size-4" />
+                {copy.duplicate}
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                <Archive className="size-4" />
+                {copy.archive}
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled variant="destructive">
+                <Trash2 className="size-4" />
+                {copy.delete}
+              </DropdownMenuItem>
+            </>
           )}
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 className="size-4" />
-            {copy.delete}
-          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
