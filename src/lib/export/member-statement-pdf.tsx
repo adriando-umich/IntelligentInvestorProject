@@ -24,14 +24,17 @@ import {
   type ProjectSnapshot,
 } from "@/lib/finance/types";
 import {
-  formatCurrency,
+  formatCurrency as formatAppCurrency,
   formatDateLabel,
-  formatPercent,
-  formatSignedCurrency,
+  formatSignedCurrency as formatAppSignedCurrency,
   roundMoney,
 } from "@/lib/format";
 import { buildProjectCashClaimView } from "@/lib/finance/project-cash-claims";
-import { defaultAppLocale, type AppLocale } from "@/lib/i18n/config";
+import {
+  defaultAppLocale,
+  getIntlLocale,
+  type AppLocale,
+} from "@/lib/i18n/config";
 
 const PDF_FONT_FAMILY = "ProjectCurrentPdf";
 let fontRegistered = false;
@@ -315,6 +318,30 @@ type StatementLine = {
 
 function isDefined<T>(value: T | null | undefined): value is T {
   return value != null;
+}
+
+function formatCurrency(
+  amount: number,
+  currencyCode: string,
+  locale: AppLocale
+) {
+  return formatAppCurrency(Math.round(amount), currencyCode, locale);
+}
+
+function formatSignedCurrency(
+  amount: number,
+  currencyCode: string,
+  locale: AppLocale
+) {
+  return formatAppSignedCurrency(Math.round(amount), currencyCode, locale);
+}
+
+function formatPercent(decimal: number, locale: AppLocale) {
+  return new Intl.NumberFormat(getIntlLocale(locale), {
+    style: "percent",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(decimal);
 }
 
 function ensurePdfFont() {
