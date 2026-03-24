@@ -28,7 +28,9 @@ import {
   formatDateLabel,
   formatPercent,
   formatSignedCurrency,
+  roundMoney,
 } from "@/lib/format";
+import { buildProjectCashClaimView } from "@/lib/finance/project-cash-claims";
 import { defaultAppLocale, type AppLocale } from "@/lib/i18n/config";
 
 const PDF_FONT_FAMILY = "ProjectCurrentPdf";
@@ -61,20 +63,37 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 700,
-    marginBottom: 4,
+    lineHeight: 1.15,
+    marginBottom: 8,
   },
   subtitle: {
     color: "#475569",
-    marginBottom: 4,
+    marginBottom: 0,
   },
   metaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
     gap: 12,
-    marginTop: 6,
+    marginTop: 10,
+  },
+  metaStack: {
+    flexDirection: "column",
+    gap: 3,
+    flexGrow: 1,
+  },
+  metaRight: {
+    maxWidth: "38%",
+    alignItems: "flex-end",
   },
   metaText: {
     color: "#64748b",
+    lineHeight: 1.35,
+  },
+  emailText: {
+    color: "#475569",
+    textAlign: "right",
+    lineHeight: 1.35,
   },
   summaryGrid: {
     flexDirection: "row",
@@ -180,6 +199,90 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     marginBottom: 4,
   },
+  breakdownBox: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#dbe7e3",
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  breakdownIntro: {
+    color: "#64748b",
+    marginBottom: 8,
+  },
+  breakdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 3,
+  },
+  breakdownLabel: {
+    flex: 1,
+    color: "#475569",
+  },
+  breakdownValue: {
+    width: 160,
+    textAlign: "right",
+    color: "#0f172a",
+  },
+  breakdownTotalRow: {
+    borderTopWidth: 1,
+    borderTopColor: "#dbe7e3",
+    marginTop: 6,
+    paddingTop: 7,
+  },
+  breakdownTotalLabel: {
+    flex: 1,
+    fontWeight: 700,
+    color: "#0f172a",
+  },
+  breakdownTotalValue: {
+    width: 160,
+    textAlign: "right",
+    fontWeight: 700,
+    color: "#0f172a",
+  },
+  sectionSummary: {
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#dbe7e3",
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  sectionSummaryLabel: {
+    fontSize: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    color: "#64748b",
+    marginBottom: 3,
+  },
+  sectionSummaryValue: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#0f172a",
+    marginBottom: 3,
+  },
+  sectionSummaryHint: {
+    color: "#64748b",
+  },
+  tableDetailStack: {
+    flexDirection: "column",
+    gap: 4,
+  },
+  tablePrimaryText: {
+    fontSize: 8.5,
+    color: "#0f172a",
+    lineHeight: 1.35,
+  },
+  tableSecondaryText: {
+    fontSize: 8,
+    color: "#64748b",
+    lineHeight: 1.4,
+  },
   footer: {
     position: "absolute",
     bottom: 14,
@@ -204,6 +307,7 @@ type StatementLine = {
   date: string;
   type: string;
   description: string;
+  amount: number;
   amountText: string;
   secondary?: string;
   tertiary?: string;
@@ -330,6 +434,7 @@ function buildCapitalRows(
         date: formatDateLabel(entry.effectiveAt, locale),
         type: getEntryTypeLabel(entry.entryType, locale),
         description: entry.description,
+        amount: allocation.amount,
         amountText: formatCurrency(
           allocation.amount,
           entry.currencyCode,
@@ -389,6 +494,7 @@ function buildExpenseRows(
         date: formatDateLabel(entry.effectiveAt, locale),
         type: getEntryTypeLabel(entry.entryType, locale),
         description: entry.description,
+        amount: allocation.amount,
         amountText: formatCurrency(
           allocation.amount,
           entry.currencyCode,
@@ -443,6 +549,7 @@ function buildCashRows(
         date: formatDateLabel(entry.effectiveAt, locale),
         type: getEntryTypeLabel(entry.entryType, locale),
         description: entry.description,
+        amount: signedAmount,
         amountText: formatSignedCurrency(
           signedAmount,
           entry.currencyCode,
@@ -486,6 +593,7 @@ function buildProfitRows(
         date: formatDateLabel(entry.effectiveAt, locale),
         type: getEntryTypeLabel(entry.entryType, locale),
         description: entry.description,
+        amount: allocation.amount,
         amountText: formatCurrency(
           allocation.amount,
           entry.currencyCode,
@@ -514,6 +622,7 @@ function buildAppendixRows(
     date: formatDateLabel(entry.effectiveAt, locale),
     type: getEntryTypeLabel(entry.entryType, locale),
     description: entry.description,
+    amount: entry.amount,
     amountText: formatCurrency(entry.amount, entry.currencyCode, locale),
     secondary: [
       entry.cashInMemberId
@@ -547,6 +656,24 @@ function SummaryMetric({
       <Text style={styles.metricLabel}>{label}</Text>
       <Text style={styles.metricValue}>{value}</Text>
       <Text style={styles.metricHint}>{hint}</Text>
+    </View>
+  );
+}
+
+function SectionSummary({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <View style={styles.sectionSummary}>
+      <Text style={styles.sectionSummaryLabel}>{label}</Text>
+      <Text style={styles.sectionSummaryValue}>{value}</Text>
+      <Text style={styles.sectionSummaryHint}>{hint}</Text>
     </View>
   );
 }
@@ -593,9 +720,15 @@ function StatementTable({
               <Text style={styles.tableCell}>{row.type}</Text>
             </View>
             <View style={{ width: `${widths[2]}%` }}>
-              <Text style={styles.tableCell}>{row.description}</Text>
-              {row.secondary ? <Text style={styles.metricHint}>{row.secondary}</Text> : null}
-              {row.tertiary ? <Text style={styles.metricHint}>{row.tertiary}</Text> : null}
+              <View style={styles.tableDetailStack}>
+                <Text style={styles.tablePrimaryText}>{row.description}</Text>
+                {row.secondary ? (
+                  <Text style={styles.tableSecondaryText}>{row.secondary}</Text>
+                ) : null}
+                {row.tertiary ? (
+                  <Text style={styles.tableSecondaryText}>{row.tertiary}</Text>
+                ) : null}
+              </View>
             </View>
             <View style={{ width: `${widths[3]}%` }}>
               <Text style={[styles.tableCell, styles.amountCell]}>{row.amountText}</Text>
@@ -623,6 +756,25 @@ function MemberStatementDocument({
   const cashRows = buildCashRows(statement, locale);
   const profitRows = buildProfitRows(statement, dataset, locale);
   const appendixRows = buildAppendixRows(statement, locale);
+  const projectCashClaims = buildProjectCashClaimView(snapshot);
+  const claimRow =
+    projectCashClaims.rowsByProjectMemberId.get(statement.summary.projectMember.id) ??
+    null;
+  const totalAllocatedCost = roundMoney(
+    expenseRows.reduce((sum, row) => sum + row.amount, 0)
+  );
+  const openProfitStillSharedByCapital = roundMoney(
+    snapshot.memberSummaries.reduce(
+      (sum, summary) =>
+        sum + (summary.estimatedProfitShare - summary.accruedProfitBalance),
+      0
+    )
+  );
+  const capitalWeightedProfitPreview = roundMoney(
+    statement.summary.estimatedProfitShare - statement.summary.accruedProfitBalance
+  );
+  const currentPayableAmount = roundMoney(claimRow?.teamOwesYou ?? 0);
+  const memberHoldingAboveClaim = roundMoney(claimRow?.youOweTeam ?? 0);
 
   const copy =
     locale === "vi"
@@ -782,12 +934,37 @@ function MemberStatementDocument({
           expenseTitle: "Costs allocated to this member",
           expenseDescription:
             "Operating expenses and shared loan interest assigned to this member.",
+          expenseTotalLabel: "Total cost allocated",
+          expenseTotalHint:
+            "This is the full cost already assigned to this member below. It flows into the member's operating P&L share and reduces the final profit position.",
           cashTitle: "Cash movements touching this member",
           cashDescription:
             "Transactions where this member directly received or paid project cash.",
           profitTitle: "Profit activity for this member",
           profitDescription:
             "Profit distributions or owner-specific payouts received by this member.",
+          claimTitle: "How much the project should pay this member now",
+          claimIntro:
+            "This separates capital still invested, estimated profit today, and shared-expense reimbursement, then shows how much project cash is already sitting with this member.",
+          claimCapital: "Capital still invested",
+          claimProfit: "Estimated profit today",
+          claimReimbursement: "Shared-expense reimbursement balance",
+          claimCashHeld: "Project cash already sitting with this member",
+          claimReserve: "Reserve cash still kept inside the project",
+          claimPayable: "Project should pay now",
+          claimHeldAbove: "Member is already holding above today's claim",
+          claimHint:
+            "When the final amount is zero, this member's current claim is already sitting inside project cash they are holding.",
+          profitFormulaTitle: "How estimated profit today is calculated",
+          profitFormulaIntro:
+            "Current profit preview = profit already reserved for this member plus the member's capital-weighted share of the project profit pool that is still open today.",
+          profitOpenPool: "Project profit still open for capital-based sharing",
+          profitWeightLabel: "Current capital weight",
+          profitWeightedShare: "Current capital-weighted profit preview",
+          profitAccrued: "Profit already reserved to this member",
+          profitEstimated: "Estimated profit today",
+          profitFormulaHint:
+            "This is not the same as cash already paid out. It is the member's current profit position today.",
           appendixTitle: "Related transaction appendix",
           appendixDescription:
             "All posted entries where this member was a payer, receiver, or part of an allocation.",
@@ -815,6 +992,63 @@ function MemberStatementDocument({
           },
         };
 
+  const detailCopy =
+    locale === "vi"
+      ? {
+          expenseTotalLabel: "Tá»•ng chi phÃ­ Ä‘Æ°á»£c phÃ¢n bá»•",
+          expenseTotalHint:
+            "Tá»•ng cÃ¡c cost rows dÆ°á»›i Ä‘Ã¢y Ä‘Ã£ Ä‘Æ°á»£c gáº¯n cho member nÃ y. Sá»‘ nÃ y Ä‘i vÃ o operating P&L share vÃ  lÃ m giáº£m pháº§n lá»£i nhuáº­n cuá»‘i cÃ¹ng.",
+          claimTitle: "Sá»‘ tiá»n dá»± Ã¡n nÃªn tráº£ cho member nÃ y hÃ´m nay",
+          claimIntro:
+            "Khoáº£n nÃ y tÃ¡ch riÃªng capital cÃ²n trong dá»± Ã¡n, lá»£i nhuáº­n Æ°á»›c tÃ­nh hÃ´m nay, vÃ  cÃ¡c khoáº£n hoÃ n tráº£ chi phÃ­ chung. Sau Ä‘Ã³ trÃ¬nh bÃ y pháº§n project cash Ä‘Ã£ náº±m sáºµn á»Ÿ member nÃ y.",
+          claimCapital: "Capital cÃ²n Ä‘ang invest",
+          claimProfit: "Estimated profit hÃ´m nay",
+          claimReimbursement: "Sá»‘ dÆ° hoÃ n tráº£ chi phÃ­ chung",
+          claimCashHeld: "Project cash Ä‘Ã£ náº±m á»Ÿ member nÃ y",
+          claimReserve: "Reserve cash táº¡m giá»¯ láº¡i trong project",
+          claimPayable: "Project nÃªn tráº£ ngay",
+          claimHeldAbove: "Member Ä‘ang giá»¯ nhiá»u hÆ¡n claim hiá»‡n táº¡i",
+          claimHint:
+            "Náº¿u con sá»‘ cuá»‘i cÃ¹ng lÃ  0, nghÄ©a lÃ  claim hiá»‡n táº¡i Ä‘Ã£ náº±m sáºµn trong project cash member nÃ y Ä‘ang giá»¯.",
+          profitFormulaTitle: "Estimated profit hÃ´m nay Ä‘Æ°á»£c tÃ­nh nhÆ° tháº¿ nÃ o",
+          profitFormulaIntro:
+            "Preview lá»£i nhuáº­n hiá»‡n táº¡i = pháº§n lá»£i nhuáº­n Ä‘Ã£ dÃ nh riÃªng cho member nÃ y + pháº§n chia theo tá»· trá»ng vá»‘n hiá»‡n táº¡i trÃªn pool lá»£i nhuáº­n cÃ²n má»Ÿ.",
+          profitOpenPool: "Project profit cÃ²n má»Ÿ Ä‘á»ƒ chia theo vá»‘n",
+          profitWeightLabel: "Tá»· trá»ng vá»‘n hiá»‡n táº¡i",
+          profitWeightedShare: "Pháº§n preview theo tá»· trá»ng vá»‘n",
+          profitAccrued: "Lá»£i nhuáº­n Ä‘Ã£ dÃ nh riÃªng tá»« trÆ°á»›c",
+          profitEstimated: "Estimated profit today",
+          profitFormulaHint:
+            "Khoáº£n nÃ y chÆ°a cháº¯c Ä‘Ã£ tráº£ ra tiá»n máº·t. ÄÃ¢y lÃ  vá»‹ tháº¿ lá»£i nhuáº­n hiá»‡n táº¡i cá»§a member nÃ y.",
+        }
+      : {
+          expenseTotalLabel: "Total cost allocated",
+          expenseTotalHint:
+            "This is the full cost already assigned to this member below. It flows into the member's operating P&L share and reduces the final profit position.",
+          claimTitle: "How much the project should pay this member now",
+          claimIntro:
+            "This separates capital still invested, estimated profit today, and shared-expense reimbursement, then shows how much project cash is already sitting with this member.",
+          claimCapital: "Capital still invested",
+          claimProfit: "Estimated profit today",
+          claimReimbursement: "Shared-expense reimbursement balance",
+          claimCashHeld: "Project cash already sitting with this member",
+          claimReserve: "Reserve cash still kept inside the project",
+          claimPayable: "Project should pay now",
+          claimHeldAbove: "Member is already holding above today's claim",
+          claimHint:
+            "When the final amount is zero, this member's current claim is already sitting inside project cash they are holding.",
+          profitFormulaTitle: "How estimated profit today is calculated",
+          profitFormulaIntro:
+            "Current profit preview = profit already reserved for this member plus the member's capital-weighted share of the project profit pool that is still open today.",
+          profitOpenPool: "Project profit still open for capital-based sharing",
+          profitWeightLabel: "Current capital weight",
+          profitWeightedShare: "Current capital-weighted profit preview",
+          profitAccrued: "Profit already reserved to this member",
+          profitEstimated: "Estimated profit today",
+          profitFormulaHint:
+            "This is not the same as cash already paid out. It is the member's current profit position today.",
+        };
+
   return (
     <Document
       title={`${statement.summary.profile.displayName} member statement`}
@@ -827,16 +1061,20 @@ function MemberStatementDocument({
         <View style={styles.header}>
           <Text style={styles.eyebrow}>{copy.eyebrow}</Text>
           <Text style={styles.title}>{statement.summary.profile.displayName}</Text>
-          <Text style={styles.subtitle}>
-            {copy.project}: {statement.project.name}
-          </Text>
           <View style={styles.metaRow}>
-            <Text style={styles.metaText}>
-              {copy.generatedAt}: {format(generatedAt, "yyyy-MM-dd HH:mm")}
-            </Text>
-            <Text style={styles.metaText}>
-              {statement.summary.profile.email}
-            </Text>
+            <View style={styles.metaStack}>
+              <Text style={styles.subtitle}>
+                {copy.project}: {statement.project.name}
+              </Text>
+              <Text style={styles.metaText}>
+                {copy.generatedAt}: {format(generatedAt, "yyyy-MM-dd HH:mm")}
+              </Text>
+            </View>
+            <View style={styles.metaRight}>
+              <Text style={styles.emailText}>
+                {statement.summary.profile.email}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -849,6 +1087,84 @@ function MemberStatementDocument({
               hint={metric.hint}
             />
           ))}
+        </View>
+
+        <View style={styles.breakdownBox}>
+          <Text style={styles.noteTitle}>{detailCopy.claimTitle}</Text>
+          <Text style={styles.breakdownIntro}>{detailCopy.claimIntro}</Text>
+          <View style={styles.breakdownRow}>
+            <Text style={styles.breakdownLabel}>{detailCopy.claimCapital}</Text>
+            <Text style={styles.breakdownValue}>
+              {formatCurrency(
+                statement.summary.capitalBalance,
+                statement.project.currencyCode,
+                locale
+              )}
+            </Text>
+          </View>
+          <View style={styles.breakdownRow}>
+            <Text style={styles.breakdownLabel}>{detailCopy.claimProfit}</Text>
+            <Text style={styles.breakdownValue}>
+              {formatCurrency(
+                statement.summary.estimatedProfitShare,
+                statement.project.currencyCode,
+                locale
+              )}
+            </Text>
+          </View>
+          <View style={styles.breakdownRow}>
+            <Text style={styles.breakdownLabel}>
+              {detailCopy.claimReimbursement}
+            </Text>
+            <Text style={styles.breakdownValue}>
+              {formatSignedCurrency(
+                statement.summary.expenseReimbursementBalance,
+                statement.project.currencyCode,
+                locale
+              )}
+            </Text>
+          </View>
+          <View style={styles.breakdownRow}>
+            <Text style={styles.breakdownLabel}>{detailCopy.claimCashHeld}</Text>
+            <Text style={styles.breakdownValue}>
+              {formatSignedCurrency(
+                statement.summary.projectCashCustody,
+                statement.project.currencyCode,
+                locale
+              )}
+            </Text>
+          </View>
+          {claimRow && Math.abs(claimRow.reserveAllocation) > 0.009 ? (
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>{detailCopy.claimReserve}</Text>
+              <Text style={styles.breakdownValue}>
+                {formatSignedCurrency(
+                  -claimRow.reserveAllocation,
+                  statement.project.currencyCode,
+                  locale
+                )}
+              </Text>
+            </View>
+          ) : null}
+          <View style={[styles.breakdownRow, styles.breakdownTotalRow]}>
+            <Text style={styles.breakdownTotalLabel}>
+              {currentPayableAmount > 0
+                ? detailCopy.claimPayable
+                : detailCopy.claimHeldAbove}
+            </Text>
+            <Text style={styles.breakdownTotalValue}>
+              {formatCurrency(
+                currentPayableAmount > 0
+                  ? currentPayableAmount
+                  : memberHoldingAboveClaim,
+                statement.project.currencyCode,
+                locale
+              )}
+            </Text>
+          </View>
+          <Text style={[styles.metricHint, { marginTop: 6 }]}>
+            {detailCopy.claimHint}
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -870,6 +1186,15 @@ function MemberStatementDocument({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{copy.expenseTitle}</Text>
           <Text style={styles.sectionDescription}>{copy.expenseDescription}</Text>
+          <SectionSummary
+            label={detailCopy.expenseTotalLabel}
+            value={formatCurrency(
+              totalAllocatedCost,
+              statement.project.currencyCode,
+              locale
+            )}
+            hint={detailCopy.expenseTotalHint}
+          />
           <StatementTable
             headers={[
               copy.headers.date,
@@ -881,6 +1206,70 @@ function MemberStatementDocument({
             emptyLabel={copy.emptyExpense}
             widths={[16, 20, 44, 20]}
           />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{detailCopy.profitFormulaTitle}</Text>
+          <Text style={styles.sectionDescription}>
+            {detailCopy.profitFormulaIntro}
+          </Text>
+          <View style={styles.breakdownBox}>
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>{detailCopy.profitOpenPool}</Text>
+              <Text style={styles.breakdownValue}>
+                {formatCurrency(
+                  openProfitStillSharedByCapital,
+                  statement.project.currencyCode,
+                  locale
+                )}
+              </Text>
+            </View>
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>
+                {detailCopy.profitWeightLabel}
+              </Text>
+              <Text style={styles.breakdownValue}>
+                {formatPercent(capitalWeight, locale)}
+              </Text>
+            </View>
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>
+                {detailCopy.profitWeightedShare}
+              </Text>
+              <Text style={styles.breakdownValue}>
+                {formatCurrency(
+                  capitalWeightedProfitPreview,
+                  statement.project.currencyCode,
+                  locale
+                )}
+              </Text>
+            </View>
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>{detailCopy.profitAccrued}</Text>
+              <Text style={styles.breakdownValue}>
+                {formatCurrency(
+                  statement.summary.accruedProfitBalance,
+                  statement.project.currencyCode,
+                  locale
+                )}
+              </Text>
+            </View>
+            <View style={[styles.breakdownRow, styles.breakdownTotalRow]}>
+              <Text style={styles.breakdownTotalLabel}>
+                {detailCopy.profitEstimated}
+              </Text>
+              <Text style={styles.breakdownTotalValue}>
+                {formatCurrency(
+                  statement.summary.estimatedProfitShare,
+                  statement.project.currencyCode,
+                  locale
+                )}
+              </Text>
+            </View>
+            <Text style={[styles.metricHint, { marginTop: 6 }]}>
+              {detailCopy.profitFormulaHint}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.section}>

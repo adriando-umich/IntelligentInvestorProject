@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getSessionState } from "@/lib/auth/session";
-import { getProjectDataset } from "@/lib/data/repository";
-import { buildMemberStatement, buildProjectSnapshot } from "@/lib/finance/engine";
+import {
+  getMemberStatement,
+  getProjectSnapshot,
+} from "@/lib/data/repository";
 import { buildMemberStatementPdf } from "@/lib/export/member-statement-pdf";
 import { getServerI18n } from "@/lib/i18n/server";
 
@@ -33,25 +35,18 @@ export async function GET(
     return NextResponse.redirect(buildSignInRedirect(request, projectId, memberId));
   }
 
-  const [{ locale }, dataset] = await Promise.all([
+  const [{ locale }, statement, snapshot] = await Promise.all([
     getServerI18n(),
-    getProjectDataset(projectId),
+    getMemberStatement(projectId, memberId),
+    getProjectSnapshot(projectId),
   ]);
 
-  if (!dataset) {
+  if (!statement || !snapshot) {
     return new Response("Project not found.", { status: 404 });
   }
-
-  const statement = buildMemberStatement(dataset, memberId);
-
-  if (!statement) {
-    return new Response("Member not found.", { status: 404 });
-  }
-
-  const snapshot = buildProjectSnapshot(dataset);
   const { fileBuffer, fileName } = await buildMemberStatementPdf({
     statement,
-    dataset,
+    dataset: snapshot.dataset,
     snapshot,
     locale,
   });
