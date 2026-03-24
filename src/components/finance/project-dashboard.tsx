@@ -58,11 +58,52 @@ import {
 import { buildProjectCashClaimView } from "@/lib/finance/project-cash-claims";
 import { buildSharedExpenseSettlementView } from "@/lib/finance/shared-expense-settlements";
 import {
-  formatCompactCurrency,
-  formatCurrency,
-  formatPercent,
-  formatSignedCurrency,
+  formatCurrency as formatAppCurrency,
+  formatSignedCurrency as formatAppSignedCurrency,
 } from "@/lib/format";
+import {
+  defaultAppLocale,
+  getIntlLocale,
+  type AppLocale,
+} from "@/lib/i18n/config";
+
+function formatCurrency(
+  amount: number,
+  currencyCode?: string,
+  locale: AppLocale = defaultAppLocale
+) {
+  return formatAppCurrency(Math.round(amount), currencyCode, locale);
+}
+
+function formatSignedCurrency(
+  amount: number,
+  currencyCode?: string,
+  locale: AppLocale = defaultAppLocale
+) {
+  return formatAppSignedCurrency(Math.round(amount), currencyCode, locale);
+}
+
+function formatCompactCurrency(
+  amount: number,
+  currencyCode = "VND",
+  locale: AppLocale = defaultAppLocale
+) {
+  return new Intl.NumberFormat(getIntlLocale(locale), {
+    style: "currency",
+    currency: currencyCode,
+    notation: "compact",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount));
+}
+
+function formatPercent(decimal: number, locale: AppLocale = defaultAppLocale) {
+  return new Intl.NumberFormat(getIntlLocale(locale), {
+    style: "percent",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(decimal);
+}
 
 type DashboardView =
   | "overview"

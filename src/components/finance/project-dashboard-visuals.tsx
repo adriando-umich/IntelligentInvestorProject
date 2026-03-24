@@ -30,13 +30,54 @@ import {
 } from "@/lib/finance/types";
 import { useLocale } from "@/components/app/locale-provider";
 import {
-  formatCompactCurrency,
-  formatCurrency,
-  formatPercent,
-  formatSignedCurrency,
+  formatCurrency as formatAppCurrency,
+  formatSignedCurrency as formatAppSignedCurrency,
   roundMoney,
 } from "@/lib/format";
 import { type EntryFamily, type ProjectSnapshot } from "@/lib/finance/types";
+import {
+  defaultAppLocale,
+  getIntlLocale,
+  type AppLocale,
+} from "@/lib/i18n/config";
+
+function formatCurrency(
+  amount: number,
+  currencyCode?: string,
+  locale: AppLocale = defaultAppLocale
+) {
+  return formatAppCurrency(Math.round(amount), currencyCode, locale);
+}
+
+function formatSignedCurrency(
+  amount: number,
+  currencyCode?: string,
+  locale: AppLocale = defaultAppLocale
+) {
+  return formatAppSignedCurrency(Math.round(amount), currencyCode, locale);
+}
+
+function formatCompactCurrency(
+  amount: number,
+  currencyCode = "VND",
+  locale: AppLocale = defaultAppLocale
+) {
+  return new Intl.NumberFormat(getIntlLocale(locale), {
+    style: "currency",
+    currency: currencyCode,
+    notation: "compact",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount));
+}
+
+function formatPercent(decimal: number, locale: AppLocale = defaultAppLocale) {
+  return new Intl.NumberFormat(getIntlLocale(locale), {
+    style: "percent",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(decimal);
+}
 
 const MEMBER_COLORS = [
   "#0f766e",
