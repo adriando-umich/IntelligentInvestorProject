@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useMemo, useState, useTransition } from "react";
 import { Copy, Link2, Mail, ShieldCheck, Trash2, Users } from "lucide-react";
 
@@ -11,7 +12,7 @@ import {
 import { useLocale } from "@/components/app/locale-provider";
 import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { TableSurface, TableToolbar } from "@/components/finance/table-toolbar";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -183,6 +184,8 @@ export function ProjectMemberManager({
           expires: "Hết hạn",
           created: "Ngày tạo",
           action: "Thao tác",
+          statement: "Statement",
+          pdf: "PDF",
           reusableShareLink: "Link chia sẻ dùng lại được",
           revoke: "Thu hồi",
           member: "Thành viên",
@@ -245,6 +248,8 @@ export function ProjectMemberManager({
           expires: "Expires",
           created: "Created",
           action: "Action",
+          statement: "Statement",
+          pdf: "PDF",
           reusableShareLink: "Reusable share link",
           revoke: "Revoke",
           member: "Member",
@@ -479,13 +484,16 @@ export function ProjectMemberManager({
                   <TableHead className="w-[160px]">{copy.role}</TableHead>
                   <TableHead className="w-[160px]">{memberStatusLabel}</TableHead>
                   <TableHead className="w-[150px]">{copy.joined}</TableHead>
+                  <TableHead className="w-[220px] text-right">
+                    {locale === "vi" ? "Tài liệu" : "Documents"}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {displayedMembers.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className="py-10 text-center whitespace-normal text-slate-500"
                     >
                       {copy.noMembersMatch}
@@ -502,9 +510,12 @@ export function ProjectMemberManager({
                             size="sm"
                             className="after:hidden"
                           />
-                          <span className="font-medium text-slate-950">
+                          <Link
+                            href={`/projects/${projectId}/members/${member.id}`}
+                            className="font-medium text-slate-950 underline-offset-4 hover:text-teal-700 hover:underline"
+                          >
                             {member.displayName}
-                          </span>
+                          </Link>
                         </div>
                       </TableCell>
                       <TableCell className="text-slate-600">
@@ -517,6 +528,31 @@ export function ProjectMemberManager({
                         <MembershipBadge status={member.membershipStatus} />
                       </TableCell>
                       <TableCell>{formatDateLabel(member.joinedAt, locale)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Link
+                            href={`/projects/${projectId}/members/${member.id}`}
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "sm",
+                              className: "rounded-full",
+                            })}
+                          >
+                            {locale === "vi" ? "Xem statement" : "Statement"}
+                          </Link>
+                          <a
+                            href={`/projects/${projectId}/members/${member.id}/export`}
+                            download
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "sm",
+                              className: "rounded-full",
+                            })}
+                          >
+                            {locale === "vi" ? "Tải PDF" : "PDF"}
+                          </a>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}

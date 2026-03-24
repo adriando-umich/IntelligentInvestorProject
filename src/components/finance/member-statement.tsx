@@ -90,6 +90,13 @@ export function MemberStatement({
         >
           {locale === "vi" ? "Quay lại dự án" : "Back to project"}
         </Link>
+        <a
+          href={`/projects/${statement.project.id}/members/${statement.summary.projectMember.id}/export`}
+          download
+          className={cn(buttonVariants({ variant: "outline" }), "rounded-2xl")}
+        >
+          {locale === "vi" ? "Tải PDF" : "Export PDF"}
+        </a>
         <Link
           href={`/projects/${statement.project.id}/ledger/new`}
           className={cn(
