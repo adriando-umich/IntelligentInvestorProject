@@ -2,11 +2,7 @@ import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/app/page-header";
 import { ProjectDashboard } from "@/components/finance/project-dashboard";
-import { getProjectSnapshot, getViewerProfile } from "@/lib/data/repository";
-import {
-  canManageProjectRole,
-  getViewerProjectRole,
-} from "@/lib/projects/access";
+import { getProjectSnapshot } from "@/lib/data/repository";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -31,10 +27,7 @@ export default async function ProjectPage({
 }) {
   const { projectId } = await params;
   const { view } = await searchParams;
-  const [snapshot, viewer] = await Promise.all([
-    getProjectSnapshot(projectId),
-    getViewerProfile(),
-  ]);
+  const snapshot = await getProjectSnapshot(projectId);
 
   if (!snapshot) {
     notFound();
@@ -43,8 +36,6 @@ export default async function ProjectPage({
   const activeView = dashboardViews.includes((view ?? "overview") as DashboardView)
     ? ((view ?? "overview") as DashboardView)
     : "overview";
-  const viewerRole = getViewerProjectRole(snapshot.dataset, viewer?.userId);
-  const canManageProject = canManageProjectRole(viewerRole);
 
   return (
     <div className="space-y-8">
@@ -57,11 +48,7 @@ export default async function ProjectPage({
         }
         status={snapshot.dataset.project.status}
       />
-      <ProjectDashboard
-        snapshot={snapshot}
-        activeView={activeView}
-        canManageProject={canManageProject}
-      />
+      <ProjectDashboard snapshot={snapshot} activeView={activeView} />
     </div>
   );
 }

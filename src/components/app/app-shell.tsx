@@ -13,6 +13,7 @@ import {
 import { signOutAction } from "@/app/actions/auth";
 import { useLocale } from "@/components/app/locale-provider";
 import { ProfileAvatar } from "@/components/app/profile-avatar";
+import { ProjectManagementMenu } from "@/components/finance/project-management-menu";
 import { APP_NAME } from "@/lib/app-config";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,8 @@ type ProjectLink = {
   id: string;
   name: string;
   slug: string;
+  status: "active" | "archived" | "closed";
+  canManageProject: boolean;
 };
 
 function NavContent({
@@ -119,21 +122,33 @@ function NavContent({
             const active = pathname === href || pathname.startsWith(`${href}/`);
 
             return (
-              <Link
+              <div
                 key={project.id}
-                href={href}
                 className={cn(
-                  "block rounded-[1.4rem] border px-4 py-3 text-sm transition-all duration-200",
+                  "flex items-start gap-2 rounded-[1.4rem] border px-3 py-3 text-sm transition-all duration-200",
                   active
                     ? "border-emerald-200 bg-emerald-50/95 text-emerald-900 shadow-[0_20px_40px_-34px_rgba(16,185,129,0.8)]"
                     : "border-white/75 bg-white/75 text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-950"
                 )}
               >
-                <p className="font-medium">{project.name}</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400">
-                  {project.slug}
-                </p>
-              </Link>
+                <Link href={href} className="min-w-0 flex-1 px-1">
+                  <p className="truncate font-medium">{project.name}</p>
+                  <p className="mt-1 truncate text-xs uppercase tracking-[0.18em] text-slate-400">
+                    {project.slug}
+                  </p>
+                </Link>
+                <ProjectManagementMenu
+                  projectId={project.id}
+                  projectName={project.name}
+                  projectStatus={project.status}
+                  canManageProject={project.canManageProject}
+                  renameRedirectTo={href}
+                  archiveRedirectTo={active ? "/projects" : pathname}
+                  restoreRedirectTo={href}
+                  deleteRedirectTo={active ? "/projects" : pathname}
+                  triggerVariant="sidebar"
+                />
+              </div>
             );
           })}
         </div>

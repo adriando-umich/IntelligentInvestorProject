@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import {
   Archive,
   CopyPlus,
-  MoreHorizontal,
+  MoreVertical,
   Pencil,
   RotateCcw,
   Settings2,
@@ -68,7 +68,7 @@ export function ProjectManagementMenu({
   archiveRedirectTo: string;
   restoreRedirectTo: string;
   deleteRedirectTo: string;
-  triggerVariant?: "icon" | "button";
+  triggerVariant?: "icon" | "button" | "sidebar";
 }) {
   const { locale } = useLocale();
   const [renameOpen, setRenameOpen] = useState(false);
@@ -177,6 +177,12 @@ export function ProjectManagementMenu({
           render={
             triggerVariant === "button" ? (
               <Button variant="outline" size="lg" className="rounded-2xl px-4" />
+            ) : triggerVariant === "sidebar" ? (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="rounded-full text-slate-500 hover:bg-white/80 hover:text-slate-950"
+              />
             ) : (
               <Button variant="outline" size="icon-sm" />
             )
@@ -188,7 +194,7 @@ export function ProjectManagementMenu({
               {copy.trigger}
             </>
           ) : (
-            <MoreHorizontal className="size-4" />
+            <MoreVertical className="size-4" />
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
