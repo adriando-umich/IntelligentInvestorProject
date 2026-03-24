@@ -19,10 +19,11 @@ export default async function WorkspaceLayout({
     getProjectCards(),
     getViewerProfile(),
   ]);
+  const activeProjects = projects.filter((project) => project.status === "active");
 
   return (
     <AppShell
-      projects={projects}
+      projects={activeProjects}
       viewerName={viewer?.displayName ?? text.shell.defaultViewerName}
       viewerAvatarUrl={viewer?.avatarUrl}
       demoMode={session.demoMode}

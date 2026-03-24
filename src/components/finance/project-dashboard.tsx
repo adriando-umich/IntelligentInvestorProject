@@ -18,6 +18,7 @@ import {
 import { useLocale } from "@/components/app/locale-provider";
 import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { MetricCard } from "@/components/finance/metric-card";
+import { ProjectManagementMenu } from "@/components/finance/project-management-menu";
 import { ProjectTransactionsTable } from "@/components/finance/project-transactions-table";
 import {
   EntryFamilyReport,
@@ -88,9 +89,11 @@ function reconciliationTone(status: string) {
 export function ProjectDashboard({
   snapshot,
   activeView = "overview",
+  canManageProject = false,
 }: {
   snapshot: ProjectSnapshot;
   activeView?: DashboardView;
+  canManageProject?: boolean;
 }) {
   const { locale } = useLocale();
   const [activityFamilyFilter, setActivityFamilyFilter] = useState<
@@ -434,6 +437,17 @@ export function ProjectDashboard({
             <FileSpreadsheet className="mr-2 size-4" />
             {exportExcelLabel}
           </Link>
+          <ProjectManagementMenu
+            projectId={snapshot.dataset.project.id}
+            projectName={snapshot.dataset.project.name}
+            projectStatus={snapshot.dataset.project.status}
+            canManageProject={canManageProject}
+            renameRedirectTo={`/projects/${snapshot.dataset.project.id}`}
+            archiveRedirectTo="/projects"
+            restoreRedirectTo={`/projects/${snapshot.dataset.project.id}`}
+            deleteRedirectTo="/projects"
+            triggerVariant="button"
+          />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

@@ -15,6 +15,10 @@ import {
   buildProjectSnapshot,
 } from "@/lib/finance/engine";
 import { type ProjectDataset, type ProjectSnapshot } from "@/lib/finance/types";
+import {
+  canManageProjectRole,
+  getViewerProjectRole,
+} from "@/lib/projects/access";
 
 export async function listProjectSnapshots() {
   noStore();
@@ -101,11 +105,14 @@ export async function getViewerProfile() {
 export async function getProjectCards() {
   noStore();
 
+  const viewer = await getViewerProfile();
   const projects = await listProjectSnapshots();
-  return projects.map((snapshot) => toProjectCard(snapshot));
+  return projects.map((snapshot) => toProjectCard(snapshot, viewer?.userId));
 }
 
-function toProjectCard(snapshot: ProjectSnapshot) {
+function toProjectCard(snapshot: ProjectSnapshot, viewerUserId?: string) {
+  const viewerRole = getViewerProjectRole(snapshot.dataset, viewerUserId);
+
   return {
     id: snapshot.dataset.project.id,
     name: snapshot.dataset.project.name,
@@ -119,5 +126,7 @@ function toProjectCard(snapshot: ProjectSnapshot) {
     openSettlementCount: snapshot.settlementSuggestions.length,
     hasReconciliationVariance:
       (snapshot.openReconciliation?.varianceCount ?? 0) > 0,
+    viewerRole,
+    canManageProject: canManageProjectRole(viewerRole),
   };
 }
