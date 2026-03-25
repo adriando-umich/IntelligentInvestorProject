@@ -299,6 +299,7 @@ export function ProjectDashboard({
             "Chỉ thành viên có vốn dương mới tham gia phần preview lợi nhuận. Sau khi làm tròn, phần lẻ được cộng vào người có vốn lớn nhất.",
           capitalInvested: "Vốn đã góp",
           profitWeight: "Tỷ trọng lợi nhuận",
+          totalCapitalAndProfit: "Tổng vốn và lãi",
           openReconciliationRunTitle: "Đợt đối chiếu đang mở",
           openReconciliationRunDescription:
             "Phần này so sánh số tiền dự án hệ thống kỳ vọng với số tiền từng thành viên báo cáo là họ thực sự đang giữ.",
@@ -410,6 +411,7 @@ export function ProjectDashboard({
             "Only members with positive capital participate in profit preview. The remainder is assigned to the largest capital holder after rounding.",
           capitalInvested: "Capital invested",
           profitWeight: "Profit weight",
+          totalCapitalAndProfit: "Total capital and profit",
           openReconciliationRunTitle: "Open reconciliation run",
           openReconciliationRunDescription:
             "This compares the app's expected project cash per member with what that member reports they actually hold.",
@@ -870,6 +872,7 @@ export function ProjectDashboard({
                           <TableHead>{copy.capitalInvested}</TableHead>
                           <TableHead>{copy.profitWeight}</TableHead>
                           <TableHead>{copy.estimatedProfitToday}</TableHead>
+                          <TableHead>{copy.totalCapitalAndProfit}</TableHead>
                           <TableHead className="text-right">{actionColumnLabel}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -880,6 +883,13 @@ export function ProjectDashboard({
                             <TableCell>{formatCurrency(row.capitalBalance, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                             <TableCell>{formatPercent(row.weight, locale)}</TableCell>
                             <TableCell>{formatCurrency(row.estimatedProfitShare, snapshot.dataset.project.currencyCode, locale)}</TableCell>
+                            <TableCell>
+                              {formatCurrency(
+                                row.capitalBalance + row.estimatedProfitShare,
+                                snapshot.dataset.project.currencyCode,
+                                locale
+                              )}
+                            </TableCell>
                             <TableCell className="text-right">
                               <Link
                                 href={`/projects/${snapshot.dataset.project.id}/ledger/new?workflow=settle_claim&memberId=${row.projectMemberId}`}
