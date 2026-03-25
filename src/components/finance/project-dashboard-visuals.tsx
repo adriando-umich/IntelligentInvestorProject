@@ -760,15 +760,13 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
     );
   }
 
-  function renderTotalLabel(props: any) {
-    const { x = 0, y = 0, width = 0, value, payload, dataKey } = props;
+  function renderCapitalTotalLabel(props: any) {
+    const { x = 0, y = 0, width = 0, value, payload } = props;
     const capitalValue = Number(payload?.capital ?? 0);
     const profitValue = Number(payload?.profit ?? 0);
-    const totalValue = Number(payload?.total ?? value ?? 0);
-    const shouldRenderOnCapital = dataKey === "capital" && profitValue <= 0;
-    const shouldRenderOnProfit = dataKey === "profit" && profitValue > 0;
+    const labelValue = Number(value ?? capitalValue);
 
-    if (!shouldRenderOnCapital && !shouldRenderOnProfit) {
+    if (profitValue > 0) {
       return null;
     }
 
@@ -780,7 +778,32 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
         className="fill-slate-500 text-[11px] font-medium"
       >
         {formatCompactCurrency(
-          shouldRenderOnProfit ? totalValue : capitalValue,
+          labelValue,
+          snapshot.dataset.project.currencyCode,
+          locale
+        )}
+      </text>
+    );
+  }
+
+  function renderProfitTotalLabel(props: any) {
+    const { x = 0, y = 0, width = 0, payload } = props;
+    const profitValue = Number(payload?.profit ?? 0);
+    const totalValue = Number(payload?.total ?? 0);
+
+    if (profitValue <= 0) {
+      return null;
+    }
+
+    return (
+      <text
+        x={Number(x) + Number(width) / 2}
+        y={Number(y) - 10}
+        textAnchor="middle"
+        className="fill-slate-500 text-[11px] font-medium"
+      >
+        {formatCompactCurrency(
+          totalValue,
           snapshot.dataset.project.currencyCode,
           locale
         )}
@@ -822,7 +845,7 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
               fill="#0f766e"
               radius={[8, 8, 0, 0]}
             >
-              <LabelList dataKey="capital" content={renderTotalLabel} />
+              <LabelList dataKey="capital" content={renderCapitalTotalLabel} />
             </Bar>
             <Bar
               dataKey="profit"
@@ -835,7 +858,7 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
               fill="#14b8a6"
               radius={[8, 8, 0, 0]}
             >
-              <LabelList dataKey="profit" content={renderTotalLabel} />
+              <LabelList dataKey="profit" content={renderProfitTotalLabel} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
