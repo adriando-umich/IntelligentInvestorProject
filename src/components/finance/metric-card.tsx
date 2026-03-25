@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type KeyboardEvent, type ReactNode } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -17,15 +17,43 @@ export function MetricCard({
   description,
   tone = "slate",
   icon,
+  onClick,
+  active = false,
 }: {
   title: string;
   value: string;
   description: string;
   tone?: keyof typeof toneStyles;
   icon?: ReactNode;
+  onClick?: () => void;
+  active?: boolean;
 }) {
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (!onClick) {
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onClick();
+    }
+  }
+
   return (
-    <Card className="border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.9))] shadow-[0_24px_70px_-48px_rgba(15,23,42,0.24)]">
+    <Card
+      className={cn(
+        "border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.9))] shadow-[0_24px_70px_-48px_rgba(15,23,42,0.24)]",
+        onClick
+          ? "cursor-pointer transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_28px_76px_-44px_rgba(16,185,129,0.24)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100"
+          : null,
+        active ? "border-emerald-300 ring-2 ring-emerald-100" : null
+      )}
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-pressed={onClick ? active : undefined}
+    >
       <CardHeader className="gap-3 space-y-0 pb-3">
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="text-sm font-medium text-slate-600">

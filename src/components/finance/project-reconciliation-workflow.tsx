@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { CheckCircle2, ClipboardCheck, ShieldCheck, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -14,7 +14,10 @@ import {
 } from "@/app/actions/reconciliation";
 import { useLocale } from "@/components/app/locale-provider";
 import { MetricCard } from "@/components/finance/metric-card";
-import { ProjectReconciliationTable } from "@/components/finance/project-reconciliation-table";
+import {
+  ProjectReconciliationTable,
+  type ReconciliationStatusFilter,
+} from "@/components/finance/project-reconciliation-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,18 +39,10 @@ import {
 import { formatDateLabel, formatSignedCurrency } from "@/lib/format";
 
 function statusTone(status: string) {
-  if (status === "matched") {
-    return "bg-emerald-100 text-emerald-800";
-  }
-  if (status === "variance_found") {
-    return "bg-rose-100 text-rose-800";
-  }
-  if (status === "pending") {
-    return "bg-amber-100 text-amber-800";
-  }
-  if (status === "accepted") {
-    return "bg-sky-100 text-sky-800";
-  }
+  if (status === "matched") return "bg-emerald-100 text-emerald-800";
+  if (status === "variance_found") return "bg-rose-100 text-rose-800";
+  if (status === "pending") return "bg-amber-100 text-amber-800";
+  if (status === "accepted") return "bg-sky-100 text-sky-800";
   return "bg-slate-100 text-slate-700";
 }
 
@@ -58,28 +53,214 @@ type WorkflowProps = {
   liveModeEnabled: boolean;
 };
 
+type Copy = ReturnType<typeof getCopy>;
+
 type OwnCheckCardProps = {
   viewerCheck: ReconciliationCheckView;
   currencyCode: string;
   locale: "en" | "vi";
   liveModeEnabled: boolean;
   isPending: boolean;
-  copy: {
-    yourCheckTitle: string;
-    yourCheckDescription: string;
-    expectedCash: string;
-    yourReportedCash: string;
-    yourStatus: string;
-    yourNote: string;
-    yourNotePlaceholder: string;
-    submitCheck: string;
-    updateCheck: string;
-    memberReported: string;
-  };
+  submittedByLabel: string;
+  copy: Copy;
   onSubmit: (reportedProjectCash: string, memberNote: string) => void;
 };
 
 const idleState: ReconciliationActionState = { status: "idle" };
+
+function getCopy(locale: "en" | "vi") {
+  if (locale === "vi") {
+    return {
+      flowTitle: "Quy trinh doi chieu",
+      flowDescription:
+        "Doi chieu giup team xac nhan so tien du an dang nam voi tung nguoi, roi giai quyet ro rang moi chenh lech truoc khi dong ky.",
+      flowSteps: [
+        "1. Manager mo mot reconciliation run voi ngay chot cu the.",
+        "2. Moi thanh vien xac nhan so tien du an thuc te ho dang giu. So am duoc phep neu ho da ung tien rieng cho du an.",
+        "3. Neu co chenh lech, manager co the chap nhan giai thich hoac post adjustment vao ledger.",
+        "4. Khi khong con dong pending hay variance chua xu ly, manager dong run.",
+      ],
+      matched: "Khop",
+      pending: "Dang cho",
+      variance: "Co chenh lech",
+      openRunTitle: "Mo reconciliation run moi",
+      openRunDescription:
+        "Chup lai expected project cash cua tung thanh vien tai mot ngay chot, sau do de moi nguoi xac nhan so tien ho thuc su dang giu.",
+      asOfDate: "Ngay chot",
+      openNoteLabel: "Ghi chu run (khong bat buoc)",
+      openNotePlaceholder:
+        "Vi du: Chot sau dot nhan coc dau tien va truoc khi thanh toan nha thau.",
+      openRunButton: "Mo reconciliation run",
+      waitingTitle: "Chua co reconciliation run dang mo",
+      waitingDescription:
+        "Khi owner hoac manager mo run, ban se thay dong cua minh de xac nhan so tien du an dang giu.",
+      demoDisabled: "Workspace mau chi de xem flow. Hay vao project live de chay reconciliation that.",
+      yourCheckTitle: "Xac nhan so tien du an ban dang giu",
+      yourCheckDescription:
+        "Nhap so tien du an thuc te dang nam trong tai khoan hoac tien mat cua ban. Neu ban dang ung tien rieng cho du an, co the nhap so am.",
+      expectedCash: "Theo he thong",
+      yourReportedCash: "Ban dang giu thuc te",
+      yourStatus: "Trang thai hien tai",
+      submittedBy: "Nguoi gui",
+      yourNote: "Ghi chu cua ban",
+      yourNotePlaceholder:
+        "Giai thich ngan neu co chenh lech, vi du vua ung them tien hoac chua kip ghi giao dich.",
+      submitCheck: "Gui so lieu cua toi",
+      updateCheck: "Cap nhat so lieu cua toi",
+      memberReported: "Member bao cao",
+      unresolvedTitle: "Manager review cho variance rows",
+      unresolvedDescription:
+        "Cac dong nay da duoc member bao so nhung van lech voi ledger hien tai. Manager can chap nhan giai thich hoac post adjustment.",
+      pendingMembersTitle: "Members still waiting to report",
+      pendingMembersDescription:
+        "Nhung nguoi nay van chua xac nhan so tien du an ho dang giu. Ban co the nhac ho hoac gui ho de dong reconciliation nhanh hon.",
+      noPendingMembers: "Khong con thanh vien nao dang pending.",
+      resolvePending: "Giai quyet",
+      resolvePendingTitle: "Nhap so cho thanh vien nay",
+      resolvePendingDescription:
+        "Owner hoac manager co the gui check ho cho thanh vien sau khi xac nhan so tien thuc te ho dang giu.",
+      resolveReportedCash: "So tien du an thuc te",
+      resolveMemberNote: "Ghi chu gui ho",
+      resolveMemberNotePlaceholder:
+        "Vi du: Da xac nhan qua dien thoai va manager gui ho de dong ky doi chieu.",
+      submitForMember: "Gui ho thanh vien",
+      cancelResolve: "Huy",
+      reviewNote: "Ghi chu review",
+      reviewNotePlaceholder:
+        "Vi du: Chap nhan vi member vua tam ung tien ca nhan va se hach toan vao cuoi ngay.",
+      memberNoteLabel: "Ghi chu member",
+      noMemberNote: "Member chua de lai ghi chu.",
+      acceptVariance: "Chap nhan giai thich",
+      postAdjustment: "Post adjustment",
+      closeRunTitle: "Dong reconciliation run",
+      closeRunDescription:
+        "Chi nen dong khi moi dong da o trang thai matched, accepted, hoac adjustment posted.",
+      unresolvedCountLabel: "Dong con phai xu ly",
+      closeNoteLabel: "Ghi chu dong run (khong bat buoc)",
+      closeNotePlaceholder:
+        "Vi du: Tat ca chenh lech ngay 24/03 da duoc xu ly xong.",
+      closeRunButton: "Dong reconciliation run",
+      closeBlocked: "Hay xu ly het cac dong pending hoac variance truoc khi dong.",
+      noRunYet: "Project nay hien khong co reconciliation run dang mo.",
+      openedAt: "Mo luc",
+      cutoffAt: "Ngay chot",
+      actionFeedbackError: "Khong the hoan tat thao tac nay.",
+      openRunWaiting: "Day la reconciliation run ma team dang lam viec.",
+      tableTitle: "Tat ca cac dong doi chieu",
+      tableDescription:
+        "Tim nhanh theo member, trang thai, hoac ghi chu de ra soat toan bo reconciliation run.",
+      noVarianceManager: "Khong con variance row nao dang cho manager review.",
+    };
+  }
+
+  return {
+    flowTitle: "How reconciliation works",
+    flowDescription:
+      "Reconciliation helps the team confirm how much project cash is actually sitting with each person, then resolve any mismatch before closing the run.",
+    flowSteps: [
+      "1. A manager opens a reconciliation run with one cutoff date.",
+      "2. Each member confirms the net project cash they are actually holding. Negative is allowed if they fronted personal money.",
+      "3. If there is a mismatch, a manager accepts the explanation or posts an adjustment to the ledger.",
+      "4. Once there are no pending or unresolved variance rows left, the manager closes the run.",
+    ],
+    matched: "Matched",
+    pending: "Pending",
+    variance: "Variance found",
+    openRunTitle: "Open a new reconciliation run",
+    openRunDescription:
+      "Take a snapshot of each member's expected project cash at one cutoff date, then let the team confirm what they actually hold.",
+    asOfDate: "Cutoff date",
+    openNoteLabel: "Run note (optional)",
+    openNotePlaceholder:
+      "Example: Check balances after the first buyer deposit and before contractor payout.",
+    openRunButton: "Open reconciliation run",
+    waitingTitle: "No open reconciliation run yet",
+    waitingDescription:
+      "Once an owner or manager opens a run, you will see your own check here and can confirm the project cash you actually hold.",
+    demoDisabled: "The sample workspace is view-only. Use a live project to run real reconciliation.",
+    yourCheckTitle: "Confirm the project cash you actually hold",
+    yourCheckDescription:
+      "Enter the real project cash currently sitting in your bank or cash. If you have fronted your own money for the project, you can enter a negative number.",
+    expectedCash: "Expected by the app",
+    yourReportedCash: "What you actually hold",
+    yourStatus: "Current status",
+    submittedBy: "Submitted by",
+    yourNote: "Your note",
+    yourNotePlaceholder:
+      "Optional short explanation, for example you fronted extra money or one transaction has not been recorded yet.",
+    submitCheck: "Submit my check",
+    updateCheck: "Update my check",
+    memberReported: "Member reported",
+    unresolvedTitle: "Manager review for variance rows",
+    unresolvedDescription:
+      "These members already submitted their numbers, but they still differ from the current ledger. A manager now needs to accept the explanation or post an adjustment.",
+    pendingMembersTitle: "Members still waiting to report",
+    pendingMembersDescription:
+      "These people have not submitted their project-cash check yet. You can remind them or resolve the row on their behalf.",
+    noPendingMembers: "No members are still pending.",
+    resolvePending: "Resolve",
+    resolvePendingTitle: "Submit a check on behalf of this member",
+    resolvePendingDescription:
+      "An owner or manager can resolve a waiting row by entering the member's confirmed project cash and a short note.",
+    resolveReportedCash: "Reported project cash",
+    resolveMemberNote: "Submission note",
+    resolveMemberNotePlaceholder:
+      "Example: Confirmed by phone and submitted on behalf of the member before closing the run.",
+    submitForMember: "Submit for member",
+    cancelResolve: "Cancel",
+    reviewNote: "Review note",
+    reviewNotePlaceholder:
+      "Example: Accepted because the member fronted cash and the ledger will be updated later today.",
+    memberNoteLabel: "Member note",
+    noMemberNote: "No member note yet.",
+    acceptVariance: "Accept explanation",
+    postAdjustment: "Post adjustment",
+    closeRunTitle: "Close this reconciliation run",
+    closeRunDescription:
+      "Close only after every row is matched, accepted, or adjusted.",
+    unresolvedCountLabel: "Rows still unresolved",
+    closeNoteLabel: "Closing note (optional)",
+    closeNotePlaceholder:
+      "Example: All March 24 reconciliation differences were resolved.",
+    closeRunButton: "Close reconciliation run",
+    closeBlocked: "Resolve every pending or variance row before closing the run.",
+    noRunYet: "This project has no open reconciliation run right now.",
+    openedAt: "Opened",
+    cutoffAt: "Cutoff",
+    actionFeedbackError: "Unable to complete this action.",
+    openRunWaiting: "This is the reconciliation run the team is currently working through.",
+    tableTitle: "All reconciliation rows",
+    tableDescription:
+      "Search by member, status, or notes to review the entire reconciliation run.",
+    noVarianceManager: "There are no variance rows waiting for manager review.",
+  };
+}
+
+function getSubmittedByLabel(
+  checkView: ReconciliationCheckView,
+  locale: "en" | "vi",
+  profilesById: Map<string, { displayName: string }>
+) {
+  if (!checkView.check.submittedAt) {
+    return locale === "vi" ? "Chua gui" : "Not submitted yet";
+  }
+
+  const submittedByName =
+    (checkView.check.submittedBy
+      ? profilesById.get(checkView.check.submittedBy)?.displayName
+      : null) ?? (locale === "vi" ? "Da gui" : "Submitted");
+
+  if (
+    checkView.check.submittedBy &&
+    checkView.check.submittedBy !== checkView.profile.userId
+  ) {
+    return locale === "vi"
+      ? `${submittedByName} (gui ho)`
+      : `${submittedByName} (on behalf)`;
+  }
+
+  return submittedByName;
+}
 
 function OwnCheckCard({
   viewerCheck,
@@ -87,6 +268,7 @@ function OwnCheckCard({
   locale,
   liveModeEnabled,
   isPending,
+  submittedByLabel,
   copy,
   onSubmit,
 }: OwnCheckCardProps) {
@@ -103,7 +285,7 @@ function OwnCheckCard({
         <CardDescription>{copy.yourCheckDescription}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
             <p className="text-sm text-slate-500">{copy.expectedCash}</p>
             <p className="mt-2 text-lg font-semibold text-slate-950">
@@ -127,13 +309,19 @@ function OwnCheckCard({
             <p className="mt-2 text-lg font-semibold text-slate-950">
               {viewerCheck.check.reportedProjectCash == null
                 ? locale === "vi"
-                  ? "Chưa gửi"
+                  ? "Chua gui"
                   : "Not submitted yet"
                 : formatSignedCurrency(
                     viewerCheck.check.reportedProjectCash,
                     currencyCode,
                     locale
                   )}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+            <p className="text-sm text-slate-500">{copy.submittedBy}</p>
+            <p className="mt-2 text-base font-semibold text-slate-950">
+              {submittedByLabel}
             </p>
           </div>
         </div>
@@ -180,19 +368,39 @@ export function ProjectReconciliationWorkflow({
 }: WorkflowProps) {
   const { locale } = useLocale();
   const router = useRouter();
+  const copy = getCopy(locale);
   const [actionState, setActionState] = useState<ReconciliationActionState>(idleState);
   const [isPending, startTransition] = useTransition();
+  const pendingSectionRef = useRef<HTMLDivElement | null>(null);
+  const varianceSectionRef = useRef<HTMLDivElement | null>(null);
+  const tableSectionRef = useRef<HTMLDivElement | null>(null);
   const [openAsOf, setOpenAsOf] = useState(() =>
     new Date().toISOString().slice(0, 10)
   );
   const [openNote, setOpenNote] = useState("");
   const [closeNote, setCloseNote] = useState("");
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [tableStatusFilter, setTableStatusFilter] =
+    useState<ReconciliationStatusFilter>("all");
+  const [resolveCheckId, setResolveCheckId] = useState<string | null>(null);
+  const [resolveReportedProjectCash, setResolveReportedProjectCash] = useState("");
+  const [resolveMemberNote, setResolveMemberNote] = useState("");
 
   const run = snapshot.openReconciliation;
   const viewerCheck =
     run?.checks.find((item) => item.member.id === viewerProjectMemberId) ?? null;
   const canManage = viewerRole === "owner" || viewerRole === "manager";
+  const profilesById = useMemo(
+    () =>
+      new Map(
+        snapshot.dataset.profiles.map((profile) => [
+          profile.userId,
+          { displayName: profile.displayName },
+        ])
+      ),
+    [snapshot.dataset.profiles]
+  );
+
   const unresolvedCount = useMemo(
     () =>
       run?.checks.filter(
@@ -202,165 +410,15 @@ export function ProjectReconciliationWorkflow({
     [run]
   );
   const varianceChecks = useMemo(
-    () =>
-      run?.checks.filter((item) => item.check.status === "variance_found") ?? [],
+    () => run?.checks.filter((item) => item.check.status === "variance_found") ?? [],
     [run]
   );
   const pendingChecks = useMemo(
-    () =>
-      run?.checks.filter((item) => item.check.status === "pending") ?? [],
+    () => run?.checks.filter((item) => item.check.status === "pending") ?? [],
     [run]
   );
-
-  const copy =
-    locale === "vi"
-      ? {
-          flowTitle: "Luồng đối chiếu hoạt động như thế nào",
-          flowDescription:
-            "Đối chiếu giúp team xác nhận số tiền dự án thực tế đang nằm trong tài khoản hoặc tiền mặt của từng người, rồi xử lý rõ ràng mọi chênh lệch trước khi đóng kỳ.",
-          flowSteps: [
-            "1. Quản lý mở một đợt đối chiếu với ngày chốt cụ thể.",
-            "2. Mỗi thành viên nhập số tiền dự án thực tế mình đang giữ. Nếu đã ứng tiền cá nhân cho dự án, có thể nhập số âm.",
-            "3. Nếu lệch, quản lý hoặc chấp nhận giải thích, hoặc post adjustment để sửa ledger.",
-            "4. Khi không còn dòng pending hay variance chưa xử lý, quản lý đóng đợt đối chiếu.",
-          ],
-          matched: "Khớp",
-          pending: "Đang chờ",
-          variance: "Có chênh lệch",
-          openRunTitle: "Mở đợt đối chiếu mới",
-          openRunDescription:
-            "Hãy chụp lại expected project cash của từng thành viên tại một ngày chốt. Sau đó mọi người sẽ tự xác nhận số tiền họ thực sự đang giữ.",
-          asOfDate: "Ngày chốt",
-          openNoteLabel: "Ghi chú cho đợt đối chiếu (không bắt buộc)",
-          openNotePlaceholder:
-            "Ví dụ: Chốt sau đợt nhận cọc đầu tiên và trước khi thanh toán nhà thầu.",
-          openRunButton: "Mở đợt đối chiếu",
-          waitingTitle: "Chưa có đợt đối chiếu đang mở",
-          waitingDescription:
-            "Khi owner hoặc manager mở một đợt đối chiếu, bạn sẽ thấy dòng của mình để xác nhận số tiền dự án thực tế đang giữ.",
-          demoDisabled:
-            "Workspace mẫu chỉ để xem flow. Muốn chạy reconciliation thật, hãy vào project live.",
-          yourCheckTitle: "Xác nhận số tiền dự án bạn đang giữ",
-          yourCheckDescription:
-            "Nhập số tiền dự án thực tế đang nằm trong tài khoản hoặc tiền mặt của bạn lúc này. Nếu bạn đang ứng tiền riêng cho dự án, có thể nhập số âm.",
-          expectedCash: "Theo hệ thống",
-          yourReportedCash: "Bạn đang giữ thực tế",
-          yourStatus: "Trạng thái hiện tại",
-          yourNote: "Ghi chú của bạn",
-          yourNotePlaceholder:
-            "Giải thích ngắn nếu có chênh lệch, ví dụ vừa ứng thêm tiền hoặc chưa kịp ghi giao dịch.",
-          submitCheck: "Gửi số liệu của tôi",
-          updateCheck: "Cập nhật số liệu của tôi",
-          unresolvedTitle: "Quản lý xử lý chênh lệch",
-          unresolvedDescription:
-            "Các dòng dưới đây đã được member báo số liệu nhưng vẫn lệch với ledger hiện tại. Quản lý cần chấp nhận giải thích hoặc post adjustment.",
-          pendingMembersTitle: "Các thành viên chưa gửi số liệu",
-          pendingMembersDescription:
-            "Những người này vẫn chưa xác nhận số tiền dự án họ đang giữ. Bạn có thể nhắc họ vào gửi trước khi đóng đợt đối chiếu.",
-          noPendingMembers: "Hiện không còn thành viên nào đang pending.",
-          reviewNote: "Ghi chú review",
-          reviewNotePlaceholder:
-            "Ví dụ: Chấp nhận vì member vừa tạm ứng tiền cá nhân và sẽ hạch toán vào cuối ngày.",
-          memberReported: "Member báo cáo",
-          memberNoteLabel: "Ghi chú member",
-          noMemberNote: "Member chưa để lại ghi chú.",
-          acceptVariance: "Chấp nhận chênh lệch",
-          postAdjustment: "Post adjustment",
-          closeRunTitle: "Đóng đợt đối chiếu",
-          closeRunDescription:
-            "Chỉ nên đóng khi mọi dòng đã ở trạng thái matched, accepted hoặc adjustment posted.",
-          unresolvedCountLabel: "Dòng còn phải xử lý",
-          closeNoteLabel: "Ghi chú đóng kỳ (không bắt buộc)",
-          closeNotePlaceholder:
-            "Ví dụ: Đã xử lý xong tất cả chênh lệch của kỳ đối chiếu ngày 22/03.",
-          closeRunButton: "Đóng đợt đối chiếu",
-          closeBlocked:
-            "Hãy xử lý hết các dòng pending hoặc variance trước khi đóng.",
-          noRunYet:
-            "Chưa có đợt đối chiếu nào đang mở cho dự án này.",
-          openedAt: "Mở lúc",
-          cutoffAt: "Ngày chốt",
-          actionFeedbackError: "Không thể hoàn tất thao tác này.",
-          openRunWaiting: "Đây là kỳ đối chiếu hiện tại mà team đang xử lý.",
-          tableTitle: "Toàn bộ các dòng đối chiếu",
-          tableDescription:
-            "Bạn có thể tìm nhanh theo thành viên, trạng thái hoặc ghi chú để rà soát toàn bộ đợt đối chiếu.",
-          noVarianceManager:
-            "Hiện không còn dòng variance nào cần manager xử lý.",
-        }
-      : {
-          flowTitle: "How reconciliation works",
-          flowDescription:
-            "Reconciliation helps the team confirm how much project cash is actually sitting with each person, then resolve any mismatch clearly before closing the run.",
-          flowSteps: [
-            "1. A manager opens a reconciliation run with a specific cutoff date.",
-            "2. Each member reports the actual net project cash they are holding. Negative is allowed if they fronted personal money for the project.",
-            "3. If there is a mismatch, a manager either accepts the explanation or posts an adjustment to the ledger.",
-            "4. Once there are no pending or unresolved variance rows left, the manager closes the run.",
-          ],
-          matched: "Matched",
-          pending: "Pending",
-          variance: "Variance found",
-          openRunTitle: "Open a new reconciliation run",
-          openRunDescription:
-            "Take a snapshot of each member's expected project cash at one cutoff date, then let the team confirm what they actually hold.",
-          asOfDate: "Cutoff date",
-          openNoteLabel: "Run note (optional)",
-          openNotePlaceholder:
-            "Example: Check balances after the first buyer deposit and before contractor payout.",
-          openRunButton: "Open reconciliation run",
-          waitingTitle: "No open reconciliation run yet",
-          waitingDescription:
-            "Once an owner or manager opens a run, you will see your own check here and can confirm the project cash you actually hold.",
-          demoDisabled:
-            "The sample workspace is view-only. Use a live project to run real reconciliation.",
-          yourCheckTitle: "Confirm the project cash you actually hold",
-          yourCheckDescription:
-            "Enter the real project cash currently sitting in your bank or cash. If you have fronted your own money for the project, you can enter a negative number.",
-          expectedCash: "Expected by the app",
-          yourReportedCash: "What you actually hold",
-          yourStatus: "Current status",
-          yourNote: "Your note",
-          yourNotePlaceholder:
-            "Optional short explanation, for example you fronted extra money or one transaction has not been recorded yet.",
-          submitCheck: "Submit my check",
-          updateCheck: "Update my check",
-          unresolvedTitle: "Manager review for variance rows",
-          unresolvedDescription:
-            "These members already submitted their numbers, but they still differ from the current ledger. A manager now needs to accept the explanation or post an adjustment.",
-          pendingMembersTitle: "Members still waiting to report",
-          pendingMembersDescription:
-            "These people have not submitted their project-cash check yet. Remind them before you try to close the run.",
-          noPendingMembers: "No members are still pending.",
-          reviewNote: "Review note",
-          reviewNotePlaceholder:
-            "Example: Accepted because the member fronted cash and the ledger will be updated later today.",
-          memberReported: "Member reported",
-          memberNoteLabel: "Member note",
-          noMemberNote: "No member note yet.",
-          acceptVariance: "Accept explanation",
-          postAdjustment: "Post adjustment",
-          closeRunTitle: "Close this reconciliation run",
-          closeRunDescription:
-            "Close only after every row is matched, accepted, or adjusted.",
-          unresolvedCountLabel: "Rows still unresolved",
-          closeNoteLabel: "Closing note (optional)",
-          closeNotePlaceholder:
-            "Example: All March 22 reconciliation differences were resolved.",
-          closeRunButton: "Close reconciliation run",
-          closeBlocked:
-            "Resolve every pending or variance row before closing the run.",
-          noRunYet: "This project has no open reconciliation run right now.",
-          openedAt: "Opened",
-          cutoffAt: "Cutoff",
-          actionFeedbackError: "Unable to complete this action.",
-          openRunWaiting: "This is the reconciliation run the team is currently working through.",
-          tableTitle: "All reconciliation rows",
-          tableDescription:
-            "Search by member, status, or notes to review the entire reconciliation run.",
-          noVarianceManager:
-            "There are no variance rows waiting for manager review.",
-        };
+  const resolveCheck =
+    pendingChecks.find((item) => item.check.id === resolveCheckId) ?? null;
 
   async function runAction(
     action: Promise<ReconciliationActionState>,
@@ -373,6 +431,28 @@ export function ProjectReconciliationWorkflow({
       onSuccess?.();
       router.refresh();
     }
+  }
+
+  function scrollToSection(target: HTMLElement | null) {
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function handleSummaryCardClick(
+    status: Exclude<ReconciliationStatusFilter, "all" | "accepted" | "adjustment_posted">
+  ) {
+    setTableStatusFilter(status);
+
+    if (status === "pending") {
+      scrollToSection((pendingChecks.length > 0 ? pendingSectionRef : tableSectionRef).current);
+      return;
+    }
+
+    if (status === "variance_found") {
+      scrollToSection((varianceChecks.length > 0 ? varianceSectionRef : tableSectionRef).current);
+      return;
+    }
+
+    scrollToSection(tableSectionRef.current);
   }
 
   function handleOpenRun() {
@@ -405,6 +485,42 @@ export function ProjectReconciliationWorkflow({
               : Number(nextReportedProjectCash),
           memberNote: nextMemberNote,
         })
+      );
+    });
+  }
+
+  function handleStartResolve(checkView: ReconciliationCheckView) {
+    setResolveCheckId(checkView.check.id);
+    setResolveReportedProjectCash(
+      checkView.check.reportedProjectCash?.toString() ??
+        checkView.check.expectedProjectCash.toString()
+    );
+    setResolveMemberNote(checkView.check.memberNote ?? "");
+    setTableStatusFilter("pending");
+    scrollToSection(pendingSectionRef.current);
+  }
+
+  function handleCancelResolve() {
+    setResolveCheckId(null);
+    setResolveReportedProjectCash("");
+    setResolveMemberNote("");
+  }
+
+  function handleSubmitOnBehalf(checkView: ReconciliationCheckView) {
+    startTransition(async () => {
+      await runAction(
+        submitReconciliationCheckAction({
+          projectId: snapshot.dataset.project.id,
+          checkId: checkView.check.id,
+          reportedProjectCash:
+            resolveReportedProjectCash.trim() === ""
+              ? Number.NaN
+              : Number(resolveReportedProjectCash),
+          memberNote: resolveMemberNote,
+        }),
+        () => {
+          handleCancelResolve();
+        }
       );
     });
   }
@@ -486,33 +602,39 @@ export function ProjectReconciliationWorkflow({
             value={`${run.matchedCount}`}
             description={
               locale === "vi"
-                ? "Các dòng đã khớp với ledger."
-                : "Rows already matched against the ledger."
+                ? "Click de loc cac dong da khop voi ledger."
+                : "Click to filter rows that already match the ledger."
             }
             tone="teal"
             icon={<CheckCircle2 className="size-5" />}
+            onClick={() => handleSummaryCardClick("matched")}
+            active={tableStatusFilter === "matched"}
           />
           <MetricCard
             title={copy.pending}
             value={`${run.pendingCount}`}
             description={
               locale === "vi"
-                ? "Thành viên chưa gửi số liệu đối chiếu."
-                : "Members who have not submitted their check yet."
+                ? "Click de xem ai dang cho va giai quyet ngay tren page nay."
+                : "Click to see who is still waiting and resolve the row from this page."
             }
             tone="amber"
             icon={<ClipboardCheck className="size-5" />}
+            onClick={() => handleSummaryCardClick("pending")}
+            active={tableStatusFilter === "pending"}
           />
           <MetricCard
             title={copy.variance}
             value={`${run.varianceCount}`}
             description={
               locale === "vi"
-                ? "Các dòng đang lệch và cần manager xử lý."
-                : "Rows that still differ and need manager review."
+                ? "Click de nhay toi cac dong lech can manager review."
+                : "Click to jump to rows with mismatches that need manager review."
             }
             tone="red"
             icon={<ShieldCheck className="size-5" />}
+            onClick={() => handleSummaryCardClick("variance_found")}
+            active={tableStatusFilter === "variance_found"}
           />
         </div>
       ) : null}
@@ -580,9 +702,7 @@ export function ProjectReconciliationWorkflow({
         <>
           <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
             <CardHeader>
-              <CardTitle>
-                {locale === "vi" ? "Thông tin đợt đang mở" : "Open run details"}
-              </CardTitle>
+              <CardTitle>{locale === "vi" ? "Thong tin run dang mo" : "Open run details"}</CardTitle>
               <CardDescription>{copy.openRunWaiting}</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-3">
@@ -621,156 +741,224 @@ export function ProjectReconciliationWorkflow({
               locale={locale}
               liveModeEnabled={liveModeEnabled}
               isPending={isPending}
-              copy={{
-                yourCheckTitle: copy.yourCheckTitle,
-                yourCheckDescription: copy.yourCheckDescription,
-                expectedCash: copy.expectedCash,
-                yourReportedCash: copy.yourReportedCash,
-                yourStatus: copy.yourStatus,
-                yourNote: copy.yourNote,
-                yourNotePlaceholder: copy.yourNotePlaceholder,
-                submitCheck: copy.submitCheck,
-                updateCheck: copy.updateCheck,
-                memberReported: copy.memberReported,
-              }}
+              submittedByLabel={getSubmittedByLabel(viewerCheck, locale, profilesById)}
+              copy={copy}
               onSubmit={handleSubmitOwnCheck}
             />
           ) : null}
 
           {canManage ? (
             <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-              <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
-                <CardHeader>
-                  <CardTitle>{copy.unresolvedTitle}</CardTitle>
-                  <CardDescription>{copy.unresolvedDescription}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {varianceChecks.length === 0 ? (
-                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
-                      {copy.noVarianceManager}
-                    </div>
-                  ) : (
-                    varianceChecks.map((item) => (
-                      <div
-                        key={item.check.id}
-                        className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-slate-950">
-                              {item.profile.displayName}
-                            </p>
-                            <div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-600">
-                              <span>
-                                {copy.expectedCash}:{" "}
-                                {formatSignedCurrency(
-                                  item.check.expectedProjectCash,
-                                  snapshot.dataset.project.currencyCode,
-                                  locale
-                                )}
-                              </span>
-                              <span>
-                                {copy.memberReported}:{" "}
-                                {formatSignedCurrency(
-                                  item.check.reportedProjectCash ?? 0,
-                                  snapshot.dataset.project.currencyCode,
-                                  locale
-                                )}
-                              </span>
-                              <span className="font-medium text-rose-700">
-                                {locale === "vi" ? "Lệch" : "Variance"}:{" "}
-                                {formatSignedCurrency(
-                                  item.check.varianceAmount ?? 0,
-                                  snapshot.dataset.project.currencyCode,
-                                  locale
-                                )}
-                              </span>
-                            </div>
-                          </div>
-                          <Badge className={statusTone(item.check.status)}>
-                            {getReconciliationStatusLabel(item.check.status, locale)}
-                          </Badge>
-                        </div>
-
-                        <div className="rounded-2xl border border-white bg-white px-4 py-3 text-sm text-slate-600">
-                          <p className="font-medium text-slate-900">
-                            {copy.memberNoteLabel}
-                          </p>
-                          <p className="mt-2">
-                            {item.check.memberNote ?? copy.noMemberNote}
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>{copy.reviewNote}</Label>
-                          <Textarea
-                            value={reviewNotes[item.check.id] ?? ""}
-                            onChange={(event) =>
-                              setReviewNotes((current) => ({
-                                ...current,
-                                [item.check.id]: event.target.value,
-                              }))
-                            }
-                            placeholder={copy.reviewNotePlaceholder}
-                            disabled={!liveModeEnabled || isPending}
-                          />
-                        </div>
-
-                        <div className="flex flex-wrap gap-3">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => handleAccept(item)}
-                            disabled={!liveModeEnabled || isPending}
-                          >
-                            {copy.acceptVariance}
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={() => handlePostAdjustment(item)}
-                            disabled={!liveModeEnabled || isPending}
-                          >
-                            {copy.postAdjustment}
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-
-              <div className="space-y-6">
+              <div ref={varianceSectionRef}>
                 <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
                   <CardHeader>
-                    <CardTitle>{copy.pendingMembersTitle}</CardTitle>
-                    <CardDescription>{copy.pendingMembersDescription}</CardDescription>
+                    <CardTitle>{copy.unresolvedTitle}</CardTitle>
+                    <CardDescription>{copy.unresolvedDescription}</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    {pendingChecks.length === 0 ? (
+                  <CardContent className="space-y-4">
+                    {varianceChecks.length === 0 ? (
                       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
-                        {copy.noPendingMembers}
+                        {copy.noVarianceManager}
                       </div>
                     ) : (
-                      pendingChecks.map((item) => (
+                      varianceChecks.map((item) => (
                         <div
                           key={item.check.id}
-                          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                          className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
                         >
-                          <p className="font-medium text-slate-950">
-                            {item.profile.displayName}
-                          </p>
-                          <p className="mt-2 text-sm text-slate-600">
-                            {formatSignedCurrency(
-                              item.check.expectedProjectCash,
-                              snapshot.dataset.project.currencyCode,
-                              locale
-                            )}
-                          </p>
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <p className="font-medium text-slate-950">
+                                {item.profile.displayName}
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-600">
+                                <span>
+                                  {copy.expectedCash}:{" "}
+                                  {formatSignedCurrency(
+                                    item.check.expectedProjectCash,
+                                    snapshot.dataset.project.currencyCode,
+                                    locale
+                                  )}
+                                </span>
+                                <span>
+                                  {copy.memberReported}:{" "}
+                                  {formatSignedCurrency(
+                                    item.check.reportedProjectCash ?? 0,
+                                    snapshot.dataset.project.currencyCode,
+                                    locale
+                                  )}
+                                </span>
+                                <span>
+                                  {copy.submittedBy}:{" "}
+                                  {getSubmittedByLabel(item, locale, profilesById)}
+                                </span>
+                                <span className="font-medium text-rose-700">
+                                  {locale === "vi" ? "Lech" : "Variance"}:{" "}
+                                  {formatSignedCurrency(
+                                    item.check.varianceAmount ?? 0,
+                                    snapshot.dataset.project.currencyCode,
+                                    locale
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                            <Badge className={statusTone(item.check.status)}>
+                              {getReconciliationStatusLabel(item.check.status, locale)}
+                            </Badge>
+                          </div>
+
+                          <div className="rounded-2xl border border-white bg-white px-4 py-3 text-sm text-slate-600">
+                            <p className="font-medium text-slate-900">
+                              {copy.memberNoteLabel}
+                            </p>
+                            <p className="mt-2">
+                              {item.check.memberNote ?? copy.noMemberNote}
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>{copy.reviewNote}</Label>
+                            <Textarea
+                              value={reviewNotes[item.check.id] ?? ""}
+                              onChange={(event) =>
+                                setReviewNotes((current) => ({
+                                  ...current,
+                                  [item.check.id]: event.target.value,
+                                }))
+                              }
+                              placeholder={copy.reviewNotePlaceholder}
+                              disabled={!liveModeEnabled || isPending}
+                            />
+                          </div>
+
+                          <div className="flex flex-wrap gap-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => handleAccept(item)}
+                              disabled={!liveModeEnabled || isPending}
+                            >
+                              {copy.acceptVariance}
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => handlePostAdjustment(item)}
+                              disabled={!liveModeEnabled || isPending}
+                            >
+                              {copy.postAdjustment}
+                            </Button>
+                          </div>
                         </div>
                       ))
                     )}
                   </CardContent>
                 </Card>
+              </div>
+
+              <div className="space-y-6">
+                <div ref={pendingSectionRef}>
+                  <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
+                    <CardHeader>
+                      <CardTitle>{copy.pendingMembersTitle}</CardTitle>
+                      <CardDescription>{copy.pendingMembersDescription}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {pendingChecks.length === 0 ? (
+                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
+                          {copy.noPendingMembers}
+                        </div>
+                      ) : (
+                        pendingChecks.map((item) => (
+                          <div
+                            key={item.check.id}
+                            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="font-medium text-slate-950">
+                                  {item.profile.displayName}
+                                </p>
+                                <p className="mt-2 text-sm text-slate-600">
+                                  {formatSignedCurrency(
+                                    item.check.expectedProjectCash,
+                                    snapshot.dataset.project.currencyCode,
+                                    locale
+                                  )}
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant={resolveCheckId === item.check.id ? "secondary" : "outline"}
+                                size="sm"
+                                onClick={() => handleStartResolve(item)}
+                                disabled={!liveModeEnabled || isPending}
+                              >
+                                {copy.resolvePending}
+                              </Button>
+                            </div>
+
+                            {resolveCheckId === item.check.id ? (
+                              <div className="mt-4 space-y-4 rounded-2xl border border-emerald-100 bg-white px-4 py-4">
+                                <div>
+                                  <p className="font-medium text-slate-950">
+                                    {copy.resolvePendingTitle}
+                                  </p>
+                                  <p className="mt-1 text-sm text-slate-600">
+                                    {copy.resolvePendingDescription}
+                                  </p>
+                                </div>
+
+                                <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+                                  <div className="space-y-2">
+                                    <Label>{copy.resolveReportedCash}</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={resolveReportedProjectCash}
+                                      onChange={(event) =>
+                                        setResolveReportedProjectCash(event.target.value)
+                                      }
+                                      disabled={!liveModeEnabled || isPending}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>{copy.resolveMemberNote}</Label>
+                                    <Textarea
+                                      value={resolveMemberNote}
+                                      onChange={(event) =>
+                                        setResolveMemberNote(event.target.value)
+                                      }
+                                      placeholder={copy.resolveMemberNotePlaceholder}
+                                      disabled={!liveModeEnabled || isPending}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-3">
+                                  <Button
+                                    type="button"
+                                    onClick={() => handleSubmitOnBehalf(item)}
+                                    disabled={!liveModeEnabled || isPending}
+                                  >
+                                    {copy.submitForMember}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleCancelResolve}
+                                    disabled={!liveModeEnabled || isPending}
+                                  >
+                                    {copy.cancelResolve}
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
 
                 <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
                   <CardHeader>
@@ -814,18 +1002,26 @@ export function ProjectReconciliationWorkflow({
             </div>
           ) : null}
 
-          <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
-            <CardHeader>
-              <CardTitle>{copy.tableTitle}</CardTitle>
-              <CardDescription>{copy.tableDescription}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ProjectReconciliationTable snapshot={snapshot} />
-            </CardContent>
-          </Card>
+          <div ref={tableSectionRef}>
+            <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
+              <CardHeader>
+                <CardTitle>{copy.tableTitle}</CardTitle>
+                <CardDescription>{copy.tableDescription}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProjectReconciliationTable
+                  snapshot={snapshot}
+                  statusFilter={tableStatusFilter}
+                  onStatusFilterChange={setTableStatusFilter}
+                  canResolvePending={canManage}
+                  onResolveCheck={canManage ? handleStartResolve : undefined}
+                  activeResolveCheckId={resolveCheck?.check.id ?? null}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </>
       )}
-
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useLocale } from "@/components/app/locale-provider";
 import { TableSurface, TableToolbar } from "@/components/finance/table-toolbar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -13,7 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { type ProjectSnapshot } from "@/lib/finance/types";
+import {
+  type ProjectSnapshot,
+  type ReconciliationCheckView,
+} from "@/lib/finance/types";
 import { formatSignedCurrency } from "@/lib/format";
 import { normalizeSearchText } from "@/lib/search";
 import { cn } from "@/lib/utils";
@@ -34,61 +38,111 @@ function statusTone(status: string) {
 function getStatusLabel(status: string, locale: "en" | "vi") {
   if (locale === "vi") {
     if (status === "matched") {
-      return "Khớp";
+      return "Khop";
     }
     if (status === "variance_found") {
-      return "Có chênh lệch";
+      return "Co chenh lech";
     }
     if (status === "accepted") {
-      return "Đã chấp nhận";
+      return "Da chap nhan";
     }
     if (status === "adjustment_posted") {
-      return "Đã ghi điều chỉnh";
+      return "Da ghi dieu chinh";
     }
-    return "Đang chờ";
+    return "Dang cho";
   }
 
   return status.replaceAll("_", " ");
 }
 
+export type ReconciliationStatusFilter =
+  | "all"
+  | "pending"
+  | "matched"
+  | "variance_found"
+  | "accepted"
+  | "adjustment_posted";
+
+function getSubmissionLabel(
+  checkView: ReconciliationCheckView,
+  locale: "en" | "vi",
+  profilesById: Map<string, ProjectSnapshot["dataset"]["profiles"][number]>
+) {
+  const { check, profile } = checkView;
+
+  if (!check.submittedAt) {
+    return locale === "vi" ? "Chua gui" : "Not submitted yet";
+  }
+
+  const submittedByName =
+    (check.submittedBy ? profilesById.get(check.submittedBy)?.displayName : null) ??
+    (locale === "vi" ? "Da gui" : "Submitted");
+
+  if (check.submittedBy && check.submittedBy !== profile.userId) {
+    return locale === "vi"
+      ? `${submittedByName} (gui ho)`
+      : `${submittedByName} (on behalf)`;
+  }
+
+  return submittedByName;
+}
+
 export function ProjectReconciliationTable({
   snapshot,
+  statusFilter: controlledStatusFilter,
+  onStatusFilterChange,
+  canResolvePending = false,
+  onResolveCheck,
+  activeResolveCheckId,
 }: {
   snapshot: ProjectSnapshot;
+  statusFilter?: ReconciliationStatusFilter;
+  onStatusFilterChange?: (value: ReconciliationStatusFilter) => void;
+  canResolvePending?: boolean;
+  onResolveCheck?: (check: ReconciliationCheckView) => void;
+  activeResolveCheckId?: string | null;
 }) {
   const { locale } = useLocale();
   const run = snapshot.openReconciliation;
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "pending" | "matched" | "variance_found" | "accepted" | "adjustment_posted"
-  >("all");
+  const [uncontrolledStatusFilter, setUncontrolledStatusFilter] =
+    useState<ReconciliationStatusFilter>("all");
   const [sortOrder, setSortOrder] = useState<
     "variance_desc" | "name_asc" | "expected_desc"
   >("variance_desc");
+  const statusFilter = controlledStatusFilter ?? uncontrolledStatusFilter;
+  const setStatusFilter = onStatusFilterChange ?? setUncontrolledStatusFilter;
+  const profilesById = useMemo(
+    () => new Map(snapshot.dataset.profiles.map((profile) => [profile.userId, profile])),
+    [snapshot.dataset.profiles]
+  );
 
   const copy =
     locale === "vi"
       ? {
-          searchLabel: "Tìm kiếm",
-          searchPlaceholder: "Tìm theo tên thành viên hoặc ghi chú...",
-          status: "Trạng thái",
-          sort: "Sắp xếp",
-          allStatuses: "Tất cả trạng thái",
-          sortByVariance: "Chênh lệch lớn nhất",
-          sortByName: "Tên A-Z",
-          sortByExpected: "Tiền hệ thống lớn nhất",
-          showing: (count: number) => `${count} dòng đối chiếu đang hiển thị.`,
-          empty: "Không có dòng đối chiếu nào khớp với tìm kiếm hoặc bộ lọc hiện tại.",
-          pending: "Đang chờ",
-          member: "Thành viên",
-          expectedProjectCash: "Tiền dự án theo hệ thống",
-          reportedProjectCash: "Tiền dự án báo cáo",
-          variance: "Chênh lệch",
-          memberNote: "Ghi chú thành viên",
+          searchLabel: "Tim kiem",
+          searchPlaceholder: "Tim theo ten thanh vien, ghi chu, nguoi gui...",
+          status: "Trang thai",
+          sort: "Sap xep",
+          allStatuses: "Tat ca trang thai",
+          sortByVariance: "Chenh lech lon nhat",
+          sortByName: "Ten A-Z",
+          sortByExpected: "Tien he thong lon nhat",
+          showing: (count: number) => `${count} dong doi chieu dang hien thi.`,
+          empty: "Khong co dong doi chieu nao khop voi tim kiem hoac bo loc hien tai.",
+          pending: "Dang cho",
+          member: "Thanh vien",
+          expectedProjectCash: "Tien du an theo he thong",
+          reportedProjectCash: "Tien du an bao cao",
+          variance: "Chenh lech",
+          submission: "Nguoi gui",
+          memberNote: "Ghi chu thanh vien",
+          actions: "Thao tac",
+          resolve: "Giai quyet",
         }
       : {
           searchLabel: "Search",
-          searchPlaceholder: "Search member name or note...",
+          searchPlaceholder: "Search member name, note, or submitter...",
           status: "Status",
           sort: "Sort",
           allStatuses: "All statuses",
@@ -102,7 +156,10 @@ export function ProjectReconciliationTable({
           expectedProjectCash: "Expected project cash",
           reportedProjectCash: "Reported project cash",
           variance: "Variance",
+          submission: "Submitted by",
           memberNote: "Member note",
+          actions: "Actions",
+          resolve: "Resolve",
         };
 
   const displayedChecks = useMemo(() => {
@@ -113,7 +170,9 @@ export function ProjectReconciliationTable({
     const normalizedSearch = normalizeSearchText(search);
 
     return [...run.checks]
-      .filter(({ check, profile }) => {
+      .filter((checkView) => {
+        const { check, profile } = checkView;
+
         if (statusFilter !== "all" && check.status !== statusFilter) {
           return false;
         }
@@ -124,7 +183,10 @@ export function ProjectReconciliationTable({
 
         return (
           normalizeSearchText(profile.displayName).includes(normalizedSearch) ||
-          normalizeSearchText(check.memberNote).includes(normalizedSearch)
+          normalizeSearchText(check.memberNote).includes(normalizedSearch) ||
+          normalizeSearchText(
+            getSubmissionLabel(checkView, locale, profilesById)
+          ).includes(normalizedSearch)
         );
       })
       .sort((left, right) => {
@@ -139,9 +201,12 @@ export function ProjectReconciliationTable({
           return right.check.expectedProjectCash - left.check.expectedProjectCash;
         }
 
-        return Math.abs(right.check.varianceAmount ?? 0) - Math.abs(left.check.varianceAmount ?? 0);
+        return (
+          Math.abs(right.check.varianceAmount ?? 0) -
+          Math.abs(left.check.varianceAmount ?? 0)
+        );
       });
-  }, [locale, run, search, sortOrder, statusFilter]);
+  }, [locale, profilesById, run, search, sortOrder, statusFilter]);
 
   if (!run) {
     return null;
@@ -161,15 +226,7 @@ export function ProjectReconciliationTable({
             label: copy.status,
             value: statusFilter,
             onValueChange: (value) =>
-              setStatusFilter(
-                value as
-                  | "all"
-                  | "pending"
-                  | "matched"
-                  | "variance_found"
-                  | "accepted"
-                  | "adjustment_posted"
-              ),
+              setStatusFilter(value as ReconciliationStatusFilter),
             options: [
               { value: "all", label: copy.allStatuses },
               { value: "pending", label: getStatusLabel("pending", locale) },
@@ -201,7 +258,7 @@ export function ProjectReconciliationTable({
       />
 
       <TableSurface>
-        <Table className="min-w-[1080px]">
+        <Table className="min-w-[1240px]">
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[220px]">{copy.member}</TableHead>
@@ -209,60 +266,90 @@ export function ProjectReconciliationTable({
               <TableHead className="w-[180px]">{copy.reportedProjectCash}</TableHead>
               <TableHead className="w-[160px]">{copy.variance}</TableHead>
               <TableHead className="w-[150px]">{copy.status}</TableHead>
+              <TableHead className="w-[220px]">{copy.submission}</TableHead>
               <TableHead className="min-w-[260px] whitespace-normal">
                 {copy.memberNote}
               </TableHead>
+              <TableHead className="w-[140px]">{copy.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {displayedChecks.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={8}
                   className="py-10 text-center whitespace-normal text-slate-500"
                 >
                   {copy.empty}
                 </TableCell>
               </TableRow>
             ) : (
-              displayedChecks.map(({ check, profile }) => (
-                <TableRow key={check.id}>
-                  <TableCell>{profile.displayName}</TableCell>
-                  <TableCell>
-                    {formatSignedCurrency(
-                      check.expectedProjectCash,
-                      snapshot.dataset.project.currencyCode,
-                      locale
+              displayedChecks.map((checkView) => {
+                const { check, profile } = checkView;
+
+                return (
+                  <TableRow
+                    key={check.id}
+                    className={cn(
+                      activeResolveCheckId === check.id ? "bg-emerald-50/60" : null
                     )}
-                  </TableCell>
-                  <TableCell>
-                    {check.reportedProjectCash == null
-                      ? copy.pending
-                      : formatSignedCurrency(
-                          check.reportedProjectCash,
-                          snapshot.dataset.project.currencyCode,
-                          locale
-                        )}
-                  </TableCell>
-                  <TableCell>
-                    {check.varianceAmount == null
-                      ? copy.pending
-                      : formatSignedCurrency(
-                          check.varianceAmount,
-                          snapshot.dataset.project.currencyCode,
-                          locale
-                        )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn("rounded-full", statusTone(check.status))}>
-                      {getStatusLabel(check.status, locale)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="whitespace-normal text-slate-600">
-                    {check.memberNote ?? "—"}
-                  </TableCell>
-                </TableRow>
-              ))
+                  >
+                    <TableCell>{profile.displayName}</TableCell>
+                    <TableCell>
+                      {formatSignedCurrency(
+                        check.expectedProjectCash,
+                        snapshot.dataset.project.currencyCode,
+                        locale
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {check.reportedProjectCash == null
+                        ? copy.pending
+                        : formatSignedCurrency(
+                            check.reportedProjectCash,
+                            snapshot.dataset.project.currencyCode,
+                            locale
+                          )}
+                    </TableCell>
+                    <TableCell>
+                      {check.varianceAmount == null
+                        ? copy.pending
+                        : formatSignedCurrency(
+                            check.varianceAmount,
+                            snapshot.dataset.project.currencyCode,
+                            locale
+                          )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn("rounded-full", statusTone(check.status))}>
+                        {getStatusLabel(check.status, locale)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="whitespace-normal text-slate-600">
+                      {getSubmissionLabel(checkView, locale, profilesById)}
+                    </TableCell>
+                    <TableCell className="whitespace-normal text-slate-600">
+                      {check.memberNote ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      {canResolvePending &&
+                      check.status === "pending" &&
+                      typeof onResolveCheck === "function" ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onResolveCheck(checkView)}
+                        >
+                          {copy.resolve}
+                        </Button>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
