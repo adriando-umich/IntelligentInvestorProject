@@ -760,11 +760,15 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
     );
   }
 
+  const totalByMember = new Map(
+    rows.map((row) => [row.member, row.capital + row.profit])
+  );
+
   function renderCapitalTotalLabel(props: any) {
-    const { x = 0, y = 0, width = 0, value, payload } = props;
-    const capitalValue = Number(payload?.capital ?? 0);
+    const { x = 0, y = 0, width = 0, payload } = props;
+    const memberName = String(payload?.member ?? "");
     const profitValue = Number(payload?.profit ?? 0);
-    const labelValue = Number(value ?? capitalValue);
+    const labelValue = Number(totalByMember.get(memberName) ?? payload?.capital ?? 0);
 
     if (profitValue > 0) {
       return null;
@@ -788,8 +792,9 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
 
   function renderProfitTotalLabel(props: any) {
     const { x = 0, y = 0, width = 0, payload } = props;
+    const memberName = String(payload?.member ?? "");
     const profitValue = Number(payload?.profit ?? 0);
-    const totalValue = Number(payload?.total ?? 0);
+    const totalValue = Number(totalByMember.get(memberName) ?? 0);
 
     if (profitValue <= 0) {
       return null;
