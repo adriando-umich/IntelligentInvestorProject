@@ -734,6 +734,9 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
       member: summary.profile.displayName,
       capital: Math.max(summary.capitalBalance, 0),
       profit: Math.max(summary.estimatedProfitShare, 0),
+      total:
+        Math.max(summary.capitalBalance, 0) +
+        Math.max(summary.estimatedProfitShare, 0),
     }))
     .filter((row) => row.capital > 0 || row.profit > 0)
     .sort(
@@ -759,7 +762,7 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={rows}
-            margin={{ top: 8, right: 18, left: 8, bottom: 8 }}
+            margin={{ top: 24, right: 18, left: 8, bottom: 8 }}
           >
             <CartesianGrid stroke="#e2e8f0" vertical={false} />
             <XAxis dataKey="member" tickLine={false} axisLine={false} />
@@ -798,6 +801,36 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
               fill="#14b8a6"
               radius={[8, 8, 0, 0]}
             />
+            <Bar
+              dataKey="total"
+              fill="transparent"
+              stroke="transparent"
+              legendType="none"
+              isAnimationActive={false}
+            >
+              <LabelList
+                dataKey="total"
+                content={(props) => {
+                  const { x = 0, y = 0, width = 0, value } = props;
+                  const numericValue = Number(value ?? 0);
+
+                  return (
+                    <text
+                      x={Number(x) + Number(width) / 2}
+                      y={Number(y) - 10}
+                      textAnchor="middle"
+                      className="fill-slate-500 text-[11px] font-medium"
+                    >
+                      {formatCompactCurrency(
+                        numericValue,
+                        snapshot.dataset.project.currencyCode,
+                        locale
+                      )}
+                    </text>
+                  );
+                }}
+              />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
