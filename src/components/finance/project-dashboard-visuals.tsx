@@ -62,13 +62,17 @@ function formatCompactCurrency(
   currencyCode = "VND",
   locale: AppLocale = defaultAppLocale
 ) {
+  const roundedAmount = Math.round(amount);
+  const absoluteAmount = Math.abs(roundedAmount);
+  const fractionDigits = absoluteAmount >= 1_000_000_000 ? 1 : 0;
+
   return new Intl.NumberFormat(getIntlLocale(locale), {
     style: "currency",
     currency: currencyCode,
     notation: "compact",
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Math.round(amount));
+    maximumFractionDigits: fractionDigits,
+  }).format(roundedAmount);
 }
 
 function formatPercent(decimal: number, locale: AppLocale = defaultAppLocale) {
@@ -756,6 +760,34 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
     );
   }
 
+  function renderTotalLabel(props: any) {
+    const { x = 0, y = 0, width = 0, value, payload, dataKey } = props;
+    const capitalValue = Number(payload?.capital ?? 0);
+    const profitValue = Number(payload?.profit ?? 0);
+    const totalValue = Number(payload?.total ?? value ?? 0);
+    const shouldRenderOnCapital = dataKey === "capital" && profitValue <= 0;
+    const shouldRenderOnProfit = dataKey === "profit" && profitValue > 0;
+
+    if (!shouldRenderOnCapital && !shouldRenderOnProfit) {
+      return null;
+    }
+
+    return (
+      <text
+        x={Number(x) + Number(width) / 2}
+        y={Number(y) - 10}
+        textAnchor="middle"
+        className="fill-slate-500 text-[11px] font-medium"
+      >
+        {formatCompactCurrency(
+          shouldRenderOnProfit ? totalValue : capitalValue,
+          snapshot.dataset.project.currencyCode,
+          locale
+        )}
+      </text>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="h-[290px]">
@@ -789,7 +821,9 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
               stackId="claim"
               fill="#0f766e"
               radius={[8, 8, 0, 0]}
-            />
+            >
+              <LabelList dataKey="capital" content={renderTotalLabel} />
+            </Bar>
             <Bar
               dataKey="profit"
               name={
@@ -800,36 +834,8 @@ function ProfitOutcomeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
               stackId="claim"
               fill="#14b8a6"
               radius={[8, 8, 0, 0]}
-            />
-            <Bar
-              dataKey="total"
-              fill="transparent"
-              stroke="transparent"
-              legendType="none"
-              isAnimationActive={false}
             >
-              <LabelList
-                dataKey="total"
-                content={(props) => {
-                  const { x = 0, y = 0, width = 0, value } = props;
-                  const numericValue = Number(value ?? 0);
-
-                  return (
-                    <text
-                      x={Number(x) + Number(width) / 2}
-                      y={Number(y) - 10}
-                      textAnchor="middle"
-                      className="fill-slate-500 text-[11px] font-medium"
-                    >
-                      {formatCompactCurrency(
-                        numericValue,
-                        snapshot.dataset.project.currencyCode,
-                        locale
-                      )}
-                    </text>
-                  );
-                }}
-              />
+              <LabelList dataKey="profit" content={renderTotalLabel} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
