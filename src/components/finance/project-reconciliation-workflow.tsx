@@ -20,6 +20,7 @@ import {
 } from "@/components/finance/project-reconciliation-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -36,7 +37,11 @@ import {
   type ProjectSnapshot,
   type ReconciliationCheckView,
 } from "@/lib/finance/types";
-import { formatDateLabel, formatSignedCurrency } from "@/lib/format";
+import {
+  formatCurrency,
+  formatDateLabel,
+  formatSignedCurrency,
+} from "@/lib/format";
 
 function statusTone(status: string) {
   if (status === "matched") return "bg-emerald-100 text-emerald-800";
@@ -150,6 +155,27 @@ function getCopy(locale: "en" | "vi") {
       tableDescription:
         "Tim nhanh theo member, trang thai, hoac ghi chu de ra soat toan bo reconciliation run.",
       noVarianceManager: "Khong con variance row nao dang cho manager review.",
+      projectAccountingTitle: "Kiem tra tong tien cap project",
+      projectAccountingDescription:
+        "Tong so team bao dang giu duoc doi chieu voi nen ke toan hien tai cua project.",
+      expectedTotalProjectCash: "Tong tien project theo ke toan",
+      reportedTotalProjectCash: "Team bao dang giu",
+      differenceAmount: "So lech con lai",
+      capitalComponent: "Von con trong project",
+      sharedLoanComponent: "Goc vay chung con lai",
+      profitComponent: "Loi nhuan chua chia",
+      reportingCoverage: (submitted: number, total: number) =>
+        `${submitted}/${total} thanh vien da gui reconciliation check.`,
+      provisionalDifference:
+        "Tong team bao dang giu van tam tinh cho den khi moi thanh vien gui check.",
+      differenceResolved:
+        "Tong tien team bao da khop voi nen ke toan cua project tai ngay chot nay.",
+      differenceNeedsReview:
+        "Tong tien team bao dang giu dang lech voi nen ke toan cua project.",
+      acceptDifferenceLabel:
+        "Dong run nay va chap nhan so lech tong cap project con lai",
+      acceptDifferenceHelp:
+        "Manager hoac owner co the dong run khi van con so lech, nhung phai xac nhan va ghi ro ly do.",
     };
   }
 
@@ -233,6 +259,27 @@ function getCopy(locale: "en" | "vi") {
     tableDescription:
       "Search by member, status, or notes to review the entire reconciliation run.",
     noVarianceManager: "There are no variance rows waiting for manager review.",
+    projectAccountingTitle: "Project-level accounting check",
+    projectAccountingDescription:
+      "Compare the team's reported cash total against the current accounting basis for this project.",
+    expectedTotalProjectCash: "Expected total project cash",
+    reportedTotalProjectCash: "Reported by the team",
+    differenceAmount: "Remaining difference",
+    capitalComponent: "Capital still invested",
+    sharedLoanComponent: "Shared loan principal outstanding",
+    profitComponent: "Profit still undistributed",
+    reportingCoverage: (submitted: number, total: number) =>
+      `${submitted}/${total} members have submitted their reconciliation check.`,
+    provisionalDifference:
+      "The team-reported total is still provisional until every member submits a check.",
+    differenceResolved:
+      "The team total matches the project's accounting basis at this cutoff.",
+    differenceNeedsReview:
+      "The team total still differs from the project's accounting basis.",
+    acceptDifferenceLabel:
+      "Close this run and accept the remaining project-level difference",
+    acceptDifferenceHelp:
+      "A manager or owner can still close the run with a documented explanation when the remaining gap is acceptable.",
   };
 }
 
@@ -379,6 +426,7 @@ export function ProjectReconciliationWorkflow({
   );
   const [openNote, setOpenNote] = useState("");
   const [closeNote, setCloseNote] = useState("");
+  const [acceptRemainingDifference, setAcceptRemainingDifference] = useState(false);
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [tableStatusFilter, setTableStatusFilter] =
     useState<ReconciliationStatusFilter>("all");
@@ -387,6 +435,7 @@ export function ProjectReconciliationWorkflow({
   const [resolveMemberNote, setResolveMemberNote] = useState("");
 
   const run = snapshot.openReconciliation;
+  const projectAccounting = run?.projectAccounting ?? null;
   const viewerCheck =
     run?.checks.find((item) => item.member.id === viewerProjectMemberId) ?? null;
   const canManage = viewerRole === "owner" || viewerRole === "manager";
@@ -419,6 +468,17 @@ export function ProjectReconciliationWorkflow({
   );
   const resolveCheck =
     pendingChecks.find((item) => item.check.id === resolveCheckId) ?? null;
+  const differenceRequiresAcceptance =
+    projectAccounting != null &&
+    Math.abs(projectAccounting.differenceAmount) > 0.01;
+  const closeBlockedByDifference =
+    differenceRequiresAcceptance &&
+    (!acceptRemainingDifference || closeNote.trim().length === 0);
+  const canCloseRun =
+    liveModeEnabled &&
+    !isPending &&
+    unresolvedCount === 0 &&
+    !closeBlockedByDifference;
 
   async function runAction(
     action: Promise<ReconciliationActionState>,
@@ -556,6 +616,7 @@ export function ProjectReconciliationWorkflow({
           projectId: snapshot.dataset.project.id,
           runId: run?.run.id ?? "",
           note: closeNote,
+          acceptRemainingDifference,
         })
       );
     });
@@ -637,6 +698,116 @@ export function ProjectReconciliationWorkflow({
             active={tableStatusFilter === "variance_found"}
           />
         </div>
+      ) : null}
+
+      {run && projectAccounting ? (
+        <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
+          <CardHeader>
+            <CardTitle>{copy.projectAccountingTitle}</CardTitle>
+            <CardDescription>{copy.projectAccountingDescription}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-sm text-slate-500">
+                  {copy.expectedTotalProjectCash}
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">
+                  {formatCurrency(
+                    projectAccounting.expectedTotalProjectCash,
+                    snapshot.dataset.project.currencyCode,
+                    locale
+                  )}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-sm text-slate-500">
+                  {copy.reportedTotalProjectCash}
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">
+                  {formatCurrency(
+                    projectAccounting.reportedTotalProjectCash,
+                    snapshot.dataset.project.currencyCode,
+                    locale
+                  )}
+                </p>
+              </div>
+              <div
+                className={
+                  Math.abs(projectAccounting.differenceAmount) <= 0.01
+                    ? "rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4"
+                    : "rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4"
+                }
+              >
+                <p className="text-sm text-slate-500">{copy.differenceAmount}</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">
+                  {formatSignedCurrency(
+                    projectAccounting.differenceAmount,
+                    snapshot.dataset.project.currencyCode,
+                    locale
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-sm text-slate-500">{copy.capitalComponent}</p>
+                <p className="mt-2 text-lg font-semibold text-slate-950">
+                  {formatCurrency(
+                    projectAccounting.expectedTotalCapitalOutstanding,
+                    snapshot.dataset.project.currencyCode,
+                    locale
+                  )}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-sm text-slate-500">{copy.sharedLoanComponent}</p>
+                <p className="mt-2 text-lg font-semibold text-slate-950">
+                  {formatCurrency(
+                    projectAccounting.expectedTotalSharedLoanPrincipal,
+                    snapshot.dataset.project.currencyCode,
+                    locale
+                  )}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-sm text-slate-500">{copy.profitComponent}</p>
+                <p className="mt-2 text-lg font-semibold text-slate-950">
+                  {formatCurrency(
+                    projectAccounting.expectedTotalUndistributedProfit,
+                    snapshot.dataset.project.currencyCode,
+                    locale
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div
+              className={
+                !projectAccounting.allMembersSubmitted
+                  ? "rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+                  : Math.abs(projectAccounting.differenceAmount) <= 0.01
+                    ? "rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+                    : "rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+              }
+            >
+              <p className="font-medium">
+                {copy.reportingCoverage(
+                  projectAccounting.submittedCount,
+                  projectAccounting.totalMemberCount
+                )}
+              </p>
+              <p className="mt-1">
+                {!projectAccounting.allMembersSubmitted
+                  ? copy.provisionalDifference
+                  : Math.abs(projectAccounting.differenceAmount) <= 0.01
+                    ? copy.differenceResolved
+                    : copy.differenceNeedsReview}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       ) : null}
 
       {!run ? (
@@ -989,10 +1160,45 @@ export function ProjectReconciliationWorkflow({
                       </div>
                     ) : null}
 
+                    {differenceRequiresAcceptance && projectAccounting ? (
+                      <div className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+                        <div>
+                          <p className="font-medium">{copy.differenceNeedsReview}</p>
+                          <p className="mt-1">
+                            {copy.differenceAmount}:{" "}
+                            {formatSignedCurrency(
+                              projectAccounting.differenceAmount,
+                              snapshot.dataset.project.currencyCode,
+                              locale
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={acceptRemainingDifference}
+                            onCheckedChange={(nextValue) =>
+                              setAcceptRemainingDifference(nextValue === true)
+                            }
+                            disabled={!liveModeEnabled || isPending}
+                            className="mt-1"
+                          />
+                          <div className="space-y-1">
+                            <Label className="text-sm font-medium text-slate-900">
+                              {copy.acceptDifferenceLabel}
+                            </Label>
+                            <p className="text-sm text-slate-700">
+                              {copy.acceptDifferenceHelp}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
                     <Button
                       type="button"
                       onClick={handleCloseRun}
-                      disabled={!liveModeEnabled || isPending || unresolvedCount > 0}
+                      disabled={!canCloseRun}
                     >
                       {copy.closeRunButton}
                     </Button>

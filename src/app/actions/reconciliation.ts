@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getSessionState } from "@/lib/auth/session";
+import { getProjectDataset } from "@/lib/data/repository";
+import { buildReconciliationProjectAccountingView } from "@/lib/finance/engine";
 import { getServerI18n } from "@/lib/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -420,10 +422,11 @@ export async function closeReconciliationRunAction(payload: {
   projectId: string;
   runId: string;
   note?: string;
+  acceptRemainingDifference?: boolean;
 }): Promise<ReconciliationActionState> {
   const { locale, text } = await getServerI18n();
   const session = await getSessionState();
-  const copy =
+  const copyBase =
     locale === "vi"
       ? {
           demoBlocked: "Workspace mẫu không cho đóng đợt đối chiếu live.",
@@ -447,6 +450,21 @@ export async function closeReconciliationRunAction(payload: {
             "The live database is missing the latest reconciliation migration. Apply the newest Supabase migration, then try again.",
           closed: "Reconciliation run closed.",
         };
+  const copy = {
+    ...copyBase,
+    runUnavailable:
+      locale === "vi"
+        ? "Khong tim thay open reconciliation run nay."
+        : "This open reconciliation run is no longer available.",
+    differenceAcceptanceRequired:
+      locale === "vi"
+        ? "Can chap nhan so lech tong cap project truoc khi dong run."
+        : "Accept the remaining project-level difference before closing this run.",
+    differenceNoteRequired:
+      locale === "vi"
+        ? "Hay ghi ro ly do dong run khi van con so lech tong cap project."
+        : "Add a closing explanation before closing with a remaining project-level difference.",
+  };
 
   if (session.demoMode) {
     return { status: "error", message: copy.demoBlocked };
@@ -456,6 +474,7 @@ export async function closeReconciliationRunAction(payload: {
     .object({
       projectId: z.string().uuid(copy.invalidProject),
       runId: z.string().uuid(copy.invalidRun),
+      acceptRemainingDifference: z.boolean().optional(),
       note: z
         .string()
         .trim()
@@ -488,9 +507,73 @@ export async function closeReconciliationRunAction(payload: {
     return { status: "error", message: copy.signInRequired };
   }
 
+  const dataset = await getProjectDataset(parsed.data.projectId);
+  const run =
+    dataset?.reconciliationRuns.find(
+      (reconciliationRun) =>
+        reconciliationRun.id === parsed.data.runId &&
+        reconciliationRun.status === "open"
+    ) ?? null;
+
+  if (!dataset || !run) {
+    return {
+      status: "error",
+      message: copy.runUnavailable,
+    };
+  }
+
+  const membersById = new Map(dataset.members.map((member) => [member.id, member]));
+  const profilesById = new Map(
+    dataset.profiles.map((profile) => [profile.userId, profile])
+  );
+  const checkViews = dataset.reconciliationChecks
+    .filter((check) => check.runId === run.id)
+    .map((check) => {
+      const member = membersById.get(check.projectMemberId);
+      if (!member) {
+        throw new Error(`Missing member for reconciliation check ${check.id}`);
+      }
+
+      const profile = profilesById.get(member.userId);
+      if (!profile) {
+        throw new Error(`Missing profile for reconciliation check ${check.id}`);
+      }
+
+      return { check, member, profile };
+    });
+  const projectAccounting = buildReconciliationProjectAccountingView(
+    dataset,
+    run.asOf,
+    checkViews
+  );
+  const differenceRequiresAcceptance =
+    Math.abs(projectAccounting.differenceAmount) > 0.01;
+
+  if (
+    differenceRequiresAcceptance &&
+    !parsed.data.acceptRemainingDifference
+  ) {
+    return {
+      status: "error",
+      message: copy.differenceAcceptanceRequired,
+    };
+  }
+
+  if (differenceRequiresAcceptance && !parsed.data.note) {
+    return {
+      status: "error",
+      message: copy.differenceNoteRequired,
+    };
+  }
+
   const { error } = await supabase.rpc("close_reconciliation_run", {
     p_run_id: parsed.data.runId,
     p_note: parsed.data.note ?? null,
+    p_accept_remaining_difference:
+      parsed.data.acceptRemainingDifference ?? false,
+    p_remaining_difference_amount: projectAccounting.differenceAmount,
+    p_reported_total_project_cash: projectAccounting.reportedTotalProjectCash,
+    p_expected_total_project_cash: projectAccounting.expectedTotalProjectCash,
   });
 
   if (error) {

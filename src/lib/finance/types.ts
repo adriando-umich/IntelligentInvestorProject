@@ -309,6 +309,11 @@ export interface ReconciliationRun {
   closedBy?: string | null;
   closedAt?: string | null;
   note?: string | null;
+  closingNote?: string | null;
+  closingDifferenceAccepted?: boolean;
+  closingDifferenceAmount?: number | null;
+  reportedTotalProjectCashAtClose?: number | null;
+  expectedTotalProjectCashAtClose?: number | null;
 }
 
 export interface ReconciliationCheck {
@@ -370,6 +375,18 @@ export interface ReconciliationCheckView {
   profile: Profile;
 }
 
+export interface ReconciliationProjectAccountingView {
+  expectedTotalProjectCash: number;
+  expectedTotalCapitalOutstanding: number;
+  expectedTotalSharedLoanPrincipal: number;
+  expectedTotalUndistributedProfit: number;
+  reportedTotalProjectCash: number;
+  differenceAmount: number;
+  submittedCount: number;
+  totalMemberCount: number;
+  allMembersSubmitted: boolean;
+}
+
 export interface CapitalWeightRow {
   projectMemberId: string;
   displayName: string;
@@ -409,6 +426,7 @@ export interface ProjectSnapshot {
     matchedCount: number;
     varianceCount: number;
     pendingCount: number;
+    projectAccounting: ReconciliationProjectAccountingView;
   } | null;
   capitalWeights: CapitalWeightRow[];
   inflowTagRollups: TagRollupRow[];

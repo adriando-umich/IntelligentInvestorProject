@@ -8,12 +8,16 @@ import {
   type ProjectMember,
   type ProjectSnapshot,
   type ReconciliationCheckView,
+  type ReconciliationProjectAccountingView,
   type SettlementSuggestion,
   type TagRollupRow,
 } from "@/lib/finance/types";
 import { roundMoney } from "@/lib/format";
 
 const EPSILON = 0.01;
+type BuildProjectSnapshotOptions = {
+  skipOpenReconciliation?: boolean;
+};
 
 function byDateAsc<T extends { effectiveAt?: string; createdAt?: string }>(
   a: T,
@@ -120,6 +124,88 @@ function getFrontedOwnMoneyDelta(beforeCashCustody: number, afterCashCustody: nu
   return roundMoney(
     Math.max(-afterCashCustody, 0) - Math.max(-beforeCashCustody, 0)
   );
+}
+
+function filterProjectDatasetAsOf(
+  dataset: ProjectDataset,
+  asOf: string
+): ProjectDataset {
+  const cutoff = new Date(asOf).getTime();
+
+  if (!Number.isFinite(cutoff)) {
+    return {
+      ...dataset,
+      reconciliationRuns: [],
+      reconciliationChecks: [],
+    };
+  }
+
+  const entries = dataset.entries.filter(
+    (entry) => new Date(entry.effectiveAt).getTime() <= cutoff
+  );
+  const includedEntryIds = new Set(entries.map((entry) => entry.id));
+
+  return {
+    ...dataset,
+    entries,
+    allocations: dataset.allocations.filter((allocation) =>
+      includedEntryIds.has(allocation.ledgerEntryId)
+    ),
+    entryTags: dataset.entryTags.filter((entryTag) =>
+      includedEntryIds.has(entryTag.ledgerEntryId)
+    ),
+    reconciliationRuns: [],
+    reconciliationChecks: [],
+  };
+}
+
+export function buildProjectSnapshotAsOf(
+  dataset: ProjectDataset,
+  asOf: string
+): ProjectSnapshot {
+  return buildProjectSnapshot(filterProjectDatasetAsOf(dataset, asOf), {
+    skipOpenReconciliation: true,
+  });
+}
+
+export function buildReconciliationProjectAccountingView(
+  dataset: ProjectDataset,
+  asOf: string,
+  checks: ReconciliationCheckView[]
+): ReconciliationProjectAccountingView {
+  const asOfSnapshot = buildProjectSnapshotAsOf(dataset, asOf);
+  const reportedTotalProjectCash = roundMoney(
+    checks.reduce(
+      (sum, checkView) => sum + (checkView.check.reportedProjectCash ?? 0),
+      0
+    )
+  );
+  const expectedTotalCapitalOutstanding = asOfSnapshot.totalCapitalOutstanding;
+  const expectedTotalSharedLoanPrincipal =
+    asOfSnapshot.sharedLoanPrincipalOutstanding;
+  const expectedTotalUndistributedProfit = asOfSnapshot.undistributedProfit;
+  const expectedTotalProjectCash = roundMoney(
+    expectedTotalCapitalOutstanding +
+      expectedTotalSharedLoanPrincipal +
+      expectedTotalUndistributedProfit
+  );
+  const submittedCount = checks.filter(
+    (checkView) => checkView.check.reportedProjectCash != null
+  ).length;
+
+  return {
+    expectedTotalProjectCash,
+    expectedTotalCapitalOutstanding,
+    expectedTotalSharedLoanPrincipal,
+    expectedTotalUndistributedProfit,
+    reportedTotalProjectCash,
+    differenceAmount: roundMoney(
+      reportedTotalProjectCash - expectedTotalProjectCash
+    ),
+    submittedCount,
+    totalMemberCount: checks.length,
+    allMembersSubmitted: submittedCount === checks.length,
+  };
 }
 
 function getReimbursementShareAmount(
@@ -506,7 +592,10 @@ function applyEntryEffects(
   }
 }
 
-export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
+export function buildProjectSnapshot(
+  dataset: ProjectDataset,
+  options: BuildProjectSnapshotOptions = {}
+): ProjectSnapshot {
   const profilesById = new Map(
     dataset.profiles.map((profile) => [profile.userId, profile])
   );
@@ -722,11 +811,11 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
     }
   }
 
-  const openRun = dataset.reconciliationRuns
-    .filter((run) => run.status === "open")
-    .sort((left, right) =>
-      right.openedAt.localeCompare(left.openedAt)
-    )[0];
+  const openRun = options.skipOpenReconciliation
+    ? undefined
+    : dataset.reconciliationRuns
+        .filter((run) => run.status === "open")
+        .sort((left, right) => right.openedAt.localeCompare(left.openedAt))[0];
 
   const openReconciliation =
     openRun == null
@@ -761,6 +850,11 @@ export function buildProjectSnapshot(dataset: ProjectDataset): ProjectSnapshot {
             ).length,
             pendingCount: checks.filter((item) => item.check.status === "pending")
               .length,
+            projectAccounting: buildReconciliationProjectAccountingView(
+              dataset,
+              openRun.asOf,
+              checks
+            ),
           };
         })();
 
