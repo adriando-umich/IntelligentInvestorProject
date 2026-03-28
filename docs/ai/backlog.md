@@ -29,9 +29,9 @@
 - Add the remaining richer member management after invite acceptance:
   - manager/member role changes
   - invite resend UX
-  - apply the pending `20260328210000_project_member_activity.sql` migration and deploy the refreshed members-page governance UX
+  - apply the pending `20260328210000_project_member_activity.sql` migration live so the already-shipped members-page governance activity feed lights up in production
   - use the new production-baseline runbook flow when shipping that release, including a fresh release-ledger entry
-  - browser-level QA for the refreshed ownership-transfer/remove-member flows, including the new activity feed and inline success states
+  - browser-level QA for the already-shipped ownership-transfer/remove-member flows, including the activity feed once the migration is live and the inline success states
 - Apply the new `20260328233000_canonical_project_member_identities.sql` migration live once a Supabase access token is available, then verify on real duplicate-member projects that:
   - stale pending aliases collapse back into one member after invite acceptance
   - old member deep links still open the canonical statement
@@ -159,3 +159,5 @@
 - Removed the `Deployed into land/assets` column from the overview holding-money table so the remaining liquid-claim columns no longer get truncated on the project dashboard.
 - Removed the top-level dashboard metric card `Cash deployed into land/assets` and the `Capital` tab's `Deployed into land/assets` column so those numbers stay out of the main dashboard chrome while the underlying calculations remain intact.
 - Added a canonical project-member normalization layer in `getLiveProjectDataset`, plus focused tests, so duplicate identities caused by stale pending/rejoin rows no longer split finance math across two displayed members in the app.
+- Promoted production deployment `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE` from clean worktree commit `1005bc3`, then verified live that `/sign-in`, `/projects`, `/projects/project-sunrise`, and `/projects/project-sunrise/members` all respond and that the hidden asset-basis strings are absent from the production HTML.
+- Kept the DB-side follow-up on the backlog: `20260328210000_project_member_activity.sql` and `20260328233000_canonical_project_member_identities.sql` still need a live Supabase apply once a workspace token is available.

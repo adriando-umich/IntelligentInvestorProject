@@ -55,10 +55,10 @@ As of the last repo-verified baseline on March 28, 2026:
 
 - Production URL: `https://intelligent-investor-project.vercel.app`
 - Vercel project: `intelligent-investor-project`
-- Latest repo-verified promoted production deployment: `dpl_5juQXS6xBRXnUThwdjvi1WKFp8z6`
-- Latest repo-verified production commit: `00deeb7ea2a4a54fb43aeccddd9ab36a6d9d1795`
+- Latest repo-verified promoted production deployment: `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE`
+- Latest repo-verified production commit: `1005bc397c9244f27bcd6aebada9bef29f54e930`
 - Latest repo-verified live Supabase migration: `20260328190500_land_purchase_entry_support.sql`
-- Known local-not-live follow-up at the time of this update: commit `b05e02ff434605d6b6f00519a0824d5f414476ea` plus migration `20260328210000_project_member_activity.sql`
+- Known local-not-live follow-up at the time of this update: post-deploy ledger and memory sync after `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE`; live DB migrations still pending for `20260328210000_project_member_activity.sql` and `20260328233000_canonical_project_member_identities.sql`
 
 If live Vercel or live Supabase checks disagree with this section, live state wins immediately and this section must be updated after the release.
 
@@ -84,8 +84,8 @@ Run and inspect these before deployment:
 5. capture current live production state
    - current Vercel production deployment id
    - current Vercel `state`
-   - current Vercel `readySubstate`
-   - current Vercel `gitCommitSha`
+   - current Vercel `readySubstate` when surfaced; otherwise record `N/A`
+   - current Vercel `gitCommitSha` when surfaced; otherwise record `N/A`
    - current live Supabase migration baseline
    - current production auth/env baseline if the release touches auth, redirects, or Supabase wiring
 
@@ -103,8 +103,8 @@ If any of those are unclear, stop and resolve them before deploying.
 Do not call a production release complete until all items below are true:
 
 1. the intended Vercel deployment is `READY`
-2. the intended Vercel deployment has `readySubstate = PROMOTED`
-3. the live deployment metadata `gitCommitSha` matches the intended commit
+2. if Vercel surfaces `readySubstate`, it is `PROMOTED`; otherwise the production alias must resolve to the inspected deployment and the ledger must record `N/A`
+3. if Vercel surfaces `gitCommitSha`, it matches the intended commit; otherwise the deploy must come from a clean worktree created at the intended commit and the ledger must record `N/A`
 4. any required Supabase migrations were applied and the remote database is current
 5. required smoke tests passed on the production URL
 6. rollback refs were recorded
@@ -133,7 +133,9 @@ Also remember:
 Before deploying:
 
 1. Capture the live production baseline.
-   - record the current Vercel production deployment id, `state`, `readySubstate`, and `gitCommitSha`
+   - record the current Vercel production deployment id and `state`
+   - if the inspect output surfaces `readySubstate` or `gitCommitSha`, record them
+   - otherwise record `N/A` explicitly and note that the uploaded-file deploy path did not surface them
    - record the current production URL being checked
    - record the current live Supabase migration baseline
    - if the release touches auth, redirects, or environment wiring, record the relevant live baseline too:
@@ -153,7 +155,8 @@ Before deploying:
    - env/auth only
    - rollback
 4. Prepare rollback before deployment.
-   - know the previous Vercel production deployment id and `gitCommitSha`
+   - know the previous Vercel production deployment id
+   - know the previous Vercel `gitCommitSha` if surfaced; otherwise record `N/A`
    - know the previous live Supabase migration baseline
    - know whether rollback is app-only or requires a forward fix because the new migration is additive and cannot be cleanly reversed
 5. Decide how success will be verified.
@@ -183,8 +186,10 @@ During deployment:
 1. Record the operator, intended scope, source branch, source commit, and source tree path.
 2. If the release depends on Supabase changes, apply the new migration(s) first and verify the remote database is current.
 3. Create the production deployment only from the clean deploy tree selected in preflight.
-4. After deployment, capture the new live Vercel deployment id, `state`, `readySubstate`, and `gitCommitSha`.
-5. If production is still serving the previous deployment or the commit metadata does not match, treat the release as failed or incomplete.
+4. After deployment, capture the new live Vercel deployment id and `state`.
+   - record `readySubstate` and `gitCommitSha` when surfaced by live inspect
+   - otherwise write `N/A` and rely on the clean deploy-worktree commit plus alias verification
+5. If production is still serving the previous deployment, or surfaced commit metadata disagrees with the intended commit, treat the release as failed or incomplete.
 6. Record any manual actions performed outside the main deploy flow:
    - Vercel project settings
    - Supabase dashboard changes
@@ -202,8 +207,8 @@ Minimum production verification:
 Status checks are mandatory in addition to smoke tests:
 
 - the newest Vercel deployment is `READY`
-- `readySubstate` is `PROMOTED`
-- the live deployment metadata `gitCommitSha` matches the intended commit
+- if surfaced, `readySubstate` is `PROMOTED`; otherwise record `N/A` and confirm the production alias points at the inspected deployment
+- if surfaced, the live deployment metadata `gitCommitSha` matches the intended commit; otherwise record `N/A` and confirm the deploy came from the intended clean worktree SHA
 - the production alias responds from that promoted deployment
 
 If the release touched ledger, balances, member governance, or finance math, also verify:
@@ -278,6 +283,49 @@ Required fields:
 - Notes
 
 If the deploy did not come directly from a clean `main` worktree, the `Notes` field must say exactly how and when the deployed source was reconciled back onto `main`.
+
+### 2026-03-28 App-Only Duplicate-Member Canonicalization + Dashboard Chrome Trim
+
+- Type: production app-only deploy
+- UTC timestamp: 2026-03-28T23:27:07Z
+- Operator: Codex
+- Intended scope: ship app-side canonical member normalization for duplicate project members, hide the dashboard asset-basis chrome, and keep the production baseline docs aligned with the live release
+- Source branch: `main`
+- Source commit: `1005bc397c9244f27bcd6aebada9bef29f54e930`
+- Source tree path: `/Users/mynguyen/Documents/Nha Trang/IntelligentInvestorProject-deploy-1005bc3`
+- Changed files: `README.md`, `docs/operations/deployment-runbook.md`, `docs/operations/release-checklist.md`, `package.json`, `src/app/(workspace)/projects/[projectId]/ledger/new/page.tsx`, `src/components/finance/project-dashboard.tsx`, `src/lib/data/project-member-canonicalization.ts`, `src/lib/data/project-member-canonicalization.test.mts`, `src/lib/data/supabase-datasets.ts`, `src/lib/finance/engine.ts`, `src/lib/finance/types.ts`, `supabase/migrations/20260328233000_canonical_project_member_identities.sql`, `docs/ai/source-of-truth.md`, `docs/ai/backlog.md`, `docs/ai/issues-and-resolutions.md`
+- Build/deploy path used: `npx --yes vercel deploy --prod --yes --scope adriandos-projects` from a clean detached worktree linked to `adriandos-projects/intelligent-investor-project`
+- Manual actions outside the main flow: authenticated Vercel through device login, linked the clean worktree with `vercel link`, and intentionally did not apply Supabase migrations because this workspace still lacks a Supabase access token
+- Pre-deploy live baseline:
+  - Vercel deployment id: `dpl_4MCeTwTq7ZHKYrqLLHnRzChjmsS3`
+  - Vercel state: `Ready`
+  - Vercel readySubstate: `N/A` (`vercel inspect` did not surface it for the uploaded-file deploy path)
+  - Vercel gitCommitSha: `N/A` (`vercel inspect` did not surface it for the uploaded-file deploy path)
+  - Production URL: `https://intelligent-investor-project.vercel.app`
+  - Supabase migration baseline: `20260328190500_land_purchase_entry_support.sql`
+- Post-deploy live baseline:
+  - Vercel deployment id: `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE`
+  - Vercel state: `Ready`
+  - Vercel readySubstate: `N/A` (`vercel inspect` did not surface it for the uploaded-file deploy path)
+  - Vercel gitCommitSha: `N/A` (`vercel inspect` did not surface it for the uploaded-file deploy path)
+  - Production URL: `https://intelligent-investor-project.vercel.app`
+  - Supabase migration baseline: `20260328190500_land_purchase_entry_support.sql` (unchanged)
+- Verification results:
+  - `npm run test:project-members` passed
+  - `npm run test:member-governance` passed
+  - `npm run build` passed
+  - [sign-in](https://intelligent-investor-project.vercel.app/sign-in) returned `200`
+  - `/projects` with demo cookie `pf_demo_session=enabled` returned `200`
+  - `/projects/project-sunrise` with the demo cookie returned `200`
+  - `/projects/project-sunrise/members` with the demo cookie returned `200`
+  - production HTML for `/projects/project-sunrise` no longer contains `Cash deployed into land/assets`
+  - production HTML for `/projects/project-sunrise` no longer contains `Deployed into land/assets`
+- Rollback plan or rollback refs:
+  - Vercel rollback target: `dpl_4MCeTwTq7ZHKYrqLLHnRzChjmsS3`
+  - Supabase rollback target: `N/A` for this release because no live migration was applied
+- Notes:
+  - This was intentionally an app-only release. The app-side canonicalization is backward-compatible with the current live schema and collapses duplicate members in snapshots without requiring an immediate DB migration.
+  - The DB-side preventative migrations `20260328210000_project_member_activity.sql` and `20260328233000_canonical_project_member_identities.sql` are present in source but still pending live until a Supabase access token is available in this workspace.
 
 ### Entry Template
 

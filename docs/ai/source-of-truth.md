@@ -159,13 +159,13 @@ Only `.env.example` should be committed.
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
 - Live Supabase database: migrated through `20260328190500_land_purchase_entry_support.sql`
-- Pending live DB upgrade from this repo: `20260328210000_project_member_activity.sql`
+- Pending live DB upgrades from this repo: `20260328210000_project_member_activity.sql`, `20260328233000_canonical_project_member_identities.sql`
 - Release policy: production deploys must come from a clean deploy worktree created from an exact committed SHA
 - Release policy: every deploy or rollback must start from the current live production baseline, not local memory
 - Current reliable Vercel path: uploaded-file API deployment from a clean commit snapshot
 - Current deploy discipline: record live Vercel deployment metadata plus live Supabase migration state before release, then append a release-ledger entry after release
-- Latest production deployment for commit `00deeb7`: ready and promoted on Vercel as `dpl_5juQXS6xBRXnUThwdjvi1WKFp8z6`
-- Current local-not-live follow-up from this workspace: commit `b05e02ff434605d6b6f00519a0824d5f414476ea` plus migration `20260328210000_project_member_activity.sql`
+- Latest production deployment for commit `1005bc3`: ready and promoted on Vercel as `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE`
+- Current local-not-live follow-up from this workspace: post-deploy release-ledger and memory sync after `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE` (no product-code delta from production)
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
 - Live Supabase Auth redirect allow-list now includes:
@@ -176,6 +176,7 @@ Only `.env.example` should be committed.
 - Verification status:
   - `./node_modules/.bin/tsc --noEmit` passed
   - `npm run build` passed
+  - `npm run test:project-members` passed
   - `npm run test:member-governance` passed
   - `npm run lint` currently fails on a fresh install because `package.json` has a `lint` script but does not declare `eslint` as a direct dev dependency
 - Public Supabase auth settings verified live:
@@ -283,5 +284,7 @@ Only `.env.example` should be committed.
 - Added live dataset canonicalization for duplicate project-member identities, keyed primarily by email identity, so stale pending rows and rejoin rows collapse into one canonical member in snapshots without losing cash legs, allocations, reconciliation rows, or statement history.
 - Added alias-resolution support so old member links or query params can still resolve onto the canonical member after that dataset merge.
 - Added `supabase/migrations/20260328233000_canonical_project_member_identities.sql` so invite acceptance can merge pending aliases back into the canonical member row instead of creating another identity, but that migration is still pending live until a Supabase access token is available in this workspace.
+- Promoted production deployment `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE` from clean worktree commit `1005bc397c9244f27bcd6aebada9bef29f54e930`, then re-smoked `/sign-in`, `/projects`, `/projects/project-sunrise`, and `/projects/project-sunrise/members` on the live site.
+- Verified from the live production HTML for `/projects/project-sunrise` that both `Cash deployed into land/assets` and `Deployed into land/assets` are absent after the release.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

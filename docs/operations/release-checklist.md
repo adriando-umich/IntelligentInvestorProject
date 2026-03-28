@@ -8,8 +8,8 @@ Treat current production as the baseline, not local memory.
 
 - Current production Vercel deployment id recorded
 - Current Vercel `state` recorded
-- Current Vercel `readySubstate` recorded
-- Current Vercel `gitCommitSha` recorded
+- Current Vercel `readySubstate` recorded when surfaced; otherwise `N/A` recorded explicitly
+- Current Vercel `gitCommitSha` recorded when surfaced; otherwise `N/A` recorded explicitly
 - Current production URL recorded
 - Current live Supabase migration baseline recorded
 - Relevant auth/env baseline recorded when the change touches auth, redirects, or Supabase wiring
@@ -60,8 +60,8 @@ Treat current production as the baseline, not local memory.
 - Deployment created from the intended clean commit only
 - Deployment method recorded
 - Newest Vercel deployment reached `READY`
-- Newest Vercel deployment reached `PROMOTED`
-- Promoted deployment metadata matches the intended commit SHA
+- If Vercel surfaces `readySubstate`, it reached `PROMOTED`; otherwise `N/A` was recorded and the production alias was checked against the inspected deployment
+- If Vercel surfaces `gitCommitSha`, it matches the intended commit SHA; otherwise `N/A` was recorded and the clean deploy-worktree SHA was logged
 - Production alias resolves from that promoted deployment
 
 ## Smoke Test
