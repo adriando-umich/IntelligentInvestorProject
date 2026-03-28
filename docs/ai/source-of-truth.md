@@ -79,6 +79,7 @@ The finance engine already derives:
 The live ledger model already supports member-to-member repayment for shared expenses through the `expense_settlement_payment` entry type. The current UI now presents this in plain language as `Member repayment`, with explicit A-paid-for-B / B-pays-A-back guidance in the planner and settlements flow.
 Project members can now exist as `active` or `pending_invite`. Pending members get a stable `project_member_id` before account acceptance so expenses can be allocated to them before they join, then keep the same history after invite acceptance.
 Project ownership can now be transferred from the current owner to another active member. The previous owner is demoted to `manager`, and `projects.created_by` moves to the new owner in the same RPC.
+Active owners and managers can now remove an already-joined member by deactivating that membership instead of deleting it. Historical statements and ledger rows keep the same `project_member_id`, while current-member surfaces and new-entry selectors stay limited to active memberships.
 Live cash-leg storage now keys ledger custody fields by `project_member_id` first, while legacy `cash_in_member_id` / `cash_out_member_id` user references remain as backward-compatible mirrors when a joined user exists. This lets pending members appear in every person-related field, including cash-holder selectors, without rewriting history when they accept later.
 The transaction model now also exposes a second classification axis in code: `entryFamily = business | correction`. The persisted DB column is still `entry_type`, but the app now derives family labels and uses them in planner guidance and the transaction helper matrix.
 The business-event shortcuts now include `shared_loan_interest_payment`, which behaves like a shared operating cost while staying distinct from shared-loan principal.
@@ -143,15 +144,16 @@ Only `.env.example` should be committed.
 - Additional owner-profit-payout settlement migration: `supabase/migrations/20260323133000_owner_profit_payout_and_claim_settlement.sql`
 - Additional reconciliation project-difference migration: `supabase/migrations/20260325193000_reconciliation_project_level_difference.sql`
 - Additional ownership-transfer migration: `supabase/migrations/20260328150000_transfer_project_ownership.sql`
+- Additional member-removal migration: `supabase/migrations/20260328170000_remove_project_member.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
-- Live Supabase database: migrated through `20260328150000_transfer_project_ownership.sql`
+- Live Supabase database: migrated through `20260328170000_remove_project_member.sql`
 - Release policy: production deploys must come from a clean deploy worktree created from an exact committed SHA
 - Current reliable Vercel path: uploaded-file API deployment from a clean commit snapshot
-- Latest production deployment for commit `d155712`: ready and promoted on Vercel as `dpl_3B12C6vmc3aTV3n5L6FrMvDwNjC8`
+- Latest production deployment for commit `00deeb7`: ready and promoted on Vercel as `dpl_5juQXS6xBRXnUThwdjvi1WKFp8z6`
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
 - Live Supabase Auth redirect allow-list now includes:
@@ -248,6 +250,8 @@ Only `.env.example` should be committed.
 - Added an overview-specific cash-claim read model in `src/lib/finance/project-cash-claims.ts`, updated the overview dashboard copy, and kept the dedicated Settlements tab on shared-expense reimbursement logic.
 - Promoted production deployment `dpl_3B12C6vmc3aTV3n5L6FrMvDwNjC8` for commit `d155712`.
 - Added owner-only project ownership transfer on `/projects/[projectId]/members`, backed by the live `transfer_project_ownership` RPC that promotes the new owner, demotes the old owner to manager, and updates `projects.created_by` atomically.
+- Added remove-member support on `/projects/[projectId]/members` through the new `remove_project_member` RPC, owner/manager confirm UI, and active-membership-only lookup/filtering for members, project cards, and new transaction selectors.
+- Applied `supabase/migrations/20260328170000_remove_project_member.sql` to the live Supabase project, verified the RPC on a disposable live project, and shipped production deployment `dpl_5juQXS6xBRXnUThwdjvi1WKFp8z6` for commit `00deeb7ea2a4a54fb43aeccddd9ab36a6d9d1795`.
 - Added `docs/operations/deployment-runbook.md` plus `docs/operations/release-checklist.md`, then linked them from `README.md` so future sessions know:
   - what counts as an app-only release
   - when Supabase ledger migrations must ship first
