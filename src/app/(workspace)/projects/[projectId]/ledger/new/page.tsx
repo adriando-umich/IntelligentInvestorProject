@@ -162,12 +162,35 @@ export default async function NewLedgerEntryPage({
   const editState = queryEntryId
     ? buildEditInitialValues(snapshot, queryEntryId)
     : null;
+  const editableAllocationMemberIds = Array.isArray(
+    editState?.initialValues.allocationProjectMemberIds
+  )
+    ? editState.initialValues.allocationProjectMemberIds
+    : [];
+  const editableMemberIds = new Set(
+    editState
+      ? [
+          editState.initialValues.cashInProjectMemberId,
+          editState.initialValues.cashOutProjectMemberId,
+          editState.initialValues.capitalOwnerProjectMemberId,
+          ...editableAllocationMemberIds,
+        ].filter((value): value is string => typeof value === "string" && value.length > 0)
+      : []
+  );
+  const activeMemberSummaries = snapshot.memberSummaries.filter(
+    (summary) => summary.projectMember.isActive
+  );
+  const plannerMemberSummaries = snapshot.memberSummaries.filter(
+    (summary) =>
+      summary.projectMember.isActive ||
+      editableMemberIds.has(summary.projectMember.id)
+  );
 
   const settleClaimState =
     !editState &&
     queryWorkflow === "settle_claim" &&
     queryMemberId
-      ? snapshot.memberSummaries.find(
+      ? activeMemberSummaries.find(
           (summary) => summary.projectMember.id === queryMemberId
         ) ?? null
       : null;
@@ -276,7 +299,7 @@ export default async function NewLedgerEntryPage({
             capitalBalance: settleClaimState.capitalBalance,
             estimatedProfitShare: settleClaimState.estimatedProfitShare,
           }}
-          payerOptions={snapshot.memberSummaries.map((summary) => ({
+          payerOptions={activeMemberSummaries.map((summary) => ({
             id: summary.projectMember.id,
             name: summary.profile.displayName,
             membershipStatus: summary.projectMember.membershipStatus ?? "active",
@@ -290,7 +313,7 @@ export default async function NewLedgerEntryPage({
           currencyCode={snapshot.dataset.project.currencyCode}
           editingEntryId={editState?.entryId}
           editingEntryType={editState?.entryType}
-          memberOptions={snapshot.memberSummaries.map((summary) => ({
+          memberOptions={plannerMemberSummaries.map((summary) => ({
             id: summary.projectMember.id,
             name: summary.profile.displayName,
             membershipStatus: summary.projectMember.membershipStatus ?? "active",

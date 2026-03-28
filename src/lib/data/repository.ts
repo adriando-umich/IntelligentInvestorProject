@@ -122,7 +122,7 @@ function toProjectCard(snapshot: ProjectSnapshot, viewerUserId?: string) {
     currencyCode: snapshot.dataset.project.currencyCode,
     totalProjectCash: snapshot.totalProjectCash,
     undistributedProfit: snapshot.undistributedProfit,
-    memberCount: snapshot.dataset.members.length,
+    memberCount: snapshot.dataset.members.filter((member) => member.isActive).length,
     openSettlementCount: snapshot.settlementSuggestions.length,
     hasReconciliationVariance:
       (snapshot.openReconciliation?.varianceCount ?? 0) > 0,

@@ -1,18 +1,29 @@
-import type { MemberRole, ProjectDataset } from "@/lib/finance/types";
+import type {
+  MemberRole,
+  ProjectDataset,
+  ProjectMember,
+} from "@/lib/finance/types";
+
+export function getViewerProjectMembership(
+  dataset: ProjectDataset,
+  viewerUserId?: string | null
+): ProjectMember | null {
+  if (!viewerUserId) {
+    return null;
+  }
+
+  return (
+    dataset.members.find(
+      (member) => member.userId === viewerUserId && member.isActive
+    ) ?? null
+  );
+}
 
 export function getViewerProjectRole(
   dataset: ProjectDataset,
   viewerUserId?: string | null
 ): MemberRole | null {
-  if (!viewerUserId) {
-    return null;
-  }
-
-  const membership = dataset.members.find(
-    (member) => member.userId === viewerUserId && member.isActive
-  );
-
-  return membership?.role ?? null;
+  return getViewerProjectMembership(dataset, viewerUserId)?.role ?? null;
 }
 
 export function canManageProjectRole(role?: MemberRole | null) {

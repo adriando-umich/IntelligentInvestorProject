@@ -6,6 +6,7 @@ import { getSessionState } from "@/lib/auth/session";
 import { getProjectSnapshot, getViewerProfile } from "@/lib/data/repository";
 import { env } from "@/lib/env";
 import { getServerI18n } from "@/lib/i18n/server";
+import { getViewerProjectMembership } from "@/lib/projects/access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type DbProjectInviteRow = {
@@ -35,9 +36,7 @@ export default async function ProjectMembersPage({
     notFound();
   }
 
-  const viewerMember = snapshot.dataset.members.find(
-    (member) => member.userId === viewer?.userId
-  );
+  const viewerMember = getViewerProjectMembership(snapshot.dataset, viewer?.userId);
   const canManageInvites =
     viewerMember?.role === "owner" || viewerMember?.role === "manager";
   const canTransferOwnership = viewerMember?.role === "owner";
@@ -85,7 +84,10 @@ export default async function ProjectMembersPage({
         liveModeEnabled={!session.demoMode}
         canManageInvites={canManageInvites}
         canTransferOwnership={canTransferOwnership}
+        viewerProjectMemberId={viewerMember?.id ?? null}
+        viewerRole={viewerMember?.role ?? null}
         members={snapshot.memberSummaries
+          .filter((summary) => summary.projectMember.isActive)
           .map((summary) => ({
             id: summary.projectMember.id,
             displayName: summary.profile.displayName,

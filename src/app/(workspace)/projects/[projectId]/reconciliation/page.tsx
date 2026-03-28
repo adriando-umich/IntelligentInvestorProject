@@ -5,6 +5,7 @@ import { ProjectReconciliationWorkflow } from "@/components/finance/project-reco
 import { getSessionState } from "@/lib/auth/session";
 import { getProjectSnapshot, getViewerProfile } from "@/lib/data/repository";
 import { getServerI18n } from "@/lib/i18n/server";
+import { getViewerProjectMembership } from "@/lib/projects/access";
 
 export default async function ReconciliationPage({
   params,
@@ -23,9 +24,10 @@ export default async function ReconciliationPage({
     notFound();
   }
 
-  const viewerMember =
-    snapshot.dataset.members.find((member) => member.userId === viewer?.userId) ??
-    null;
+  const viewerMember = getViewerProjectMembership(
+    snapshot.dataset,
+    viewer?.userId
+  );
 
   return (
     <div className="space-y-8">

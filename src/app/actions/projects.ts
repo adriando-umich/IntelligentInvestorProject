@@ -87,6 +87,16 @@ function isMissingOwnershipTransferMigration(error: {
   );
 }
 
+function isMissingRemoveProjectMemberMigration(error: {
+  code?: string;
+  message?: string | null;
+}) {
+  return (
+    error.code === "PGRST202" ||
+    error.message?.toLowerCase().includes("remove_project_member") === true
+  );
+}
+
 function translateTransferOwnershipError(
   error: { message?: string | null },
   copy: {
@@ -106,6 +116,42 @@ function translateTransferOwnershipError(
   }
 
   return error.message ?? copy.transferFailed;
+}
+
+function translateRemoveProjectMemberError(
+  error: { message?: string | null },
+  copy: {
+    permissionDenied: string;
+    invalidTarget: string;
+    cannotRemoveSelf: string;
+    cannotRemoveOwner: string;
+    managerCannotRemoveRole: string;
+    removeFailed: string;
+  }
+) {
+  const message = error.message?.toLowerCase() ?? "";
+
+  if (message.includes("only project owners or managers can remove members")) {
+    return copy.permissionDenied;
+  }
+
+  if (message.includes("target must be an active joined project member")) {
+    return copy.invalidTarget;
+  }
+
+  if (message.includes("you cannot remove yourself from the project")) {
+    return copy.cannotRemoveSelf;
+  }
+
+  if (message.includes("transfer ownership before removing the current owner")) {
+    return copy.cannotRemoveOwner;
+  }
+
+  if (message.includes("managers can only remove project members")) {
+    return copy.managerCannotRemoveRole;
+  }
+
+  return error.message ?? copy.removeFailed;
 }
 
 export async function createProjectAction(
@@ -535,6 +581,128 @@ export async function transferProjectOwnershipAction(
   return {
     status: "success",
     message: copy.transferred,
+  };
+}
+
+export async function removeProjectMemberAction(
+  projectId: string,
+  projectMemberId: string
+): Promise<ProjectActionState> {
+  const { locale } = await getServerI18n();
+  const session = await getSessionState();
+  const copy =
+    locale === "vi"
+      ? {
+          missingProjectId: "Thieu project ID.",
+          missingMemberId: "Thieu member ID.",
+          demoBlocked: "Khong the remove member trong demo mode.",
+          removeFailed: "Khong the remove member khoi project nay.",
+          signInRequired: "Ban can dang nhap de remove member.",
+          permissionDenied:
+            "Chi owner hoac manager dang hoat dong moi duoc remove member.",
+          invalidTarget:
+            "Chi co the remove mot thanh vien dang hoat dong da tham gia project.",
+          cannotRemoveSelf: "Ban khong the tu remove chinh minh khoi project.",
+          cannotRemoveOwner:
+            "Hay chuyen ownership truoc khi remove owner hien tai.",
+          managerCannotRemoveRole:
+            "Manager chi co the remove thanh vien thuong, khong remove owner hoac manager khac.",
+          supabaseMissing: "Supabase chua duoc cau hinh.",
+          missingMigration:
+            "Database live dang thieu migration remove member. Hay apply SQL migration moi nhat tren Supabase roi thu lai.",
+          invalidResponse: "Phan hoi remove member khong hop le.",
+          removed: "Da remove member khoi project.",
+        }
+      : {
+          missingProjectId: "Missing project ID.",
+          missingMemberId: "Missing member ID.",
+          demoBlocked: "Member removal is disabled in demo mode.",
+          removeFailed: "Unable to remove this member from the project.",
+          signInRequired: "You must be signed in to remove a member.",
+          permissionDenied:
+            "Only active project owners or managers can remove members.",
+          invalidTarget:
+            "Only an active joined project member can be removed.",
+          cannotRemoveSelf: "You cannot remove yourself from the project.",
+          cannotRemoveOwner:
+            "Transfer ownership before removing the current owner.",
+          managerCannotRemoveRole:
+            "Managers can only remove regular members, not another manager or the owner.",
+          supabaseMissing: "Supabase is not configured.",
+          missingMigration:
+            "The live database is missing the member-removal migration. Apply the newest SQL migration in Supabase, then try again.",
+          invalidResponse: "Member removal returned an invalid response.",
+          removed: "Member removed from the project.",
+        };
+
+  if (session.demoMode) {
+    return {
+      status: "error",
+      message: copy.demoBlocked,
+    };
+  }
+
+  const parsed = z
+    .object({
+      projectId: z.string().uuid(copy.missingProjectId),
+      projectMemberId: z.string().uuid(copy.missingMemberId),
+    })
+    .safeParse({
+      projectId,
+      projectMemberId,
+    });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? copy.removeFailed,
+    };
+  }
+
+  const { supabase, user } = await getAuthenticatedSupabase();
+
+  if (!supabase) {
+    return {
+      status: "error",
+      message: copy.supabaseMissing,
+    };
+  }
+
+  if (!user) {
+    return {
+      status: "error",
+      message: copy.signInRequired,
+    };
+  }
+
+  const { data, error } = await supabase.rpc("remove_project_member", {
+    p_project_id: parsed.data.projectId,
+    p_project_member_id: parsed.data.projectMemberId,
+  });
+
+  if (error) {
+    return {
+      status: "error",
+      message: isMissingRemoveProjectMemberMigration(error)
+        ? copy.missingMigration
+        : translateRemoveProjectMemberError(error, copy),
+    };
+  }
+
+  const response = rpcResponseSchema.safeParse(data);
+
+  if (!response.success) {
+    return {
+      status: "error",
+      message: copy.invalidResponse,
+    };
+  }
+
+  revalidateProjectPaths(parsed.data.projectId);
+
+  return {
+    status: "success",
+    message: copy.removed,
   };
 }
 

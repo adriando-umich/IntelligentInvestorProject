@@ -9,7 +9,10 @@ import {
   revokeProjectInviteAction,
   type ProjectInviteActionState,
 } from "@/app/actions/project-invites";
-import { transferProjectOwnershipAction } from "@/app/actions/projects";
+import {
+  removeProjectMemberAction,
+  transferProjectOwnershipAction,
+} from "@/app/actions/projects";
 import { useLocale } from "@/components/app/locale-provider";
 import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { TableSurface, TableToolbar } from "@/components/finance/table-toolbar";
@@ -115,6 +118,8 @@ export function ProjectMemberManager({
   invites,
   canManageInvites,
   canTransferOwnership,
+  viewerProjectMemberId,
+  viewerRole,
   liveModeEnabled,
 }: {
   projectId: string;
@@ -123,6 +128,8 @@ export function ProjectMemberManager({
   invites: InviteSummary[];
   canManageInvites: boolean;
   canTransferOwnership: boolean;
+  viewerProjectMemberId: string | null;
+  viewerRole: MemberSummary["role"] | null;
   liveModeEnabled: boolean;
 }) {
   const { locale } = useLocale();
@@ -137,6 +144,10 @@ export function ProjectMemberManager({
   const [transferTarget, setTransferTarget] = useState<MemberSummary | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferPending, startTransferTransition] = useTransition();
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<MemberSummary | null>(null);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [removePending, startRemoveTransition] = useTransition();
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberRoleFilter, setMemberRoleFilter] = useState<
@@ -212,6 +223,16 @@ export function ProjectMemberManager({
           transferringOwnership: "Dang chuyen ownership...",
           transferOwnershipUnavailable:
             "Chi owner hien tai moi co the chuyen ownership cho mot thanh vien dang hoat dong khac.",
+          removeMember: "Remove member",
+          removeMemberTitle: "Remove member from project?",
+          removeMemberDescription: (memberName: string) =>
+            `${memberName} se mat quyen truy cap vao ${projectName}, nhung lich su giao dich truoc do van duoc giu nguyen.`,
+          removeMemberWarning:
+            "Remove member se chi deactivate membership hien tai. Statement va cac giao dich cu van duoc giu de bao toan lich su.",
+          removeMemberConfirm: "Xac nhan remove member",
+          removingMember: "Dang remove member...",
+          removeMemberUnavailable:
+            "Chi owner hoac manager dang hoat dong moi co the remove mot thanh vien dang hoat dong khac.",
           cancel: "Huy",
           reusableShareLink: "Link chia sẻ dùng lại được",
           revoke: "Thu hồi",
@@ -287,6 +308,16 @@ export function ProjectMemberManager({
           transferringOwnership: "Transferring ownership...",
           transferOwnershipUnavailable:
             "Only the current owner can transfer ownership to another active project member.",
+          removeMember: "Remove member",
+          removeMemberTitle: "Remove member from project?",
+          removeMemberDescription: (memberName: string) =>
+            `${memberName} will lose access to ${projectName}, but prior transaction history will stay intact.`,
+          removeMemberWarning:
+            "Removing a member only deactivates their current membership. Existing statements and ledger history stay in place for auditability.",
+          removeMemberConfirm: "Remove member",
+          removingMember: "Removing member...",
+          removeMemberUnavailable:
+            "Only an active owner or manager can remove another active member.",
           cancel: "Cancel",
           reusableShareLink: "Reusable share link",
           revoke: "Revoke",
@@ -400,6 +431,32 @@ export function ProjectMemberManager({
       });
   }, [inviteSearch, inviteSort, inviteStatusFilter, invites, locale]);
 
+  const canManageMembers = viewerRole === "owner" || viewerRole === "manager";
+
+  function canRemoveMember(member: MemberSummary) {
+    if (!liveModeEnabled || !canManageMembers) {
+      return false;
+    }
+
+    if (member.membershipStatus !== "active") {
+      return false;
+    }
+
+    if (member.id === viewerProjectMemberId) {
+      return false;
+    }
+
+    if (member.role === "owner") {
+      return false;
+    }
+
+    if (viewerRole === "manager" && member.role !== "member") {
+      return false;
+    }
+
+    return true;
+  }
+
   async function copyInvite(link: string) {
     try {
       await navigator.clipboard.writeText(link);
@@ -434,6 +491,12 @@ export function ProjectMemberManager({
     setTransferOpen(true);
   }
 
+  function openRemoveDialog(member: MemberSummary) {
+    setRemoveError(null);
+    setRemoveTarget(member);
+    setRemoveOpen(true);
+  }
+
   function handleTransferOpenChange(open: boolean) {
     if (transferPending) {
       return;
@@ -444,6 +507,19 @@ export function ProjectMemberManager({
     if (!open) {
       setTransferTarget(null);
       setTransferError(null);
+    }
+  }
+
+  function handleRemoveOpenChange(open: boolean) {
+    if (removePending) {
+      return;
+    }
+
+    setRemoveOpen(open);
+
+    if (!open) {
+      setRemoveTarget(null);
+      setRemoveError(null);
     }
   }
 
@@ -462,6 +538,25 @@ export function ProjectMemberManager({
 
       if (result.status === "error") {
         setTransferError(result.message ?? copy.transferOwnershipUnavailable);
+        return;
+      }
+
+      window.location.reload();
+    });
+  }
+
+  function removeMember() {
+    if (!removeTarget) {
+      return;
+    }
+
+    setRemoveError(null);
+
+    startRemoveTransition(async () => {
+      const result = await removeProjectMemberAction(projectId, removeTarget.id);
+
+      if (result.status === "error") {
+        setRemoveError(result.message ?? copy.removeMemberUnavailable);
         return;
       }
 
@@ -523,6 +618,11 @@ export function ProjectMemberManager({
             {transferError ? (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {transferError}
+              </div>
+            ) : null}
+            {removeError ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {removeError}
               </div>
             ) : null}
             <TableToolbar
@@ -632,6 +732,19 @@ export function ProjectMemberManager({
                                 onClick={() => openTransferDialog(member)}
                               >
                                 {copy.transferOwnership}
+                              </Button>
+                            ) : null}
+                            {canRemoveMember(member) ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="rounded-full border-rose-200 text-rose-700 hover:bg-rose-50"
+                                disabled={removePending}
+                                onClick={() => openRemoveDialog(member)}
+                              >
+                                <Trash2 className="size-4" />
+                                {copy.removeMember}
                               </Button>
                             ) : null}
                             <Link
@@ -953,6 +1066,42 @@ export function ProjectMemberManager({
                 {transferPending
                   ? copy.transferringOwnership
                   : copy.transferOwnershipConfirm}
+              </Button>
+            </AlertDialogFooter>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={removeOpen} onOpenChange={handleRemoveOpenChange}>
+        <AlertDialogContent className="rounded-[1.6rem] p-0">
+          <div className="space-y-5 p-6">
+            <AlertDialogHeader className="items-start text-left">
+              <AlertDialogTitle>{copy.removeMemberTitle}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {removeTarget
+                  ? copy.removeMemberDescription(removeTarget.displayName)
+                  : copy.removeMemberUnavailable}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {copy.removeMemberWarning}
+            </div>
+            {removeError ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {removeError}
+              </div>
+            ) : null}
+            <AlertDialogFooter className="mx-0 mb-0 rounded-[1.2rem] border-0 bg-transparent p-0">
+              <AlertDialogCancel disabled={removePending}>
+                {copy.cancel}
+              </AlertDialogCancel>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={removePending || !removeTarget}
+                onClick={removeMember}
+              >
+                {removePending ? copy.removingMember : copy.removeMemberConfirm}
               </Button>
             </AlertDialogFooter>
           </div>
