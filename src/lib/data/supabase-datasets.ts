@@ -441,6 +441,7 @@ export async function getLiveProjectDataset(projectId: string) {
       .select("*")
       .eq("project_id", projectId)
       .order("effective_at", { ascending: true })
+      .order("created_at", { ascending: true })
       .returns<DbLedgerEntryRow[]>(),
     supabase
       .from("profit_distribution_runs")

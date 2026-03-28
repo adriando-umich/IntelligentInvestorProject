@@ -23,10 +23,14 @@ function byDateAsc<T extends { effectiveAt?: string; createdAt?: string }>(
   a: T,
   b: T
 ) {
-  return (
-    new Date(a.effectiveAt ?? a.createdAt ?? 0).getTime() -
-    new Date(b.effectiveAt ?? b.createdAt ?? 0).getTime()
-  );
+  const effectiveDelta =
+    new Date(a.effectiveAt ?? 0).getTime() - new Date(b.effectiveAt ?? 0).getTime();
+
+  if (effectiveDelta !== 0) {
+    return effectiveDelta;
+  }
+
+  return new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime();
 }
 
 function byDateDesc<T extends { effectiveAt?: string; createdAt?: string }>(

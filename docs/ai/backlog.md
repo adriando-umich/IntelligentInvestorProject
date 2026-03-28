@@ -40,6 +40,9 @@
   - members and invites search/filter/sort
   - tags search/filter/sort
   - settlements and reconciliation table search/filter/sort
+- Run one live regression pass on order-sensitive same-day ledgers:
+  - capital contribution, loan drawdown, and operating expense entered on the same date
+  - confirm overview and settlements stay stable after refresh and on production
 - Run one browser/device QA pass on the updated ledger planner using `docs/manual-qa/ledger-planner-ui-ux.md`:
   - desktop web
   - tablet

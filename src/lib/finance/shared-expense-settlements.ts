@@ -23,9 +23,17 @@ function byDateAsc<T extends { effectiveAt?: string; createdAt?: string }>(
   left: T,
   right: T
 ) {
+  const effectiveDelta =
+    new Date(left.effectiveAt ?? 0).getTime() -
+    new Date(right.effectiveAt ?? 0).getTime();
+
+  if (effectiveDelta !== 0) {
+    return effectiveDelta;
+  }
+
   return (
-    new Date(left.effectiveAt ?? left.createdAt ?? 0).getTime() -
-    new Date(right.effectiveAt ?? right.createdAt ?? 0).getTime()
+    new Date(left.createdAt ?? 0).getTime() -
+    new Date(right.createdAt ?? 0).getTime()
   );
 }
 

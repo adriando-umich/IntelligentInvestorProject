@@ -76,6 +76,8 @@ The finance engine already derives:
 - Tagged inflow and expense rollups
 - Live dataset loading from Supabase rows when env/session are available
 
+For live ledger math, same-day entries are order-sensitive. The app now treats `effective_at` as the primary business date and `created_at` as the required tiebreaker so capital, loan, income, and expense entries posted on the same day do not create false reimbursement debt.
+
 The live ledger model already supports member-to-member repayment for shared expenses through the `expense_settlement_payment` entry type. The current UI now presents this in plain language as `Member repayment`, with explicit A-paid-for-B / B-pays-A-back guidance in the planner and settlements flow.
 Project members can now exist as `active` or `pending_invite`. Pending members get a stable `project_member_id` before account acceptance so expenses can be allocated to them before they join, then keep the same history after invite acceptance.
 Project ownership can now be transferred from the current owner to another active member. The previous owner is demoted to `manager`, and `projects.created_by` moves to the new owner in the same RPC.

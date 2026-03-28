@@ -71,6 +71,7 @@
 - Pending members could receive allocations and capital ownership before join, but they were still blocked from cash-holder fields because `ledger_entries` stored cash legs by joined `profiles.user_id`; resolved by adding `cash_in_project_member_id` / `cash_out_project_member_id`, widening the person selectors, and keeping history attached to the same `project_member_id` after invite acceptance.
 - Projects had no real handoff path when an owner needed another active member to take over; resolved by adding the `transfer_project_ownership` RPC, a server action, and an owner-only confirm flow on the members screen.
 - Active projects had no safe way to remove a joined member without breaking historical `project_member_id` references; resolved by adding the `remove_project_member` RPC, a server action, and a deactivate-based confirm flow on the members screen.
+- Live same-day ledger rows could be processed in the wrong order because the app sorted only by `effective_at`, which made capital and loan inflows appear after same-day expenses and falsely created multi-billion reimbursement debt; resolved by ordering live reads on `effective_at` plus `created_at` and using the same tiebreaker inside the engine and settlement calculator.
 - The members and reconciliation pages could still derive viewer context from an inactive membership in app code; resolved by centralizing the active-membership lookup and reusing it in those pages.
 - The product still felt visually split between older warm cards and newer finance surfaces; resolved in code by moving the shared theme toward lighter Splitwise-inspired mint accents plus softer Apple-style surfaces across the shell, auth, cards, buttons, tabs, and primary project pages.
 - The refreshed theme initially appeared “done locally but not on production” because pushing to GitHub did not trigger a usable production release and git-source API deployments still failed with `git_info_fail`; resolved by creating a Vercel uploaded-files production deployment from the committed source snapshot, which successfully promoted the new theme live.
@@ -102,6 +103,7 @@
 - When Supabase social auth looks wired in code but absent in production, check both the public `/auth/v1/settings` endpoint and the project-level auth config (`site_url`, provider enabled flag, callback allow-list).
 - When a workflow depends on returning to a deep link after auth, preserve the `next` path consistently across OAuth, password sign-in, and sign-up.
 - For Vietnamese operator-facing search, normalize both the query and searchable text so users are not forced to type diacritics exactly.
+- For balance engines that depend on running cash custody, never rely on one business-date column alone; use a deterministic secondary tiebreaker such as `created_at` for same-day entries.
 
 ## Latest Session Delta
 
