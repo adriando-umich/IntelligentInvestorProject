@@ -151,7 +151,7 @@ Only `.env.example` should be committed.
 - Live Supabase database: migrated through `20260328150000_transfer_project_ownership.sql`
 - Release policy: production deploys must come from a clean deploy worktree created from an exact committed SHA
 - Current reliable Vercel path: uploaded-file API deployment from a clean commit snapshot
-- Latest production deployment for commit `de0b36b`: ready and promoted on Vercel as `dpl_BdXgcnDAQwdHNAU3FJHJyQT6qWf4`
+- Latest production deployment for commit `d155712`: ready and promoted on Vercel as `dpl_3B12C6vmc3aTV3n5L6FrMvDwNjC8`
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
 - Live Supabase Auth redirect allow-list now includes:
@@ -246,7 +246,7 @@ Only `.env.example` should be committed.
 - Verified both the preview deployment and `https://intelligent-investor-project.vercel.app/sign-in` now render the new theme markers from the refreshed sign-in hero, confirming production is serving the Splitwise/Apple visual update.
 - Clarified that overview `Team owes you / You owe team` must represent current member cash claims after capital and profit preview, not only shared-expense reimbursement.
 - Added an overview-specific cash-claim read model in `src/lib/finance/project-cash-claims.ts`, updated the overview dashboard copy, and kept the dedicated Settlements tab on shared-expense reimbursement logic.
-- Promoted production deployment `dpl_BdXgcnDAQwdHNAU3FJHJyQT6qWf4` for commit `de0b36b`.
+- Promoted production deployment `dpl_3B12C6vmc3aTV3n5L6FrMvDwNjC8` for commit `d155712`.
 - Added owner-only project ownership transfer on `/projects/[projectId]/members`, backed by the live `transfer_project_ownership` RPC that promotes the new owner, demotes the old owner to manager, and updates `projects.created_by` atomically.
 - Added `docs/operations/deployment-runbook.md` plus `docs/operations/release-checklist.md`, then linked them from `README.md` so future sessions know:
   - what counts as an app-only release
