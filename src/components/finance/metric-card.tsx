@@ -39,6 +39,16 @@ export function MetricCard({
     }
   }
 
+  const interactiveProps = onClick
+    ? {
+        onClick,
+        onKeyDown: handleKeyDown,
+        role: "button" as const,
+        tabIndex: 0,
+        "aria-pressed": active,
+      }
+    : {};
+
   return (
     <Card
       className={cn(
@@ -48,11 +58,7 @@ export function MetricCard({
           : null,
         active ? "border-emerald-300 ring-2 ring-emerald-100" : null
       )}
-      onClick={onClick}
-      onKeyDown={handleKeyDown}
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      aria-pressed={onClick ? active : undefined}
+      {...interactiveProps}
     >
       <CardHeader className="gap-3 space-y-0 pb-3">
         <div className="flex items-center justify-between gap-3">
