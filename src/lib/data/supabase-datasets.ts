@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSessionState } from "@/lib/auth/session";
+import { canonicalizeProjectDatasetMembers } from "@/lib/data/project-member-canonicalization";
 import { getUserAvatarUrl, getUserDisplayName } from "@/lib/profiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -621,7 +622,7 @@ export async function getLiveProjectDataset(projectId: string) {
       updatedAt: member.joined_at,
     }));
 
-  return {
+  return canonicalizeProjectDatasetMembers({
     project: mapProject(projectResult.data),
     profiles: [...actualProfiles, ...syntheticPendingProfiles],
     members: members.map(mapProjectMember),
@@ -638,5 +639,5 @@ export async function getLiveProjectDataset(projectId: string) {
     projectMemberActivities: isMissingRelationError(memberActivityResult.error)
       ? []
       : (memberActivityResult.data ?? []).map(mapProjectMemberActivity),
-  } satisfies ProjectDataset;
+  } satisfies ProjectDataset);
 }

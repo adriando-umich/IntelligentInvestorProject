@@ -161,8 +161,11 @@ Only `.env.example` should be committed.
 - Live Supabase database: migrated through `20260328190500_land_purchase_entry_support.sql`
 - Pending live DB upgrade from this repo: `20260328210000_project_member_activity.sql`
 - Release policy: production deploys must come from a clean deploy worktree created from an exact committed SHA
+- Release policy: every deploy or rollback must start from the current live production baseline, not local memory
 - Current reliable Vercel path: uploaded-file API deployment from a clean commit snapshot
+- Current deploy discipline: record live Vercel deployment metadata plus live Supabase migration state before release, then append a release-ledger entry after release
 - Latest production deployment for commit `00deeb7`: ready and promoted on Vercel as `dpl_5juQXS6xBRXnUThwdjvi1WKFp8z6`
+- Current local-not-live follow-up from this workspace: commit `b05e02ff434605d6b6f00519a0824d5f414476ea` plus migration `20260328210000_project_member_activity.sql`
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
 - Live Supabase Auth redirect allow-list now includes:
@@ -272,5 +275,13 @@ Only `.env.example` should be committed.
   - when Supabase ledger migrations must ship first
   - that releases must come from a clean deploy worktree built from an exact committed SHA
   - which real projects and screens to verify after deploy
+- Upgraded the deploy docs to a stricter production-baseline contract:
+  - live Vercel deployment metadata plus live Supabase migration state are the deploy baseline
+  - every release must capture pre-deploy live state, record rollback refs, and append a release-ledger entry
+  - git pushes are explicitly not treated as proof of production rollout for this repo
+- Hid the dashboard metric card `Cash deployed into land/assets` and removed the `Deployed into land/assets` column from the `Capital` table so the overview stays narrower while the underlying liquid-claim math remains unchanged.
+- Added live dataset canonicalization for duplicate project-member identities, keyed primarily by email identity, so stale pending rows and rejoin rows collapse into one canonical member in snapshots without losing cash legs, allocations, reconciliation rows, or statement history.
+- Added alias-resolution support so old member links or query params can still resolve onto the canonical member after that dataset merge.
+- Added `supabase/migrations/20260328233000_canonical_project_member_identities.sql` so invite acceptance can merge pending aliases back into the canonical member row instead of creating another identity, but that migration is still pending live until a Supabase access token is available in this workspace.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getSessionState } from "@/lib/auth/session";
+import { resolveCanonicalProjectMemberId } from "@/lib/data/project-member-canonicalization";
 import { getProjectSnapshot } from "@/lib/data/repository";
 import {
   buildAllocationSharesFromAllocations,
@@ -165,6 +166,18 @@ export default async function NewLedgerEntryPage({
   const queryEntryId = getQueryValue(query, "entryId");
   const queryWorkflow = getQueryValue(query, "workflow");
   const queryMemberId = getQueryValue(query, "memberId");
+  const resolvedQueryFrom = resolveCanonicalProjectMemberId(
+    snapshot.dataset,
+    queryFrom
+  );
+  const resolvedQueryTo = resolveCanonicalProjectMemberId(
+    snapshot.dataset,
+    queryTo
+  );
+  const resolvedQueryMemberId = resolveCanonicalProjectMemberId(
+    snapshot.dataset,
+    queryMemberId
+  );
   const editState = queryEntryId
     ? buildEditInitialValues(snapshot, queryEntryId)
     : null;
@@ -195,9 +208,9 @@ export default async function NewLedgerEntryPage({
   const settleClaimState =
     !editState &&
     queryWorkflow === "settle_claim" &&
-    queryMemberId
+    resolvedQueryMemberId
       ? activeMemberSummaries.find(
-          (summary) => summary.projectMember.id === queryMemberId
+          (summary) => summary.projectMember.id === resolvedQueryMemberId
         ) ?? null
       : null;
 
@@ -205,7 +218,11 @@ export default async function NewLedgerEntryPage({
     notFound();
   }
 
-  if (queryWorkflow === "settle_claim" && queryMemberId && !settleClaimState) {
+  if (
+    queryWorkflow === "settle_claim" &&
+    resolvedQueryMemberId &&
+    !settleClaimState
+  ) {
     notFound();
   }
 
@@ -215,10 +232,12 @@ export default async function NewLedgerEntryPage({
       currencyCode: snapshot.dataset.project.currencyCode,
       entryType: isPlannerEntryType(queryType) ? queryType : undefined,
       amount: queryAmount ? Number(queryAmount) : undefined,
-      cashOutProjectMemberId: queryFrom,
-      cashInProjectMemberId: queryTo,
+      cashOutProjectMemberId: resolvedQueryFrom,
+      cashInProjectMemberId: resolvedQueryTo,
       description:
-        queryType === "expense_settlement_payment" && queryFrom && queryTo
+        queryType === "expense_settlement_payment" &&
+        resolvedQueryFrom &&
+        resolvedQueryTo
           ? "Member repayment recorded from suggestion"
           : "",
     };

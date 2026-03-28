@@ -30,7 +30,12 @@
   - manager/member role changes
   - invite resend UX
   - apply the pending `20260328210000_project_member_activity.sql` migration and deploy the refreshed members-page governance UX
+  - use the new production-baseline runbook flow when shipping that release, including a fresh release-ledger entry
   - browser-level QA for the refreshed ownership-transfer/remove-member flows, including the new activity feed and inline success states
+- Apply the new `20260328233000_canonical_project_member_identities.sql` migration live once a Supabase access token is available, then verify on real duplicate-member projects that:
+  - stale pending aliases collapse back into one member after invite acceptance
+  - old member deep links still open the canonical statement
+  - split selectors and overview tables no longer show duplicate people
 - Run a focused language QA pass in both English and Vietnamese on the live app:
   - check for any remaining English-only strings in less-frequent dashboard/chart states
   - tighten Vietnamese wording where it still sounds too literal or overly technical
@@ -148,6 +153,9 @@
 - Refreshed the shared visual system toward a lighter Splitwise/Apple direction across the shell, auth, navigation, and top-level project surfaces, then re-ran `next build` successfully.
 - Pushed the theme refresh commit `ffb036c`, then shipped it to production through a Vercel uploaded-files deployment after confirming the git-source deployment path still fails with `git_info_fail`.
 - Added canonical deployment docs in `docs/operations/deployment-runbook.md` and `docs/operations/release-checklist.md`, then linked them from `README.md` so future releases know exactly what to deploy, in what order, and from which clean worktree.
+- Tightened those deploy docs further so future production releases must start from the live production baseline, capture Vercel plus Supabase preflight state, and end with a release-ledger entry.
 - Added `land_purchase` as a separate business event, updated claim math so land/assets reduce liquid capital instead of operating profit, patched the audit workbook to track asset basis and shared-loan interest separately, and applied/backfilled the live Supabase changes for the obvious land-purchase rows.
 - Added a shared `member-governance` permission helper, lightweight role-matrix tests, `router.refresh()`-based success UX on the members screen, and a new optional `project_member_activity` audit trail + feed that still needs live migration/deploy follow-through.
 - Removed the `Deployed into land/assets` column from the overview holding-money table so the remaining liquid-claim columns no longer get truncated on the project dashboard.
+- Removed the top-level dashboard metric card `Cash deployed into land/assets` and the `Capital` tab's `Deployed into land/assets` column so those numbers stay out of the main dashboard chrome while the underlying calculations remain intact.
+- Added a canonical project-member normalization layer in `getLiveProjectDataset`, plus focused tests, so duplicate identities caused by stale pending/rejoin rows no longer split finance math across two displayed members in the app.

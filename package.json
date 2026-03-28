@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:member-governance": "node --experimental-strip-types --test src/lib/projects/member-governance.test.mts",
+    "test:project-members": "node --experimental-strip-types --test src/lib/data/project-member-canonicalization.test.mts",
     "verify:audit-workbook": "node scripts/verify-audit-workbook.mjs"
   },
   "dependencies": {

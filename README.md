@@ -111,7 +111,7 @@ For the actual production release workflow in this repo, use:
 - [docs/operations/deployment-runbook.md](docs/operations/deployment-runbook.md)
 - [docs/operations/release-checklist.md](docs/operations/release-checklist.md)
 
-Those files define the required deploy order for app code versus Supabase ledger migrations, and the rule that production releases must come from a clean deploy worktree created from an exact committed SHA.
+Those files define the required deploy order for app code versus Supabase ledger migrations, the rule that production releases must come from a clean deploy worktree created from an exact committed SHA, and the standing requirement to capture the current live production baseline before every release.
 
 ## Product Notes
 

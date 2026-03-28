@@ -12,6 +12,7 @@ import {
   type SettlementSuggestion,
   type TagRollupRow,
 } from "@/lib/finance/types";
+import { resolveCanonicalProjectMemberId } from "@/lib/data/project-member-canonicalization";
 import { roundMoney } from "@/lib/format";
 
 const EPSILON = 0.01;
@@ -926,8 +927,12 @@ export function buildMemberStatement(
   projectMemberId: string
 ): MemberStatementSnapshot | null {
   const snapshot = buildProjectSnapshot(dataset);
+  const resolvedProjectMemberId = resolveCanonicalProjectMemberId(
+    snapshot.dataset,
+    projectMemberId
+  );
   const summary = snapshot.memberSummaries.find(
-    (item) => item.projectMember.id === projectMemberId
+    (item) => item.projectMember.id === resolvedProjectMemberId
   );
 
   if (!summary) {

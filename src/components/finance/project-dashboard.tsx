@@ -8,7 +8,6 @@ import {
   BanknoteArrowUp,
   CircleAlert,
   FileSpreadsheet,
-  FolderTree,
   HandCoins,
   Landmark,
   PiggyBank,
@@ -540,17 +539,6 @@ export function ProjectDashboard({
             icon={<PiggyBank className="size-5" />}
           />
           <MetricCard
-            title={copy.metricAssetBasisTitle}
-            value={formatCurrency(
-              snapshot.totalDeployedAssetBasis,
-              snapshot.dataset.project.currencyCode,
-              locale
-            )}
-            description={copy.metricAssetBasisDescription}
-            tone="slate"
-            icon={<FolderTree className="size-5" />}
-          />
-          <MetricCard
             title={copy.metricProfitPreviewTitle}
             value={formatCurrency(
               Math.max(snapshot.undistributedProfit, 0),
@@ -891,12 +879,11 @@ export function ProjectDashboard({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table className="min-w-[820px]">
+                  <Table className="min-w-[720px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>{copy.member}</TableHead>
                           <TableHead>{copy.capitalInvested}</TableHead>
-                          <TableHead>{copy.assetBasisDeployed}</TableHead>
                           <TableHead>{copy.profitWeight}</TableHead>
                           <TableHead>{copy.estimatedProfitToday}</TableHead>
                           <TableHead>{copy.claimAvailableToday}</TableHead>
@@ -908,7 +895,6 @@ export function ProjectDashboard({
                           <TableRow key={row.projectMemberId}>
                             <TableCell>{row.displayName}</TableCell>
                             <TableCell>{formatCurrency(row.capitalBalance, snapshot.dataset.project.currencyCode, locale)}</TableCell>
-                            <TableCell>{formatCurrency(row.assetBasisBalance, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                             <TableCell>{formatPercent(row.weight, locale)}</TableCell>
                             <TableCell>{formatCurrency(row.estimatedProfitShare, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                             <TableCell>

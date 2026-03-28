@@ -363,6 +363,7 @@ export interface ProjectDataset {
   reconciliationRuns: ReconciliationRun[];
   reconciliationChecks: ReconciliationCheck[];
   projectMemberActivities?: ProjectMemberActivity[];
+  projectMemberCanonicalIdByAlias?: Record<string, string>;
 }
 
 export interface MemberFinanceSummary {
