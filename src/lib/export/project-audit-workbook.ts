@@ -56,6 +56,7 @@ type CalcMetricKey =
   | "membersHoldingProjectCashTotal"
   | "frontedByMembersTotal"
   | "totalCapitalOutstanding"
+  | "totalDeployedAssetBasis"
   | "estimatedProfitToday"
   | "sharedLoanPrincipalOutstanding"
   | "projectOperatingIncome"
@@ -105,8 +106,10 @@ type EntryEffectsSheetContext = {
   columns: {
     projectCashDelta: string;
     capitalDelta: string;
+    assetBasisDelta: string;
     operatingIncomeDelta: string;
     operatingExpenseDelta: string;
+    sharedLoanInterestDelta: string;
     profitDistributionDelta: string;
     ownerProfitPayoutDelta: string;
     sharedLoanPrincipalDelta: string;
@@ -129,8 +132,10 @@ type EntryAuditEffect = {
   affectsMemberCashClaims: boolean;
   projectCashDelta: number;
   capitalDelta: number;
+  assetBasisDelta: number;
   operatingIncomeDelta: number;
   operatingExpenseDelta: number;
+  sharedLoanInterestDelta: number;
   profitDistributionDelta: number;
   ownerProfitPayoutDelta: number;
   sharedLoanPrincipalDelta: number;
@@ -143,9 +148,18 @@ function byDateAsc<T extends { effectiveAt?: string; createdAt?: string }>(
   left: T,
   right: T
 ) {
-  const leftTime = new Date(left.effectiveAt ?? left.createdAt ?? 0).getTime();
-  const rightTime = new Date(right.effectiveAt ?? right.createdAt ?? 0).getTime();
-  return leftTime - rightTime;
+  const effectiveDelta =
+    new Date(left.effectiveAt ?? 0).getTime() -
+    new Date(right.effectiveAt ?? 0).getTime();
+
+  if (effectiveDelta !== 0) {
+    return effectiveDelta;
+  }
+
+  return (
+    new Date(left.createdAt ?? 0).getTime() -
+    new Date(right.createdAt ?? 0).getTime()
+  );
 }
 
 function sanitizeFileSegment(value: string) {
@@ -275,6 +289,10 @@ function buildAuditDriver(entryType: EntryType) {
     drivers.push("operating profit");
   }
 
+  if (entryType === "land_purchase") {
+    drivers.push("deployed asset basis");
+  }
+
   if (
     entryType === "shared_loan_drawdown" ||
     entryType === "shared_loan_repayment_principal"
@@ -353,8 +371,10 @@ function computeEntryAuditEffect(
       affectsMemberCashClaims: false,
       projectCashDelta: 0,
       capitalDelta: 0,
+      assetBasisDelta: 0,
       operatingIncomeDelta: 0,
       operatingExpenseDelta: 0,
+      sharedLoanInterestDelta: 0,
       profitDistributionDelta: 0,
       ownerProfitPayoutDelta: 0,
       sharedLoanPrincipalDelta: 0,
@@ -378,12 +398,15 @@ function computeEntryAuditEffect(
       : sourceEntry.entryType === "capital_return"
         ? -sourceEntry.amount
         : 0);
+  const assetBasisDelta =
+    sign * (sourceEntry.entryType === "land_purchase" ? sourceEntry.amount : 0);
   const operatingIncomeDelta =
     sign * (sourceEntry.entryType === "operating_income" ? sourceEntry.amount : 0);
   const operatingExpenseDelta =
+    sign * (sourceEntry.entryType === "operating_expense" ? sourceEntry.amount : 0);
+  const sharedLoanInterestDelta =
     sign *
-    (sourceEntry.entryType === "operating_expense" ||
-    sourceEntry.entryType === "shared_loan_interest_payment"
+    (sourceEntry.entryType === "shared_loan_interest_payment"
       ? sourceEntry.amount
       : 0);
   const profitDistributionDelta =
@@ -400,6 +423,7 @@ function computeEntryAuditEffect(
   const estimatedProfitDelta =
     operatingIncomeDelta -
     operatingExpenseDelta -
+    sharedLoanInterestDelta -
     profitDistributionDelta -
     ownerProfitPayoutDelta;
   const affectsProjectCash = Boolean(
@@ -418,6 +442,7 @@ function computeEntryAuditEffect(
   const affectsMemberCashClaims =
     affectsProjectCash ||
     affectsCapital ||
+    Math.abs(assetBasisDelta) > 0.01 ||
     affectsOperatingProfit ||
     affectsSharedLoanPrincipal ||
     sourceEntry.entryType === "profit_distribution" ||
@@ -433,8 +458,10 @@ function computeEntryAuditEffect(
     affectsMemberCashClaims,
     projectCashDelta: roundMoney(projectCashDelta),
     capitalDelta: roundMoney(capitalDelta),
+    assetBasisDelta: roundMoney(assetBasisDelta),
     operatingIncomeDelta: roundMoney(operatingIncomeDelta),
     operatingExpenseDelta: roundMoney(operatingExpenseDelta),
+    sharedLoanInterestDelta: roundMoney(sharedLoanInterestDelta),
     profitDistributionDelta: roundMoney(profitDistributionDelta),
     ownerProfitPayoutDelta: roundMoney(ownerProfitPayoutDelta),
     sharedLoanPrincipalDelta: roundMoney(sharedLoanPrincipalDelta),
@@ -953,6 +980,12 @@ function buildEntryEffectsSheet(
       style: { numFmt: MONEY_FORMAT },
     },
     {
+      header: "Deployed asset basis delta",
+      key: "assetBasisDelta",
+      width: 20,
+      style: { numFmt: MONEY_FORMAT },
+    },
+    {
       header: "Operating income delta",
       key: "operatingIncomeDelta",
       width: 18,
@@ -962,6 +995,12 @@ function buildEntryEffectsSheet(
       header: "Operating expense delta",
       key: "operatingExpenseDelta",
       width: 18,
+      style: { numFmt: MONEY_FORMAT },
+    },
+    {
+      header: "Shared loan interest delta",
+      key: "sharedLoanInterestDelta",
+      width: 20,
       style: { numFmt: MONEY_FORMAT },
     },
     {
@@ -1032,13 +1071,14 @@ function buildEntryEffectsSheet(
     const capitalExpression =
       `IF(${sourceTypeRef}="capital_contribution",${sourceAmountRef},0)` +
       `-IF(${sourceTypeRef}="capital_return",${sourceAmountRef},0)`;
+    const assetBasisExpression =
+      `IF(${sourceTypeRef}="land_purchase",${sourceAmountRef},0)`;
     const operatingIncomeExpression =
       `IF(${sourceTypeRef}="operating_income",${sourceAmountRef},0)`;
     const operatingExpenseExpression =
-      `IF(${buildEntryTypeMatchFormula(sourceTypeRef, [
-        "operating_expense",
-        "shared_loan_interest_payment",
-      ])},${sourceAmountRef},0)`;
+      `IF(${sourceTypeRef}="operating_expense",${sourceAmountRef},0)`;
+    const sharedLoanInterestExpression =
+      `IF(${sourceTypeRef}="shared_loan_interest_payment",${sourceAmountRef},0)`;
     const profitDistributionExpression =
       `IF(${sourceTypeRef}="profit_distribution",${sourceAmountRef},0)`;
     const ownerProfitPayoutExpression =
@@ -1049,6 +1089,7 @@ function buildEntryEffectsSheet(
     const estimatedProfitExpression =
       `${operatingIncomeExpression}` +
       `-(${operatingExpenseExpression})` +
+      `-(${sharedLoanInterestExpression})` +
       `-(${profitDistributionExpression})` +
       `-(${ownerProfitPayoutExpression})`;
 
@@ -1076,6 +1117,10 @@ function buildEntryEffectsSheet(
         formula: withPostedSign(statusRef, capitalExpression, auditSource.sign),
         result: auditEffect.capitalDelta,
       },
+      assetBasisDelta: {
+        formula: withPostedSign(statusRef, assetBasisExpression, auditSource.sign),
+        result: auditEffect.assetBasisDelta,
+      },
       operatingIncomeDelta: {
         formula: withPostedSign(statusRef, operatingIncomeExpression, auditSource.sign),
         result: auditEffect.operatingIncomeDelta,
@@ -1083,6 +1128,14 @@ function buildEntryEffectsSheet(
       operatingExpenseDelta: {
         formula: withPostedSign(statusRef, operatingExpenseExpression, auditSource.sign),
         result: auditEffect.operatingExpenseDelta,
+      },
+      sharedLoanInterestDelta: {
+        formula: withPostedSign(
+          statusRef,
+          sharedLoanInterestExpression,
+          auditSource.sign
+        ),
+        result: auditEffect.sharedLoanInterestDelta,
       },
       profitDistributionDelta: {
         formula: withPostedSign(statusRef, profitDistributionExpression, auditSource.sign),
@@ -1116,10 +1169,15 @@ function buildEntryEffectsSheet(
   const lastDataRow = sheet.rowCount;
   const projectCashDeltaColumn = getColumnLetterByKey(sheet, "projectCashDelta");
   const capitalDeltaColumn = getColumnLetterByKey(sheet, "capitalDelta");
+  const assetBasisDeltaColumn = getColumnLetterByKey(sheet, "assetBasisDelta");
   const operatingIncomeDeltaColumn = getColumnLetterByKey(sheet, "operatingIncomeDelta");
   const operatingExpenseDeltaColumn = getColumnLetterByKey(
     sheet,
     "operatingExpenseDelta"
+  );
+  const sharedLoanInterestDeltaColumn = getColumnLetterByKey(
+    sheet,
+    "sharedLoanInterestDelta"
   );
   const profitDistributionDeltaColumn = getColumnLetterByKey(
     sheet,
@@ -1154,6 +1212,13 @@ function buildEntryEffectsSheet(
   );
   registerColumnRange(
     workbook,
+    "entryfx_asset_basis_delta",
+    "_entry_effects",
+    assetBasisDeltaColumn,
+    lastDataRow
+  );
+  registerColumnRange(
+    workbook,
     "entryfx_operating_income_delta",
     "_entry_effects",
     operatingIncomeDeltaColumn,
@@ -1164,6 +1229,13 @@ function buildEntryEffectsSheet(
     "entryfx_operating_expense_delta",
     "_entry_effects",
     operatingExpenseDeltaColumn,
+    lastDataRow
+  );
+  registerColumnRange(
+    workbook,
+    "entryfx_shared_loan_interest_delta",
+    "_entry_effects",
+    sharedLoanInterestDeltaColumn,
     lastDataRow
   );
   registerColumnRange(
@@ -1201,8 +1273,10 @@ function buildEntryEffectsSheet(
     columns: {
       projectCashDelta: projectCashDeltaColumn,
       capitalDelta: capitalDeltaColumn,
+      assetBasisDelta: assetBasisDeltaColumn,
       operatingIncomeDelta: operatingIncomeDeltaColumn,
       operatingExpenseDelta: operatingExpenseDeltaColumn,
+      sharedLoanInterestDelta: sharedLoanInterestDeltaColumn,
       profitDistributionDelta: profitDistributionDeltaColumn,
       ownerProfitPayoutDelta: ownerProfitPayoutDeltaColumn,
       sharedLoanPrincipalDelta: sharedLoanPrincipalDeltaColumn,
@@ -1256,17 +1330,22 @@ function buildCalcSheet(
   sheet.getCell("D2").value = "Delta";
   setHeaderStyle(sheet.getRow(2));
 
-  const memberStartRow = 19;
+  const reserveCashMetricRow = 13;
+  const positiveCashMetricRow = 14;
+  const positiveEntitlementMetricRow = 15;
+  const maxReserveWeightRow = 16;
+  const reserveRemainderRow = 17;
+  const memberSectionRow = 18;
+  const memberHeaderRow = 19;
+  const memberStartRow = 20;
   const memberEndRow = memberStartRow + memberDirectory.length - 1;
   const projectMoneyRange = `$D$${memberStartRow}:$D$${memberEndRow}`;
   const frontedRange = `$E$${memberStartRow}:$E$${memberEndRow}`;
-  const capitalRange = `$G$${memberStartRow}:$G$${memberEndRow}`;
-  const estimatedProfitRange = `$H$${memberStartRow}:$H$${memberEndRow}`;
-  const entitlementRange = `$I$${memberStartRow}:$I$${memberEndRow}`;
-  const positiveCashRange = `$J$${memberStartRow}:$J$${memberEndRow}`;
-  const positiveEntitlementRange = `$K$${memberStartRow}:$K$${memberEndRow}`;
-  const reserveWeightRange = `$L$${memberStartRow}:$L$${memberEndRow}`;
-  const reserveBaseRange = `$M$${memberStartRow}:$M$${memberEndRow}`;
+  const entitlementRange = `$J$${memberStartRow}:$J$${memberEndRow}`;
+  const positiveCashRange = `$K$${memberStartRow}:$K$${memberEndRow}`;
+  const positiveEntitlementRange = `$L$${memberStartRow}:$L$${memberEndRow}`;
+  const reserveWeightRange = `$M$${memberStartRow}:$M$${memberEndRow}`;
+  const reserveBaseRange = `$N$${memberStartRow}:$N$${memberEndRow}`;
 
   const positiveCashHeldApp = roundMoney(
     snapshot.memberSummaries.reduce(
@@ -1317,59 +1396,65 @@ function buildCalcSheet(
       appValue: snapshot.totalCapitalOutstanding,
     },
     {
+      key: "totalDeployedAssetBasis",
+      label: "Deployed into land/assets",
+      row: 7,
+      formula: `ROUND(SUM(entryfx_asset_basis_delta),2)`,
+      appValue: snapshot.totalDeployedAssetBasis,
+    },
+    {
       key: "estimatedProfitToday",
       label: "Estimated profit if distributed today",
-      row: 7,
+      row: 8,
       formula: `ROUND(SUM(entryfx_estimated_profit_delta),2)`,
       appValue: snapshot.undistributedProfit,
     },
     {
       key: "sharedLoanPrincipalOutstanding",
       label: "Shared loan principal outstanding",
-      row: 8,
+      row: 9,
       formula: `ROUND(SUM(entryfx_shared_loan_principal_delta),2)`,
       appValue: snapshot.sharedLoanPrincipalOutstanding,
     },
     {
       key: "projectOperatingIncome",
       label: "Project operating income",
-      row: 9,
+      row: 10,
       formula: `ROUND(SUM(entryfx_operating_income_delta),2)`,
       appValue: snapshot.projectOperatingIncome,
     },
     {
       key: "projectOperatingExpense",
       label: "Project operating expense",
-      row: 10,
+      row: 11,
       formula: `ROUND(SUM(entryfx_operating_expense_delta),2)`,
       appValue: snapshot.projectOperatingExpense,
     },
     {
       key: "sharedLoanInterestPaid",
       label: "Shared loan interest paid",
-      row: 11,
-      formula:
-        `ROUND(SUMIFS(tx_amount,tx_status,\"posted\",tx_entry_type,\"shared_loan_interest_payment\"),2)`,
+      row: 12,
+      formula: `ROUND(SUM(entryfx_shared_loan_interest_delta),2)`,
       appValue: snapshot.sharedLoanInterestPaidTotal,
     },
     {
       key: "reserveCashTotal",
       label: "Reserve cash total",
-      row: 12,
+      row: reserveCashMetricRow,
       formula: `ROUND($B$3-SUM(${entitlementRange}),2)`,
       appValue: cashClaimView.reserveCashTotal,
     },
     {
       key: "positiveCashHeldTotal",
       label: "Positive cash held total",
-      row: 13,
+      row: positiveCashMetricRow,
       formula: `ROUND(SUM(${positiveCashRange}),2)`,
       appValue: positiveCashHeldApp,
     },
     {
       key: "positiveEntitlementTotal",
       label: "Positive entitlement total",
-      row: 14,
+      row: positiveEntitlementMetricRow,
       formula: `ROUND(SUM(${positiveEntitlementRange}),2)`,
       appValue: positiveEntitlementApp,
     },
@@ -1399,48 +1484,50 @@ function buildCalcSheet(
     };
   }
 
-  sheet.getCell("A15").value = "Max reserve weight";
-  sheet.getCell("B15").value = {
+  sheet.getCell(`A${maxReserveWeightRow}`).value = "Max reserve weight";
+  sheet.getCell(`B${maxReserveWeightRow}`).value = {
     formula: `MAX(${reserveWeightRange})`,
     result: 0,
   };
-  sheet.getCell("A16").value = "Reserve remainder";
-  sheet.getCell("B16").value = {
-      formula: `ROUND($B$12-SUM(${reserveBaseRange}),2)`,
+  sheet.getCell(`A${reserveRemainderRow}`).value = "Reserve remainder";
+  sheet.getCell(`B${reserveRemainderRow}`).value = {
+      formula: `ROUND($B$${reserveCashMetricRow}-SUM(${reserveBaseRange}),2)`,
       result: 0,
   };
-  sheet.getCell("B15").numFmt = PERCENT_FORMAT;
-  sheet.getCell("B16").numFmt = MONEY_FORMAT;
+  sheet.getCell(`B${maxReserveWeightRow}`).numFmt = PERCENT_FORMAT;
+  sheet.getCell(`B${reserveRemainderRow}`).numFmt = MONEY_FORMAT;
 
-  sheet.getCell("A17").value = "Per-member cash-claim audit model";
-  sheet.mergeCells("A17:X17");
-  setSectionStyle(sheet.getRow(17));
+  sheet.getCell(`A${memberSectionRow}`).value = "Per-member cash-claim audit model";
+  sheet.mergeCells(`A${memberSectionRow}:Z${memberSectionRow}`);
+  setSectionStyle(sheet.getRow(memberSectionRow));
 
-  sheet.getCell("A18").value = "Order";
-  sheet.getCell("B18").value = "Project member ID";
-  sheet.getCell("C18").value = "Member";
-  sheet.getCell("D18").value = "Project money held";
-  sheet.getCell("E18").value = "Fronted own money";
-  sheet.getCell("F18").value = "Expense reimbursement (engine)";
-  sheet.getCell("G18").value = "Capital invested";
-  sheet.getCell("H18").value = "Estimated profit today (engine)";
-  sheet.getCell("I18").value = "Cash entitlement";
-  sheet.getCell("J18").value = "Positive cash held";
-  sheet.getCell("K18").value = "Positive entitlement";
-  sheet.getCell("L18").value = "Reserve weight";
-  sheet.getCell("M18").value = "Reserve base";
-  sheet.getCell("N18").value = "Reserve allocation";
-  sheet.getCell("O18").value = "Distributable cash held";
-  sheet.getCell("P18").value = "Team owes you";
-  sheet.getCell("Q18").value = "You owe team";
-  sheet.getCell("R18").value = "Profit weight";
-  sheet.getCell("S18").value = "App project money held";
-  sheet.getCell("T18").value = "App fronted own money";
-  sheet.getCell("U18").value = "App capital invested";
-  sheet.getCell("V18").value = "App estimated profit today";
-  sheet.getCell("W18").value = "App team owes you";
-  sheet.getCell("X18").value = "App you owe team";
-  setHeaderStyle(sheet.getRow(18));
+  sheet.getCell(`A${memberHeaderRow}`).value = "Order";
+  sheet.getCell(`B${memberHeaderRow}`).value = "Project member ID";
+  sheet.getCell(`C${memberHeaderRow}`).value = "Member";
+  sheet.getCell(`D${memberHeaderRow}`).value = "Project money held";
+  sheet.getCell(`E${memberHeaderRow}`).value = "Fronted own money";
+  sheet.getCell(`F${memberHeaderRow}`).value = "Expense reimbursement (engine)";
+  sheet.getCell(`G${memberHeaderRow}`).value = "Capital invested";
+  sheet.getCell(`H${memberHeaderRow}`).value = "Deployed into land/assets";
+  sheet.getCell(`I${memberHeaderRow}`).value = "Estimated profit today (engine)";
+  sheet.getCell(`J${memberHeaderRow}`).value = "Cash entitlement";
+  sheet.getCell(`K${memberHeaderRow}`).value = "Positive cash held";
+  sheet.getCell(`L${memberHeaderRow}`).value = "Positive entitlement";
+  sheet.getCell(`M${memberHeaderRow}`).value = "Reserve weight";
+  sheet.getCell(`N${memberHeaderRow}`).value = "Reserve base";
+  sheet.getCell(`O${memberHeaderRow}`).value = "Reserve allocation";
+  sheet.getCell(`P${memberHeaderRow}`).value = "Distributable cash held";
+  sheet.getCell(`Q${memberHeaderRow}`).value = "Team owes you";
+  sheet.getCell(`R${memberHeaderRow}`).value = "You owe team";
+  sheet.getCell(`S${memberHeaderRow}`).value = "Profit weight";
+  sheet.getCell(`T${memberHeaderRow}`).value = "App project money held";
+  sheet.getCell(`U${memberHeaderRow}`).value = "App fronted own money";
+  sheet.getCell(`V${memberHeaderRow}`).value = "App capital invested";
+  sheet.getCell(`W${memberHeaderRow}`).value = "App deployed asset basis";
+  sheet.getCell(`X${memberHeaderRow}`).value = "App estimated profit today";
+  sheet.getCell(`Y${memberHeaderRow}`).value = "App team owes you";
+  sheet.getCell(`Z${memberHeaderRow}`).value = "App you owe team";
+  setHeaderStyle(sheet.getRow(memberHeaderRow));
 
   const memberRefs: CalcMemberRef[] = [];
 
@@ -1449,7 +1536,7 @@ function buildCalcSheet(
     const claimRow = claimRowById.get(row.projectMemberId);
     const summary = row.summary;
     const capitalWeight = capitalWeightById.get(row.projectMemberId) ?? 0;
-    const countIfRange = `$L$${memberStartRow}:$L${excelRow}`;
+    const countIfRange = `$M$${memberStartRow}:$M${excelRow}`;
 
     sheet.getCell(`A${excelRow}`).value = row.order;
     sheet.getCell(`B${excelRow}`).value = row.projectMemberId;
@@ -1475,66 +1562,75 @@ function buildCalcSheet(
         `,2)`,
       result: summary.capitalBalance,
     };
-    sheet.getCell(`H${excelRow}`).value = summary.estimatedProfitShare;
-    sheet.getCell(`I${excelRow}`).value = {
-      formula: `ROUND(G${excelRow}+H${excelRow}+F${excelRow},2)`,
+    sheet.getCell(`H${excelRow}`).value = {
+      formula:
+        `ROUND(` +
+        `SUMIFS(alloc_amount,alloc_entry_status,\"posted\",alloc_entry_type,\"land_purchase\",alloc_member_id,$B${excelRow},alloc_allocation_type,\"expense_share\")` +
+        `,2)`,
+      result: summary.assetBasisBalance,
+    };
+    sheet.getCell(`I${excelRow}`).value = summary.estimatedProfitShare;
+    sheet.getCell(`J${excelRow}`).value = {
+      formula: `ROUND(G${excelRow}-H${excelRow}+I${excelRow}+F${excelRow},2)`,
       result:
         claimRow?.cashEntitlement ??
         roundMoney(
           summary.capitalBalance +
+            -summary.assetBasisBalance +
             summary.estimatedProfitShare +
             summary.expenseReimbursementBalance
         ),
     };
-    sheet.getCell(`J${excelRow}`).value = {
+    sheet.getCell(`K${excelRow}`).value = {
       formula: `ROUND(MAX(D${excelRow},0),2)`,
       result: Math.max(summary.projectCashCustody, 0),
     };
-    sheet.getCell(`K${excelRow}`).value = {
-      formula: `ROUND(MAX(I${excelRow},0),2)`,
+    sheet.getCell(`L${excelRow}`).value = {
+      formula: `ROUND(MAX(J${excelRow},0),2)`,
       result: Math.max(claimRow?.cashEntitlement ?? 0, 0),
     };
-    sheet.getCell(`L${excelRow}`).value = {
+    sheet.getCell(`M${excelRow}`).value = {
       formula:
-        `IF(ABS($B$12)<=0.01,0,` +
-        `IF($B$13>0.01,J${excelRow}/$B$13,` +
-        `IF($B$14>0.01,K${excelRow}/$B$14,` +
+        `IF(ABS($B$${reserveCashMetricRow})<=0.01,0,` +
+        `IF($B$${positiveCashMetricRow}>0.01,K${excelRow}/$B$${positiveCashMetricRow},` +
+        `IF($B$${positiveEntitlementMetricRow}>0.01,L${excelRow}/$B$${positiveEntitlementMetricRow},` +
         `IF(A${excelRow}=MIN($A$${memberStartRow}:$A$${memberEndRow}),1,0)` +
         `)))`,
       result: 0,
     };
-    sheet.getCell(`M${excelRow}`).value = {
-      formula: `ROUND($B$12*L${excelRow},2)`,
-      result: claimRow?.reserveAllocation ?? 0,
-    };
     sheet.getCell(`N${excelRow}`).value = {
-      formula:
-        `ROUND(M${excelRow}+IF(AND(ABS($B$16)>0.01,L${excelRow}=$B$15,COUNTIF(${countIfRange},$B$15)=1),$B$16,0),2)`,
+      formula: `ROUND($B$${reserveCashMetricRow}*M${excelRow},2)`,
       result: claimRow?.reserveAllocation ?? 0,
     };
     sheet.getCell(`O${excelRow}`).value = {
-      formula: `ROUND(D${excelRow}-N${excelRow},2)`,
-      result: claimRow?.distributableCashHeld ?? summary.projectCashCustody,
+      formula:
+        `ROUND(N${excelRow}+IF(AND(ABS($B$${reserveRemainderRow})>0.01,M${excelRow}=$B$${maxReserveWeightRow},COUNTIF(${countIfRange},$B$${maxReserveWeightRow})=1),$B$${reserveRemainderRow},0),2)`,
+      result: claimRow?.reserveAllocation ?? 0,
     };
     sheet.getCell(`P${excelRow}`).value = {
-      formula: `ROUND(MAX(I${excelRow}-O${excelRow},0),2)`,
-      result: claimRow?.teamOwesYou ?? 0,
+      formula: `ROUND(D${excelRow}-O${excelRow},2)`,
+      result: claimRow?.distributableCashHeld ?? summary.projectCashCustody,
     };
     sheet.getCell(`Q${excelRow}`).value = {
-      formula: `ROUND(MAX(O${excelRow}-I${excelRow},0),2)`,
-      result: claimRow?.youOweTeam ?? 0,
+      formula: `ROUND(MAX(J${excelRow}-P${excelRow},0),2)`,
+      result: claimRow?.teamOwesYou ?? 0,
     };
     sheet.getCell(`R${excelRow}`).value = {
+      formula: `ROUND(MAX(P${excelRow}-J${excelRow},0),2)`,
+      result: claimRow?.youOweTeam ?? 0,
+    };
+    sheet.getCell(`S${excelRow}`).value = {
       formula:
         `IF(G${excelRow}>0,ROUND(G${excelRow}/SUMIF($G$${memberStartRow}:$G$${memberEndRow},\">0\",$G$${memberStartRow}:$G$${memberEndRow}),6),0)`,
       result: capitalWeight,
     };
-    sheet.getCell(`S${excelRow}`).value = summary.projectCashCustody;
-    sheet.getCell(`T${excelRow}`).value = summary.frontedOwnMoney;
-    sheet.getCell(`U${excelRow}`).value = summary.capitalBalance;
-    sheet.getCell(`V${excelRow}`).value = summary.estimatedProfitShare;
-    sheet.getCell(`W${excelRow}`).value = claimRow?.teamOwesYou ?? 0;
-    sheet.getCell(`X${excelRow}`).value = claimRow?.youOweTeam ?? 0;
+    sheet.getCell(`T${excelRow}`).value = summary.projectCashCustody;
+    sheet.getCell(`U${excelRow}`).value = summary.frontedOwnMoney;
+    sheet.getCell(`V${excelRow}`).value = summary.capitalBalance;
+    sheet.getCell(`W${excelRow}`).value = summary.assetBasisBalance;
+    sheet.getCell(`X${excelRow}`).value = summary.estimatedProfitShare;
+    sheet.getCell(`Y${excelRow}`).value = claimRow?.teamOwesYou ?? 0;
+    sheet.getCell(`Z${excelRow}`).value = claimRow?.youOweTeam ?? 0;
 
     for (const column of [
       "D",
@@ -1545,23 +1641,25 @@ function buildCalcSheet(
       "I",
       "J",
       "K",
-      "M",
+      "L",
       "N",
       "O",
       "P",
       "Q",
-      "S",
+      "R",
       "T",
       "U",
       "V",
       "W",
       "X",
+      "Y",
+      "Z",
     ]) {
       sheet.getCell(`${column}${excelRow}`).numFmt = MONEY_FORMAT;
     }
 
-    sheet.getCell(`L${excelRow}`).numFmt = PERCENT_FORMAT;
-    sheet.getCell(`R${excelRow}`).numFmt = PERCENT_FORMAT;
+    sheet.getCell(`M${excelRow}`).numFmt = PERCENT_FORMAT;
+    sheet.getCell(`S${excelRow}`).numFmt = PERCENT_FORMAT;
 
     memberRefs.push({
       row: excelRow,
@@ -1579,22 +1677,24 @@ function buildCalcSheet(
     { key: "F", width: 18 },
     { key: "G", width: 16 },
     { key: "H", width: 18 },
-    { key: "I", width: 16 },
+    { key: "I", width: 18 },
     { key: "J", width: 16 },
     { key: "K", width: 16 },
-    { key: "L", width: 12 },
-    { key: "M", width: 14 },
+    { key: "L", width: 16 },
+    { key: "M", width: 12 },
     { key: "N", width: 14 },
-    { key: "O", width: 18 },
-    { key: "P", width: 16 },
+    { key: "O", width: 14 },
+    { key: "P", width: 18 },
     { key: "Q", width: 16 },
-    { key: "R", width: 12 },
-    { key: "S", width: 16 },
+    { key: "R", width: 16 },
+    { key: "S", width: 12 },
     { key: "T", width: 16 },
     { key: "U", width: 16 },
-    { key: "V", width: 18 },
-    { key: "W", width: 16 },
-    { key: "X", width: 16 },
+    { key: "V", width: 16 },
+    { key: "W", width: 18 },
+    { key: "X", width: 18 },
+    { key: "Y", width: 16 },
+    { key: "Z", width: 16 },
   ];
 
   return {
@@ -1655,6 +1755,15 @@ function buildDashboardSheet(
       traceSheet: entryEffectsSheetName,
       traceCell: "A1",
       traceLabel: "See capital deltas",
+    },
+    {
+      key: "totalDeployedAssetBasis" as const,
+      label: "Deployed into land/assets",
+      ref: refs.metrics.totalDeployedAssetBasis,
+      result: snapshot.totalDeployedAssetBasis,
+      traceSheet: entryEffectsSheetName,
+      traceCell: "A1",
+      traceLabel: "See land-purchase deltas",
     },
     {
       key: "estimatedProfitToday" as const,
@@ -1719,7 +1828,7 @@ function buildDashboardSheet(
     {
       step: "4",
       what: "Inspect member claim math",
-      goTo: createInternalLink("_calc", "A17", "_calc!A17"),
+      goTo: createInternalLink("_calc", "A18", "_calc!A18"),
       why: "This is the helper model behind project cash held, capital, reserve allocation, and claim balances.",
     },
     {
@@ -1841,15 +1950,15 @@ function buildDashboardSheet(
       result: summary?.frontedOwnMoney ?? 0,
     };
     sheet.getCell(`D${row}`).value = {
-      formula: `_calc!P${member.row}`,
+      formula: `_calc!Q${member.row}`,
       result: claimRow?.teamOwesYou ?? 0,
     };
     sheet.getCell(`E${row}`).value = {
-      formula: `_calc!Q${member.row}`,
+      formula: `_calc!R${member.row}`,
       result: claimRow?.youOweTeam ?? 0,
     };
     sheet.getCell(`F${row}`).value = {
-      formula: `_calc!H${member.row}`,
+      formula: `_calc!I${member.row}`,
       result: summary?.estimatedProfitShare ?? 0,
     };
 
@@ -1864,11 +1973,12 @@ function buildDashboardSheet(
   sheet.getCell(`A${capitalHeaderRow - 1}`).value =
     "Capital and profit claim today";
   setSectionStyle(sheet.getRow(capitalHeaderRow - 1));
-  sheet.mergeCells(`A${capitalHeaderRow - 1}:D${capitalHeaderRow - 1}`);
+  sheet.mergeCells(`A${capitalHeaderRow - 1}:E${capitalHeaderRow - 1}`);
   sheet.getCell(`A${capitalHeaderRow}`).value = "Member";
   sheet.getCell(`B${capitalHeaderRow}`).value = "Capital invested";
-  sheet.getCell(`C${capitalHeaderRow}`).value = "Profit weight";
-  sheet.getCell(`D${capitalHeaderRow}`).value = "Estimated profit today";
+  sheet.getCell(`C${capitalHeaderRow}`).value = "Deployed into land/assets";
+  sheet.getCell(`D${capitalHeaderRow}`).value = "Profit weight";
+  sheet.getCell(`E${capitalHeaderRow}`).value = "Estimated profit today";
   setHeaderStyle(sheet.getRow(capitalHeaderRow));
 
   for (const [index, member] of refs.memberRows.entries()) {
@@ -1886,16 +1996,21 @@ function buildDashboardSheet(
       result: summary?.capitalBalance ?? 0,
     };
     sheet.getCell(`C${row}`).value = {
-      formula: `_calc!R${member.row}`,
-      result: capitalWeightById.get(member.projectMemberId) ?? 0,
+      formula: `_calc!H${member.row}`,
+      result: summary?.assetBasisBalance ?? 0,
     };
     sheet.getCell(`D${row}`).value = {
-      formula: `_calc!H${member.row}`,
+      formula: `_calc!S${member.row}`,
+      result: capitalWeightById.get(member.projectMemberId) ?? 0,
+    };
+    sheet.getCell(`E${row}`).value = {
+      formula: `_calc!I${member.row}`,
       result: summary?.estimatedProfitShare ?? 0,
     };
     sheet.getCell(`B${row}`).numFmt = MONEY_FORMAT;
-    sheet.getCell(`C${row}`).numFmt = PERCENT_FORMAT;
-    sheet.getCell(`D${row}`).numFmt = MONEY_FORMAT;
+    sheet.getCell(`C${row}`).numFmt = MONEY_FORMAT;
+    sheet.getCell(`D${row}`).numFmt = PERCENT_FORMAT;
+    sheet.getCell(`E${row}`).numFmt = MONEY_FORMAT;
   }
 
   const parityHeaderRow = capitalStartRow + refs.memberRows.length + 3;
@@ -1904,13 +2019,14 @@ function buildDashboardSheet(
 
   sheet.getCell(`A${parityHeaderRow - 1}`).value = "Member parity checks";
   setSectionStyle(sheet.getRow(parityHeaderRow - 1));
-  sheet.mergeCells(`A${parityHeaderRow - 1}:F${parityHeaderRow - 1}`);
+  sheet.mergeCells(`A${parityHeaderRow - 1}:G${parityHeaderRow - 1}`);
   sheet.getCell(`A${parityHeaderRow}`).value = "Member";
   sheet.getCell(`B${parityHeaderRow}`).value = "Project money delta";
   sheet.getCell(`C${parityHeaderRow}`).value = "Capital delta";
-  sheet.getCell(`D${parityHeaderRow}`).value = "Profit delta";
-  sheet.getCell(`E${parityHeaderRow}`).value = "Team owes delta";
-  sheet.getCell(`F${parityHeaderRow}`).value = "You owe delta";
+  sheet.getCell(`D${parityHeaderRow}`).value = "Asset basis delta";
+  sheet.getCell(`E${parityHeaderRow}`).value = "Profit delta";
+  sheet.getCell(`F${parityHeaderRow}`).value = "Team owes delta";
+  sheet.getCell(`G${parityHeaderRow}`).value = "You owe delta";
   setHeaderStyle(sheet.getRow(parityHeaderRow));
 
   for (const [index, member] of refs.memberRows.entries()) {
@@ -1923,27 +2039,31 @@ function buildDashboardSheet(
     );
     setLinkStyle(sheet.getCell(`A${row}`));
     sheet.getCell(`B${row}`).value = {
-      formula: `ROUND(_calc!D${member.row}-_calc!S${member.row},2)`,
+      formula: `ROUND(_calc!D${member.row}-_calc!T${member.row},2)`,
       result: 0,
     };
     sheet.getCell(`C${row}`).value = {
-      formula: `ROUND(_calc!G${member.row}-_calc!U${member.row},2)`,
+      formula: `ROUND(_calc!G${member.row}-_calc!V${member.row},2)`,
       result: 0,
     };
     sheet.getCell(`D${row}`).value = {
-      formula: `ROUND(_calc!H${member.row}-_calc!V${member.row},2)`,
+      formula: `ROUND(_calc!H${member.row}-_calc!W${member.row},2)`,
       result: 0,
     };
     sheet.getCell(`E${row}`).value = {
-      formula: `ROUND(_calc!P${member.row}-_calc!W${member.row},2)`,
+      formula: `ROUND(_calc!I${member.row}-_calc!X${member.row},2)`,
       result: 0,
     };
     sheet.getCell(`F${row}`).value = {
-      formula: `ROUND(_calc!Q${member.row}-_calc!X${member.row},2)`,
+      formula: `ROUND(_calc!Q${member.row}-_calc!Y${member.row},2)`,
+      result: 0,
+    };
+    sheet.getCell(`G${row}`).value = {
+      formula: `ROUND(_calc!R${member.row}-_calc!Z${member.row},2)`,
       result: 0,
     };
 
-    for (const column of ["B", "C", "D", "E", "F"]) {
+    for (const column of ["B", "C", "D", "E", "F", "G"]) {
       sheet.getCell(`${column}${row}`).numFmt = MONEY_FORMAT;
       memberParityDeltaCells.push({ cell: `${column}${row}`, value: 0 });
     }
@@ -1952,7 +2072,7 @@ function buildDashboardSheet(
   const parityNoteRow = parityEndRow + 2;
   sheet.getCell(`A${parityNoteRow}`).value =
     "Audit note: every delta block in this sheet should stay at 0. If a delta drifts, unhide _calc and trace the linked member row or metric source.";
-  sheet.mergeCells(`A${parityNoteRow}:F${parityNoteRow}`);
+  sheet.mergeCells(`A${parityNoteRow}:G${parityNoteRow}`);
   sheet.getCell(`A${parityNoteRow}`).alignment = { wrapText: true };
   sheet.getCell(`A${parityNoteRow}`).fill = SECTION_FILL;
 
@@ -1977,7 +2097,7 @@ function buildDashboardSheet(
   );
   addZeroDeltaFormatting(
     sheet,
-    `B${parityStartRow}:F${parityEndRow}`,
+    `B${parityStartRow}:G${parityEndRow}`,
     memberParityDeltaCells
   );
 }

@@ -8,6 +8,7 @@ import {
   BanknoteArrowUp,
   CircleAlert,
   FileSpreadsheet,
+  FolderTree,
   HandCoins,
   Landmark,
   PiggyBank,
@@ -55,7 +56,10 @@ import {
   type EntryFamily,
   type ProjectSnapshot,
 } from "@/lib/finance/types";
-import { buildProjectCashClaimView } from "@/lib/finance/project-cash-claims";
+import {
+  buildProjectCashClaimView,
+  getClaimAvailableToday,
+} from "@/lib/finance/project-cash-claims";
 import { buildSharedExpenseSettlementView } from "@/lib/finance/shared-expense-settlements";
 import {
   formatCurrency as formatAppCurrency,
@@ -195,23 +199,22 @@ export function ProjectDashboard({
   const claimSettlementRows = useMemo(
     () =>
       snapshot.memberSummaries
-        .filter(
-          (summary) =>
-            summary.capitalBalance > 0 || summary.estimatedProfitShare > 0
-        )
         .map((summary) => ({
           projectMemberId: summary.projectMember.id,
           displayName: summary.profile.displayName,
           capitalBalance: summary.capitalBalance,
+          assetBasisBalance: summary.assetBasisBalance,
           estimatedProfitShare: summary.estimatedProfitShare,
+          claimAvailableToday: getClaimAvailableToday(summary),
           weight: capitalWeightByMemberId.get(summary.projectMember.id) ?? 0,
         }))
+        .filter((summary) => summary.claimAvailableToday > 0.01)
         .sort((left, right) => {
-          if (right.capitalBalance !== left.capitalBalance) {
-            return right.capitalBalance - left.capitalBalance;
+          if (right.claimAvailableToday !== left.claimAvailableToday) {
+            return right.claimAvailableToday - left.claimAvailableToday;
           }
 
-          return right.estimatedProfitShare - left.estimatedProfitShare;
+          return right.capitalBalance - left.capitalBalance;
         }),
     [capitalWeightByMemberId, snapshot.memberSummaries]
   );
@@ -234,21 +237,25 @@ export function ProjectDashboard({
           metricCapitalTitle: "Vốn đang góp",
           metricCapitalDescription:
             "Chỉ vốn góp mới làm đổi tỷ trọng chia lợi nhuận. Chi phí chung không làm đổi con số này.",
+          metricAssetBasisTitle: "Tiền đã deploy vào đất/tài sản",
+          metricAssetBasisDescription:
+            "Các khoản mua đất làm giảm tiền mặt nhưng vẫn giữ giá trị trong dự án. Chúng không đi vào lỗ vận hành.",
           metricProfitPreviewTitle: "Lợi nhuận ước tính nếu chia hôm nay",
           metricProfitPreviewDescription:
-            "Đây là lợi nhuận vận hành chưa chia. Chỉ là số preview cho tới khi quản lý thực hiện lệnh chia lợi nhuận.",
+            "Đây chỉ là lợi nhuận vận hành chưa chia. Mua đất không đi vào con số này cho tới khi tài sản được bán hoặc hiện thực hóa.",
           metricSettlementTitle: "Việc đối trừ còn mở",
           metricSettlementDescription:
-            "Chỉ là gợi ý chuyển tiền do chi phí chung. Hoàn toàn tách biệt với vốn và lợi nhuận.",
+            "Đây là gợi ý phân lại tiền mặt theo claim hiện tại sau khi trừ phần tiền đã đi vào đất/tài sản. Nó tách biệt với shared-expense reimbursement.",
           whySeparateTitle: "Vì sao các con số được tách riêng",
           whySeparateDescription:
-            "Dashboard này cố tình tách tiền dự án, tiền hoàn trả giữa thành viên, vốn góp và lợi nhuận để người không chuyên kế toán cũng dễ hiểu.",
+            "Dashboard này cố tình tách tiền dự án, tiền hoàn trả giữa thành viên, vốn góp, giá trị đã đi vào đất/tài sản và lợi nhuận vận hành để người không chuyên kế toán cũng dễ hiểu.",
           holdingMoneyTitle: "Ai đang giữ tiền dự án",
           holdingMoneyDescription:
-            "Số dương nghĩa là thành viên đó đang giữ tiền dự án. “Ứng tiền riêng” nghĩa là họ đã dùng tiền cá nhân cho hoạt động của dự án.",
+            "Số dương nghĩa là thành viên đó đang giữ tiền dự án. Claim tiền mặt hiện tại được tính sau khi trừ phần tiền đã đổi thành đất/tài sản và cộng phần lợi nhuận vận hành còn mở.",
           member: "Thành viên",
           projectMoneyHeld: "Tiền dự án đang giữ",
           frontedOwnMoney: "Đã ứng tiền riêng",
+          assetBasisDeployed: "Đã vào đất/tài sản",
           teamOwesYou: "Team đang nợ bạn",
           youOweTeam: "Bạn đang nợ team",
           estimatedProfitToday: "Lợi nhuận ước tính hôm nay",
@@ -260,10 +267,10 @@ export function ProjectDashboard({
           noReceivingMember: "Chưa có người nhận tiền",
           inLabel: "Vào",
           outLabel: "Ra",
-          owesWhoTitle: "Ai đang nợ ai vì chi phí chung",
+          owesWhoTitle: "Ai nên nhận tiền dự án tiếp theo",
           owesWhoDescription:
-            "Các gợi ý này chỉ để tất toán chi phí chung. Chúng không làm thay đổi quyền vốn.",
-          settled: "Các khoản chi phí chung đã được đối trừ xong.",
+            "Các gợi ý này so tiền mặt đang giữ với claim tiền mặt hiện tại sau vốn, đất/tài sản đã mua, lợi nhuận vận hành và cash reserve còn phải giữ lại.",
+          settled: "Tiền mặt đang giữ đã khớp với claim hiện tại của từng người.",
           pays: "trả cho",
           reconciliationHealthTitle: "Tình trạng đối chiếu",
           reconciliationHealthDescription:
@@ -296,10 +303,10 @@ export function ProjectDashboard({
           entries: "Số giao dịch",
           capitalTableTitle: "Vốn góp và tỷ lệ chia lợi nhuận",
           capitalTableDescription:
-            "Chỉ thành viên có vốn dương mới tham gia phần preview lợi nhuận. Sau khi làm tròn, phần lẻ được cộng vào người có vốn lớn nhất.",
+            "Bảng này giữ vốn góp tách riêng khỏi phần tiền đã đổi thành đất/tài sản. Claim available today chỉ phản ánh phần cash/liquid claim có thể settle ngay.",
           capitalInvested: "Vốn đã góp",
+          claimAvailableToday: "Claim có thể settle hôm nay",
           profitWeight: "Tỷ trọng lợi nhuận",
-          totalCapitalAndProfit: "Tổng vốn và lãi",
           openReconciliationRunTitle: "Đợt đối chiếu đang mở",
           openReconciliationRunDescription:
             "Phần này so sánh số tiền dự án hệ thống kỳ vọng với số tiền từng thành viên báo cáo là họ thực sự đang giữ.",
@@ -313,8 +320,9 @@ export function ProjectDashboard({
             "Dashboard thân thiện ở phía trên là mặc định. Phần này hiển thị ý nghĩa kỹ thuật ở lớp bên dưới.",
           operatingTotalsTitle: "Tổng số vận hành",
           operatingTotalsTooltip:
-            "Lợi nhuận vận hành bằng tiền vào trừ chi phí vận hành, trước khi tính các lần chia lợi nhuận.",
+            "Lợi nhuận vận hành bằng tiền vào trừ chi phí vận hành, trước khi tính các lần chia lợi nhuận. Mua đất được tách riêng khỏi phần này.",
           income: "Tiền vào",
+          assetBasisComponent: "Đã vào đất/tài sản",
           expense: "Chi phí",
           sharedLoanInterest: "Lãi vay chung",
           sharedLoanOutstanding: "Gốc vay chung còn lại",
@@ -326,6 +334,7 @@ export function ProjectDashboard({
             "Reimbursement dùng để theo dõi ai nợ ai vì chi phí chung.",
             "Vốn góp quyết định tỷ lệ chia lợi nhuận.",
             "Gốc vay chung là tài trợ vốn, còn lãi vay chung là chi phí.",
+            "Mua đất làm chuyển tiền mặt thành tài sản của dự án, không phải chi phí vận hành.",
             "Lợi nhuận chỉ được xem là đã trả khi quản lý thực hiện lệnh chia lợi nhuận.",
           ],
         }
@@ -346,21 +355,25 @@ export function ProjectDashboard({
           metricCapitalTitle: "Capital invested",
           metricCapitalDescription:
             "Only capital changes profit-sharing weight. Shared expenses do not change this number.",
+          metricAssetBasisTitle: "Cash deployed into land/assets",
+          metricAssetBasisDescription:
+            "Land purchases reduce cash but keep value inside the project. They do not count as operating loss.",
           metricProfitPreviewTitle: "Estimated profit if distributed today",
           metricProfitPreviewDescription:
-            "This is undistributed operating profit. It is only a preview until a manager posts a profit distribution.",
+            "This is undistributed operating profit only. Land purchases stay out of this number until the asset is sold or otherwise realized.",
           metricSettlementTitle: "Cash redistribution actions",
           metricSettlementDescription:
-            "Suggested transfers based on capital still invested, profit earned so far, and who is already holding the project cash.",
+            "Suggested transfers based on today's liquid claim after land/assets already purchased and who is already holding the project cash.",
           whySeparateTitle: "Why the numbers stay separate",
           whySeparateDescription:
-            "This dashboard keeps project cash, member cash claims, shared-expense reimbursements, capital, and profit separate so each number answers one question clearly.",
+            "This dashboard keeps project cash, member cash claims, shared-expense reimbursements, capital, land/assets already purchased, and operating profit separate so each number answers one question clearly.",
           holdingMoneyTitle: "Who is holding project money",
           holdingMoneyDescription:
-            "Positive numbers mean the member is holding project money. Team balances compare that cash against each member's current claim after capital, profit preview, and any true fronted-money reimbursement.",
+            "Positive numbers mean the member is holding project money. Team balances compare that cash against each member's current liquid claim after capital, land/assets already purchased, profit preview, and any true fronted-money reimbursement.",
           member: "Member",
           projectMoneyHeld: "Project money held",
           frontedOwnMoney: "Fronted own money",
+          assetBasisDeployed: "Deployed into land/assets",
           teamOwesYou: "Team owes you",
           youOweTeam: "You owe team",
           estimatedProfitToday: "Estimated profit today",
@@ -374,7 +387,7 @@ export function ProjectDashboard({
           outLabel: "Out",
           owesWhoTitle: "Who should receive project cash next",
           owesWhoDescription:
-            "These suggestions compare the cash people are holding now against each member's current claim after capital and profit preview.",
+            "These suggestions compare the cash people are holding now against each member's current liquid claim after capital, land/assets already purchased, profit preview, and reserve cash that should stay inside the project.",
           settled: "Current cash already lines up with member claims.",
           pays: "pays",
           reconciliationHealthTitle: "Reconciliation health",
@@ -408,10 +421,10 @@ export function ProjectDashboard({
           entries: "Entries",
           capitalTableTitle: "Capital and profit-sharing weight",
           capitalTableDescription:
-            "Only members with positive capital participate in profit preview. The remainder is assigned to the largest capital holder after rounding.",
+            "Capital stays separate from land/assets already purchased. Claim available today only reflects the liquid amount that can be settled now.",
           capitalInvested: "Capital invested",
+          claimAvailableToday: "Claim available today",
           profitWeight: "Profit weight",
-          totalCapitalAndProfit: "Total capital and profit",
           openReconciliationRunTitle: "Open reconciliation run",
           openReconciliationRunDescription:
             "This compares the app's expected project cash per member with what that member reports they actually hold.",
@@ -425,8 +438,9 @@ export function ProjectDashboard({
             "The friendly dashboard above is the default. This section exposes the raw technical meaning underneath.",
           operatingTotalsTitle: "Operating totals",
           operatingTotalsTooltip:
-            "Operating profit is income minus operating expense before profit distributions.",
+            "Operating profit is income minus operating expense before profit distributions. Land purchases stay outside this section.",
           income: "Income",
+          assetBasisComponent: "Deployed into land/assets",
           expense: "Expense",
           sharedLoanInterest: "Shared loan interest",
           sharedLoanOutstanding: "Shared loan principal still outstanding",
@@ -438,6 +452,7 @@ export function ProjectDashboard({
             "Reimbursement tracks who owes whom because of shared expenses.",
             "Capital drives profit weight.",
             "Shared loan principal is financing, while shared loan interest is cost.",
+            "Land purchase converts cash into a project asset instead of an operating cost.",
             "Profit is only paid when a manager posts a distribution.",
           ],
         };
@@ -525,6 +540,17 @@ export function ProjectDashboard({
             icon={<PiggyBank className="size-5" />}
           />
           <MetricCard
+            title={copy.metricAssetBasisTitle}
+            value={formatCurrency(
+              snapshot.totalDeployedAssetBasis,
+              snapshot.dataset.project.currencyCode,
+              locale
+            )}
+            description={copy.metricAssetBasisDescription}
+            tone="slate"
+            icon={<FolderTree className="size-5" />}
+          />
+          <MetricCard
             title={copy.metricProfitPreviewTitle}
             value={formatCurrency(
               Math.max(snapshot.undistributedProfit, 0),
@@ -578,6 +604,7 @@ export function ProjectDashboard({
                       <TableHead>{copy.member}</TableHead>
                       <TableHead>{copy.projectMoneyHeld}</TableHead>
                       <TableHead>{copy.frontedOwnMoney}</TableHead>
+                      <TableHead>{copy.assetBasisDeployed}</TableHead>
                       <TableHead>{copy.teamOwesYou}</TableHead>
                       <TableHead>{copy.youOweTeam}</TableHead>
                       <TableHead>{copy.estimatedProfitToday}</TableHead>
@@ -602,6 +629,7 @@ export function ProjectDashboard({
                         </TableCell>
                         <TableCell>{formatSignedCurrency(summary.projectCashCustody, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                         <TableCell>{formatCurrency(summary.frontedOwnMoney, snapshot.dataset.project.currencyCode, locale)}</TableCell>
+                        <TableCell>{formatCurrency(summary.assetBasisBalance, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                         <TableCell className="text-emerald-700">{formatCurrency(summary.teamOwesYou, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                         <TableCell className="text-rose-700">{formatCurrency(summary.youOweTeam, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                         <TableCell>{formatCurrency(summary.estimatedProfitShare, snapshot.dataset.project.currencyCode, locale)}</TableCell>
@@ -870,9 +898,10 @@ export function ProjectDashboard({
                         <TableRow>
                           <TableHead>{copy.member}</TableHead>
                           <TableHead>{copy.capitalInvested}</TableHead>
+                          <TableHead>{copy.assetBasisDeployed}</TableHead>
                           <TableHead>{copy.profitWeight}</TableHead>
                           <TableHead>{copy.estimatedProfitToday}</TableHead>
-                          <TableHead>{copy.totalCapitalAndProfit}</TableHead>
+                          <TableHead>{copy.claimAvailableToday}</TableHead>
                           <TableHead className="text-right">{actionColumnLabel}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -881,11 +910,12 @@ export function ProjectDashboard({
                           <TableRow key={row.projectMemberId}>
                             <TableCell>{row.displayName}</TableCell>
                             <TableCell>{formatCurrency(row.capitalBalance, snapshot.dataset.project.currencyCode, locale)}</TableCell>
+                            <TableCell>{formatCurrency(row.assetBasisBalance, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                             <TableCell>{formatPercent(row.weight, locale)}</TableCell>
                             <TableCell>{formatCurrency(row.estimatedProfitShare, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                             <TableCell>
                               {formatCurrency(
-                                row.capitalBalance + row.estimatedProfitShare,
+                                row.claimAvailableToday,
                                 snapshot.dataset.project.currencyCode,
                                 locale
                               )}
@@ -993,6 +1023,7 @@ export function ProjectDashboard({
                     </div>
                     <div className="mt-3 space-y-2 text-sm text-slate-600">
                       <p>{copy.income}: {formatCompactCurrency(snapshot.projectOperatingIncome, snapshot.dataset.project.currencyCode, locale)}</p>
+                      <p>{copy.assetBasisComponent}: {formatCompactCurrency(snapshot.totalDeployedAssetBasis, snapshot.dataset.project.currencyCode, locale)}</p>
                       <p>{copy.expense}: {formatCompactCurrency(snapshot.projectOperatingExpense, snapshot.dataset.project.currencyCode, locale)}</p>
                       <p>{copy.sharedLoanInterest}: {formatCompactCurrency(snapshot.sharedLoanInterestPaidTotal, snapshot.dataset.project.currencyCode, locale)}</p>
                       <p>{copy.sharedLoanOutstanding}: {formatCompactCurrency(snapshot.sharedLoanPrincipalOutstanding, snapshot.dataset.project.currencyCode, locale)}</p>

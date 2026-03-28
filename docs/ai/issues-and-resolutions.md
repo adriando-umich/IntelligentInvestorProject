@@ -8,6 +8,7 @@
 - The invite flow now has database-level live verification, but it still needs one full browser-level pass covering create invite, sign in from deep link, and accept invite through the production UI.
 - The new ownership-transfer flow has live SQL verification, but it still needs one browser-level pass from the production members screen with a real owner session.
 - The new remove-member flow has live SQL verification, but it still needs one browser-level pass from the production members screen with a real owner or manager session.
+- The new `land_purchase` model has local build coverage and live DB backfill, but it still needs one browser-level production pass plus one audit-export pass on a real project to confirm the new asset-basis columns stay aligned.
 - Profit distribution still has no dedicated live post flow.
 - Fresh installs cannot run `npm run lint` right now because the repo has a `lint` script but does not declare `eslint` as a direct dev dependency.
 - Large single `apply_patch` payloads can fail on Windows with command-length limits.
@@ -76,6 +77,7 @@
 - The product still felt visually split between older warm cards and newer finance surfaces; resolved in code by moving the shared theme toward lighter Splitwise-inspired mint accents plus softer Apple-style surfaces across the shell, auth, cards, buttons, tabs, and primary project pages.
 - The refreshed theme initially appeared “done locally but not on production” because pushing to GitHub did not trigger a usable production release and git-source API deployments still failed with `git_info_fail`; resolved by creating a Vercel uploaded-files production deployment from the committed source snapshot, which successfully promoted the new theme live.
 - Deployment knowledge had been trapped in session context, which increased the risk of deploying the wrong code tree or forgetting the app-vs-migration order; resolved by adding `docs/operations/deployment-runbook.md`, `docs/operations/release-checklist.md`, and a README pointer to them.
+- Projects that bought land using `operating_expense` showed both owners with large negative `Estimated profit today` and misleading cash-claim balances even when the cash had simply been converted into land; resolved by adding a dedicated `land_purchase` entry type, changing the claim model to subtract deployed asset basis from liquid capital instead of P&L, updating dashboard/member/export surfaces, and backfilling the obvious live land-purchase rows out of `operating_expense`.
 
 ## Repeated Pitfalls / Prevention Notes
 
@@ -104,6 +106,7 @@
 - When a workflow depends on returning to a deep link after auth, preserve the `next` path consistently across OAuth, password sign-in, and sign-up.
 - For Vietnamese operator-facing search, normalize both the query and searchable text so users are not forced to type diacritics exactly.
 - For balance engines that depend on running cash custody, never rely on one business-date column alone; use a deterministic secondary tiebreaker such as `created_at` for same-day entries.
+- When project money is converted into land or another long-lived asset, do not model that movement as `operating_expense`; keep deployed asset basis separate from liquid cash claims and operating profit, or the UI will invent losses and debts that are not real.
 
 ## Latest Session Delta
 
@@ -159,3 +162,4 @@
 - Pushed commit `00deeb7` to `main`, promoted production deployment `dpl_5juQXS6xBRXnUThwdjvi1WKFp8z6`, and re-smoked `/sign-in`, `/projects`, and `/projects/project-sunrise/members` on the live site.
 - Clarified the overview balance model so `Team owes you / You owe team` now means current project-cash claim after capital and profit preview, while the dedicated Settlements tab remains the shared-expense reimbursement surface.
 - Added operator docs for deploy order, clean deploy worktrees, and post-release verification so future sessions do not repeat the same production mismatch problem.
+- Added `land_purchase`, applied the new Supabase enum/support migrations, backfilled the four obvious live land-acquisition rows, and updated the audit workbook so exported parity checks now include deployed asset basis instead of treating land buys as operating expense.

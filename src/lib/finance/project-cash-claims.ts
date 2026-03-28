@@ -1,4 +1,5 @@
 import {
+  type MemberFinanceSummary,
   type ProjectSnapshot,
   type SettlementSuggestion,
 } from "@/lib/finance/types";
@@ -22,6 +23,60 @@ export type ProjectCashClaimView = {
   settlementSuggestions: SettlementSuggestion[];
   reserveCashTotal: number;
 };
+
+export function getLiquidCapitalBalance(
+  summary: Pick<MemberFinanceSummary, "capitalBalance" | "assetBasisBalance">
+) {
+  return roundMoney(summary.capitalBalance - summary.assetBasisBalance);
+}
+
+export function getCashEntitlement(
+  summary: Pick<
+    MemberFinanceSummary,
+    | "capitalBalance"
+    | "assetBasisBalance"
+    | "estimatedProfitShare"
+    | "expenseReimbursementBalance"
+  >
+) {
+  return roundMoney(
+    getLiquidCapitalBalance(summary) +
+      summary.estimatedProfitShare +
+      summary.expenseReimbursementBalance
+  );
+}
+
+export function getCapitalReturnAvailableToday(
+  summary: Pick<
+    MemberFinanceSummary,
+    "capitalBalance" | "assetBasisBalance" | "estimatedProfitShare"
+  >
+) {
+  return roundMoney(
+    Math.max(
+      getLiquidCapitalBalance(summary) + Math.min(summary.estimatedProfitShare, 0),
+      0
+    )
+  );
+}
+
+export function getProfitPayoutAvailableToday(
+  summary: Pick<MemberFinanceSummary, "estimatedProfitShare">
+) {
+  return roundMoney(Math.max(summary.estimatedProfitShare, 0));
+}
+
+export function getClaimAvailableToday(
+  summary: Pick<
+    MemberFinanceSummary,
+    "capitalBalance" | "assetBasisBalance" | "estimatedProfitShare"
+  >
+) {
+  return roundMoney(
+    getCapitalReturnAvailableToday(summary) +
+      getProfitPayoutAvailableToday(summary)
+  );
+}
 
 type WeightedReserveRow = {
   projectMemberId: string;
@@ -85,11 +140,7 @@ export function buildProjectCashClaimView(
   snapshot: ProjectSnapshot
 ): ProjectCashClaimView {
   const baseRows = snapshot.memberSummaries.map((summary) => {
-    const cashEntitlement = roundMoney(
-      summary.capitalBalance +
-        summary.estimatedProfitShare +
-        summary.expenseReimbursementBalance
-    );
+    const cashEntitlement = getCashEntitlement(summary);
 
     return {
       projectMemberId: summary.projectMember.id,

@@ -548,6 +548,7 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
     snapshot.totalCapitalOutstanding +
       snapshot.sharedLoanPrincipalOutstanding +
       snapshot.projectOperatingIncome -
+      snapshot.totalDeployedAssetBasis -
       snapshot.projectOperatingExpense -
       snapshot.totalProfitDistributed
   );
@@ -568,6 +569,10 @@ function CashBridgeChart({ snapshot }: { snapshot: ProjectSnapshot }) {
     {
       label: locale === "vi" ? "Tiền vào" : "Income",
       value: snapshot.projectOperatingIncome,
+    },
+    {
+      label: locale === "vi" ? "Mua đất" : "Land purchase",
+      value: -snapshot.totalDeployedAssetBasis,
     },
     {
       label: locale === "vi" ? "Chi phí" : "Expense",
@@ -1010,7 +1015,7 @@ export function ProjectOverviewVisuals({
           </CardTitle>
           <CardDescription>
             {locale === "vi"
-              ? "Cầu tiền theo ngôn ngữ dễ hiểu: vốn, gốc vay chung và biến động vận hành đều được tách thành từng bước."
+              ? "Cầu tiền theo ngôn ngữ dễ hiểu: vốn, gốc vay chung, tiền đã chuyển thành đất và biến động vận hành đều được tách thành từng bước."
               : "This cash bridge shows how project cash reached its current balance, step by step."}
           </CardDescription>
         </CardHeader>
@@ -1038,8 +1043,8 @@ export function ProjectOverviewVisuals({
           <CardTitle>{locale === "vi" ? "Ai nên nhận tiền dự án tiếp theo" : "Who should receive project cash next"}</CardTitle>
           <CardDescription>
             {locale === "vi"
-              ? "Biểu đồ này so sánh tiền đang giữ với quyền lợi hiện tại sau khi tính vốn, lợi nhuận tạm tính, và phần cash dự trữ còn phải giữ lại trong dự án."
-              : "This compares the cash people are holding now with each member's current claim after capital, profit preview, and any cash reserve that still needs to stay in the project."}
+              ? "Biểu đồ này so sánh tiền đang giữ với quyền lợi tiền mặt hiện tại sau khi trừ phần đất/tài sản đã mua và phần cash dự trữ còn phải giữ lại trong dự án."
+              : "This compares the cash people are holding now with each member's current liquid claim after land/assets already purchased and any reserve cash that still needs to stay in the project."}
           </CardDescription>
         </CardHeader>
         <CardContent>

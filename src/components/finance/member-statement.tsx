@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { CircleAlert, PiggyBank, ReceiptText, Wallet } from "lucide-react";
+import {
+  CircleAlert,
+  FolderTree,
+  PiggyBank,
+  ReceiptText,
+  Wallet,
+} from "lucide-react";
 
 import { useLocale } from "@/components/app/locale-provider";
 import { ProfileAvatar } from "@/components/app/profile-avatar";
@@ -108,7 +114,7 @@ export function MemberStatement({
         </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard
           title={locale === "vi" ? "Tiền dự án bạn đang giữ" : "Project money you are holding"}
           value={formatCurrency(
@@ -169,6 +175,25 @@ export function MemberStatement({
           tone="blue"
           icon={<PiggyBank className="size-5" />}
         />
+        <MetricCard
+          title={
+            locale === "vi"
+              ? "Đã vào đất/tài sản"
+              : "Deployed into land/assets"
+          }
+          value={formatCurrency(
+            statement.summary.assetBasisBalance,
+            statement.project.currencyCode,
+            locale
+          )}
+          description={
+            locale === "vi"
+              ? "Phần tiền mặt của dự án đã được chuyển thành đất hoặc tài sản không phải tiền mặt."
+              : "Project cash already converted into land or another non-cash asset."
+          }
+          tone="slate"
+          icon={<FolderTree className="size-5" />}
+        />
       </div>
 
       <Card className="rounded-[1.75rem] border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(240,249,255,0.95))]">
@@ -188,8 +213,8 @@ export function MemberStatement({
           </CardTitle>
           <CardDescription>
             {locale === "vi"
-              ? "Bản xem ưu tiên sự dễ hiểu cho thành viên này. Khoản hoàn trả chi phí chung, tiền dự án đang giữ, vốn góp và lợi nhuận luôn được tách riêng có chủ đích."
-              : "This member view keeps project cash, reimbursements, capital, and profit separate so the numbers stay easy to follow."}
+              ? "Bản xem ưu tiên sự dễ hiểu cho thành viên này. Khoản hoàn trả chi phí chung, tiền dự án đang giữ, vốn góp, phần đã vào đất/tài sản và lợi nhuận luôn được tách riêng có chủ đích."
+              : "This member view keeps project cash, reimbursements, capital, land/assets already purchased, and profit separate so the numbers stay easy to follow."}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -351,6 +376,23 @@ export function MemberStatement({
                       {locale === "vi"
                         ? "Cơ sở để tính tỷ trọng chia lợi nhuận."
                         : "The basis for profit-sharing weight."}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>
+                      {locale === "vi" ? "Đã vào đất/tài sản" : "Deployed into land/assets"}
+                    </TableCell>
+                    <TableCell>
+                      {formatCurrency(
+                        statement.summary.assetBasisBalance,
+                        statement.project.currencyCode,
+                        locale
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {locale === "vi"
+                        ? "Phần tiền mặt đã đổi thành đất hoặc tài sản nên không còn là claim tiền mặt có thể trả ngay."
+                        : "Cash already converted into land or other assets, so it is no longer immediate cash claim."}
                     </TableCell>
                   </TableRow>
                   <TableRow>

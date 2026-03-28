@@ -23,6 +23,11 @@ import {
   type PlannerEntryFormValues,
   type PlannerEntryType,
 } from "@/lib/finance/entry-form";
+import {
+  getCapitalReturnAvailableToday,
+  getClaimAvailableToday,
+  getProfitPayoutAvailableToday,
+} from "@/lib/finance/project-cash-claims";
 import { type ProjectSnapshot } from "@/lib/finance/types";
 import { getServerI18n } from "@/lib/i18n/server";
 
@@ -49,12 +54,13 @@ function buildEditInitialValues(
   }
 
   const allocationType =
+    entry.entryType === "land_purchase" ||
     entry.entryType === "operating_expense" ||
     entry.entryType === "shared_loan_interest_payment"
       ? "expense_share"
       : entry.entryType === "profit_distribution"
         ? "profit_share"
-      : null;
+        : null;
 
   const capitalOwnerProjectMemberId =
     entry.entryType === "capital_contribution" ||
@@ -230,7 +236,7 @@ export default async function NewLedgerEntryPage({
             ? `Dung guided flow nay de ghi nhan phan hoan von, phan tra loi nhuan, hoac ca hai cho ${settleClaimState.profile.displayName} ngay trong Add transaction.`
             : editState
             ? "Cap nhat giao dich da co. Khi luu, he thong se ghi de len transaction hien tai thay vi tao transaction moi."
-            : "Dung form nay de ghi von gop, tien vao co tag, giai ngan vay chung, tra goc vay chung, tra lai vay chung, chi phi van hanh, chuyen tien noi bo, thanh vien tra lai tien cho nhau, hoac post mot dot chia loi nhuan. Trong workspace mau, form chi o che do preview; con du an live da dang nhap co the luu truc tiep cac loai giao dich duoc ho tro len Supabase.",
+            : "Dung form nay de ghi von gop, tien vao co tag, giai ngan vay chung, tra goc vay chung, mua dat, tra lai vay chung, chi phi van hanh, chuyen tien noi bo, thanh vien tra lai tien cho nhau, hoac post mot dot chia loi nhuan. Trong workspace mau, form chi o che do preview; con du an live da dang nhap co the luu truc tiep cac loai giao dich duoc ho tro len Supabase.",
           helperTitle: "Can giup chon dung loai giao dich?",
           helperDescription:
             "Form nay giu tap trung vao viec nhap lieu. Mo huong dan neu ban chua chac nen ghi loai giao dich nao, hoac sang trang tag neu can don nhom bao cao truoc.",
@@ -248,7 +254,7 @@ export default async function NewLedgerEntryPage({
             ? `Use this guided mode to record capital returned, owner profit paid out, or both for ${settleClaimState.profile.displayName} without leaving Add transaction.`
             : editState
             ? "Update an existing ledger entry here. Saving will overwrite the current transaction instead of creating a duplicate."
-            : "Use this planner to record capital, tagged inflows, shared loan drawdowns, shared loan principal repayments, shared loan interest payments, operating expenses, project cash handovers, member repayments, or a posted profit distribution run. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase.",
+            : "Use this planner to record capital, tagged inflows, shared loan drawdowns, shared loan principal repayments, land purchases, shared loan interest payments, operating expenses, project cash handovers, member repayments, or a posted profit distribution run. In the sample workspace it stays preview-only, while live signed-in projects can save supported transaction types directly to Supabase.",
           helperTitle: "Need help choosing the right transaction?",
           helperDescription:
             "Keep the planner focused here. Open the guide if you are unsure which transaction type to record, or jump to tag management before posting if the reporting labels need cleanup.",
@@ -296,8 +302,13 @@ export default async function NewLedgerEntryPage({
           claimMember={{
             id: settleClaimState.projectMember.id,
             name: settleClaimState.profile.displayName,
-            capitalBalance: settleClaimState.capitalBalance,
-            estimatedProfitShare: settleClaimState.estimatedProfitShare,
+            capitalAvailableToday: getCapitalReturnAvailableToday(
+              settleClaimState
+            ),
+            profitAvailableToday: getProfitPayoutAvailableToday(
+              settleClaimState
+            ),
+            claimAvailableToday: getClaimAvailableToday(settleClaimState),
           }}
           payerOptions={activeMemberSummaries.map((summary) => ({
             id: summary.projectMember.id,

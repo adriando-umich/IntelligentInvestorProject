@@ -49,6 +49,9 @@ function entryTone(entryType: EntryType) {
   if (entryType === "shared_loan_interest_payment") {
     return "bg-amber-100 text-amber-800";
   }
+  if (entryType === "land_purchase") {
+    return "bg-stone-100 text-stone-800";
+  }
   if (entryType === "operating_expense") {
     return "bg-rose-100 text-rose-800";
   }

@@ -22,6 +22,7 @@ export const entryTypeLabels = {
   operating_income: "Operating income",
   shared_loan_drawdown: "Shared loan drawdown",
   shared_loan_repayment_principal: "Shared loan principal repayment",
+  land_purchase: "Land purchase",
   shared_loan_interest_payment: "Shared loan interest payment",
   operating_expense: "Operating expense",
   cash_handover: "Cash handover",
@@ -40,6 +41,7 @@ export const businessEntryTypes = [
   "operating_income",
   "shared_loan_drawdown",
   "shared_loan_repayment_principal",
+  "land_purchase",
   "shared_loan_interest_payment",
   "operating_expense",
   "cash_handover",
@@ -71,6 +73,7 @@ const localizedEntryTypeLabels = {
     operating_income: "Tiền vào vận hành",
     shared_loan_drawdown: "Giải ngân khoản vay chung",
     shared_loan_repayment_principal: "Trả gốc khoản vay chung",
+    land_purchase: "Mua đất",
     shared_loan_interest_payment: "Trả lãi khoản vay chung",
     operating_expense: "Chi phí vận hành",
     cash_handover: "Chuyển tiền giữa thành viên",
@@ -157,6 +160,7 @@ export const entryFamilyByType = {
   operating_income: "business",
   shared_loan_drawdown: "business",
   shared_loan_repayment_principal: "business",
+  land_purchase: "business",
   shared_loan_interest_payment: "business",
   operating_expense: "business",
   cash_handover: "business",
@@ -355,6 +359,7 @@ export interface MemberFinanceSummary {
   teamOwesYou: number;
   youOweTeam: number;
   capitalBalance: number;
+  assetBasisBalance: number;
   operatingPnlShare: number;
   profitReceivedTotal: number;
   ownerProfitPayoutTotal: number;
@@ -378,6 +383,7 @@ export interface ReconciliationCheckView {
 export interface ReconciliationProjectAccountingView {
   expectedTotalProjectCash: number;
   expectedTotalCapitalOutstanding: number;
+  expectedTotalDeployedAssetBasis: number;
   expectedTotalSharedLoanPrincipal: number;
   expectedTotalUndistributedProfit: number;
   reportedTotalProjectCash: number;
@@ -412,6 +418,7 @@ export interface ProjectSnapshot {
   projectOperatingIncome: number;
   projectOperatingExpense: number;
   projectOperatingProfit: number;
+  totalDeployedAssetBasis: number;
   sharedLoanDrawdownTotal: number;
   sharedLoanPrincipalRepaidTotal: number;
   sharedLoanPrincipalOutstanding: number;

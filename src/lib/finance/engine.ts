@@ -185,13 +185,15 @@ export function buildReconciliationProjectAccountingView(
     )
   );
   const expectedTotalCapitalOutstanding = asOfSnapshot.totalCapitalOutstanding;
+  const expectedTotalDeployedAssetBasis = asOfSnapshot.totalDeployedAssetBasis;
   const expectedTotalSharedLoanPrincipal =
     asOfSnapshot.sharedLoanPrincipalOutstanding;
   const expectedTotalUndistributedProfit = asOfSnapshot.undistributedProfit;
   const expectedTotalProjectCash = roundMoney(
     expectedTotalCapitalOutstanding +
+      expectedTotalUndistributedProfit +
       expectedTotalSharedLoanPrincipal +
-      expectedTotalUndistributedProfit
+      -expectedTotalDeployedAssetBasis
   );
   const submittedCount = checks.filter(
     (checkView) => checkView.check.reportedProjectCash != null
@@ -200,6 +202,7 @@ export function buildReconciliationProjectAccountingView(
   return {
     expectedTotalProjectCash,
     expectedTotalCapitalOutstanding,
+    expectedTotalDeployedAssetBasis,
     expectedTotalSharedLoanPrincipal,
     expectedTotalUndistributedProfit,
     reportedTotalProjectCash,
@@ -393,6 +396,28 @@ function applyEntryEffects(
       totals.operatingIncome = roundMoney(
         totals.operatingIncome + entry.amount * factor
       );
+      return;
+    }
+    case "land_purchase": {
+      for (const allocation of getAllocationsForEntry(
+        entry.id,
+        allocations,
+        "expense_share"
+      )) {
+        const member = projectMemberById.get(allocation.projectMemberId);
+        if (!member) {
+          continue;
+        }
+
+        const summary = summariesByMemberRef.get(member.id);
+        if (!summary) {
+          continue;
+        }
+
+        summary.assetBasisBalance = roundMoney(
+          summary.assetBasisBalance + allocation.amount * factor
+        );
+      }
       return;
     }
     case "operating_expense": {
@@ -623,6 +648,7 @@ export function buildProjectSnapshot(
         teamOwesYou: 0,
         youOweTeam: 0,
         capitalBalance: 0,
+        assetBasisBalance: 0,
         operatingPnlShare: 0,
         profitReceivedTotal: 0,
         ownerProfitPayoutTotal: 0,
@@ -700,6 +726,9 @@ export function buildProjectSnapshot(
   );
   const totalCapitalOutstanding = roundMoney(
     memberSummaries.reduce((sum, summary) => sum + summary.capitalBalance, 0)
+  );
+  const totalDeployedAssetBasis = roundMoney(
+    memberSummaries.reduce((sum, summary) => sum + summary.assetBasisBalance, 0)
   );
   const sharedLoanPrincipalOutstanding = roundMoney(
     totals.sharedLoanDrawdown - totals.sharedLoanPrincipalRepaid
@@ -873,6 +902,7 @@ export function buildProjectSnapshot(
     projectOperatingProfit: roundMoney(
       totals.operatingIncome - totals.operatingExpense
     ),
+    totalDeployedAssetBasis,
     sharedLoanDrawdownTotal: roundMoney(totals.sharedLoanDrawdown),
     sharedLoanPrincipalRepaidTotal: roundMoney(totals.sharedLoanPrincipalRepaid),
     sharedLoanPrincipalOutstanding,

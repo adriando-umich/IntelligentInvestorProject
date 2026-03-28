@@ -43,6 +43,11 @@
 - Run one live regression pass on order-sensitive same-day ledgers:
   - capital contribution, loan drawdown, and operating expense entered on the same date
   - confirm overview and settlements stay stable after refresh and on production
+- Run one live regression pass on the new land-purchase model:
+  - create a `land_purchase` entry from the planner
+  - confirm `Estimated profit today` no longer drops for asset deployment
+  - confirm `Team owes you / You owe team` only reflects liquid cash claims, not land already bought
+  - export the audit workbook and verify the new asset-basis parity columns stay at 0
 - Run one browser/device QA pass on the updated ledger planner using `docs/manual-qa/ledger-planner-ui-ux.md`:
   - desktop web
   - tablet
@@ -142,3 +147,4 @@
 - Refreshed the shared visual system toward a lighter Splitwise/Apple direction across the shell, auth, navigation, and top-level project surfaces, then re-ran `next build` successfully.
 - Pushed the theme refresh commit `ffb036c`, then shipped it to production through a Vercel uploaded-files deployment after confirming the git-source deployment path still fails with `git_info_fail`.
 - Added canonical deployment docs in `docs/operations/deployment-runbook.md` and `docs/operations/release-checklist.md`, then linked them from `README.md` so future releases know exactly what to deploy, in what order, and from which clean worktree.
+- Added `land_purchase` as a separate business event, updated claim math so land/assets reduce liquid capital instead of operating profit, patched the audit workbook to track asset basis and shared-loan interest separately, and applied/backfilled the live Supabase changes for the obvious land-purchase rows.

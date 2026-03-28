@@ -66,6 +66,7 @@ export const businessPlannerEntryTypes = [
   "operating_income",
   "shared_loan_drawdown",
   "shared_loan_repayment_principal",
+  "land_purchase",
   "shared_loan_interest_payment",
   "operating_expense",
   "cash_handover",
@@ -113,6 +114,7 @@ export function entryTypeNeedsCashOut(entryType: PlannerEntryType) {
   return (
     entryType === "capital_return" ||
     entryType === "shared_loan_repayment_principal" ||
+    entryType === "land_purchase" ||
     entryType === "shared_loan_interest_payment" ||
     entryType === "operating_expense" ||
     entryType === "cash_handover" ||
@@ -130,6 +132,7 @@ export function entryTypeNeedsCapitalOwner(entryType: PlannerEntryType) {
 
 export function entryTypeNeedsAllocation(entryType: PlannerEntryType) {
   return (
+    entryType === "land_purchase" ||
     entryType === "operating_expense" ||
     entryType === "shared_loan_interest_payment"
   );
@@ -162,13 +165,13 @@ function createPlannerEntrySchemaForLocale(locale: AppLocale) {
             "Khoan thanh vien tra lai tien can 1 nguoi tra va 1 nguoi nhan khac nhau.",
           chooseCapitalOwner: "Hay chon nguoi co so du von can thay doi.",
           chooseAllocationMembers:
-            "Hay chon cac thanh vien cung chia khoan chi phi nay.",
+            "Hay chon cac thanh vien cung chia khoan nay.",
           allocationWeightsRequired:
             "Hay nhap ty le chia cho cac thanh vien da chon.",
           allocationWeightsMismatch:
             "Danh sach thanh vien duoc chon va ty le chia dang khong khop nhau.",
           allocationWeightsTotal:
-            "Tong ty le chia chi phi phai bang 100%.",
+            "Tong ty le chia phai bang 100%.",
           allocationWeightsPositive:
             "Moi thanh vien duoc chon phai co ty le chia lon hon 0%.",
           chooseOneAdjustmentSide:
@@ -189,13 +192,13 @@ function createPlannerEntrySchemaForLocale(locale: AppLocale) {
             "Member repayment needs a payer and a receiver that are different members.",
           chooseCapitalOwner: "Choose whose capital balance should change.",
           chooseAllocationMembers:
-            "Choose the members who should share this expense.",
+            "Choose the members who should share this amount.",
           allocationWeightsRequired:
             "Add a percentage split for the selected members.",
           allocationWeightsMismatch:
             "The selected members and split rows do not match.",
           allocationWeightsTotal:
-            "Expense split percentages must total 100%.",
+            "Split percentages must total 100%.",
           allocationWeightsPositive:
             "Each selected member must have a percentage greater than 0%.",
           chooseOneAdjustmentSide:
@@ -373,6 +376,7 @@ export function isCapitalEntryType(entryType: PlannerEntryType) {
 
 export function isAllocationEntryType(entryType: PlannerEntryType) {
   return (
+    entryType === "land_purchase" ||
     entryType === "operating_expense" ||
     entryType === "shared_loan_interest_payment"
   );

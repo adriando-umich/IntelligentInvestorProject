@@ -834,6 +834,15 @@ function MemberStatementDocument({
               hint: "Phần lợi nhuận hiện tại mà thành viên này đang có quyền hưởng.",
             },
             {
+              label: "Đã vào đất/tài sản",
+              value: formatCurrency(
+                statement.summary.assetBasisBalance,
+                statement.project.currencyCode,
+                locale
+              ),
+              hint: "Phần tiền mặt đã chuyển thành đất hoặc tài sản nên chưa còn là claim tiền mặt.",
+            },
+            {
               label: "Tiền dự án đang giữ",
               value: formatSignedCurrency(
                 statement.summary.projectCashCustody,
@@ -928,6 +937,15 @@ function MemberStatementDocument({
               hint: "The member's current undistributed profit position.",
             },
             {
+              label: "Deployed into land/assets",
+              value: formatCurrency(
+                statement.summary.assetBasisBalance,
+                statement.project.currencyCode,
+                locale
+              ),
+              hint: "Cash already converted into land or other non-cash assets.",
+            },
+            {
               label: "Project money held",
               value: formatSignedCurrency(
                 statement.summary.projectCashCustody,
@@ -972,8 +990,9 @@ function MemberStatementDocument({
             "Profit distributions or owner-specific payouts received by this member.",
           claimTitle: "How much the project should pay this member now",
           claimIntro:
-            "This separates capital still invested, estimated profit today, and shared-expense reimbursement, then shows how much project cash is already sitting with this member.",
+            "This separates capital still invested, land/assets already purchased, estimated profit today, and shared-expense reimbursement, then shows how much project cash is already sitting with this member.",
           claimCapital: "Capital still invested",
+          claimAssetBasis: "Land/assets already purchased",
           claimProfit: "Estimated profit today",
           claimReimbursement: "Shared-expense reimbursement balance",
           claimCashHeld: "Project cash already sitting with this member",
@@ -1027,8 +1046,9 @@ function MemberStatementDocument({
             "Tá»•ng cÃ¡c cost rows dÆ°á»›i Ä‘Ã¢y Ä‘Ã£ Ä‘Æ°á»£c gáº¯n cho member nÃ y. Sá»‘ nÃ y Ä‘i vÃ o operating P&L share vÃ  lÃ m giáº£m pháº§n lá»£i nhuáº­n cuá»‘i cÃ¹ng.",
           claimTitle: "Sá»‘ tiá»n dá»± Ã¡n nÃªn tráº£ cho member nÃ y hÃ´m nay",
           claimIntro:
-            "Khoáº£n nÃ y tÃ¡ch riÃªng capital cÃ²n trong dá»± Ã¡n, lá»£i nhuáº­n Æ°á»›c tÃ­nh hÃ´m nay, vÃ  cÃ¡c khoáº£n hoÃ n tráº£ chi phÃ­ chung. Sau Ä‘Ã³ trÃ¬nh bÃ y pháº§n project cash Ä‘Ã£ náº±m sáºµn á»Ÿ member nÃ y.",
+            "Khoáº£n nÃ y tÃ¡ch riÃªng capital cÃ²n trong dá»± Ã¡n, pháº§n Ä‘Ã£ Ä‘i vÃ o Ä‘áº¥t/tÃ i sáº£n, lá»£i nhuáº­n Æ°á»›c tÃ­nh hÃ´m nay, vÃ  cÃ¡c khoáº£n hoÃ n tráº£ chi phÃ­ chung. Sau Ä‘Ã³ trÃ¬nh bÃ y pháº§n project cash Ä‘Ã£ náº±m sáºµn á»Ÿ member nÃ y.",
           claimCapital: "Capital cÃ²n Ä‘ang invest",
+          claimAssetBasis: "ÄÃ£ vÃ o Ä‘áº¥t/tÃ i sáº£n",
           claimProfit: "Estimated profit hÃ´m nay",
           claimReimbursement: "Sá»‘ dÆ° hoÃ n tráº£ chi phÃ­ chung",
           claimCashHeld: "Project cash Ä‘Ã£ náº±m á»Ÿ member nÃ y",
@@ -1054,8 +1074,9 @@ function MemberStatementDocument({
             "This is the full cost already assigned to this member below. It flows into the member's operating P&L share and reduces the final profit position.",
           claimTitle: "How much the project should pay this member now",
           claimIntro:
-            "This separates capital still invested, estimated profit today, and shared-expense reimbursement, then shows how much project cash is already sitting with this member.",
+            "This separates capital still invested, land/assets already purchased, estimated profit today, and shared-expense reimbursement, then shows how much project cash is already sitting with this member.",
           claimCapital: "Capital still invested",
+          claimAssetBasis: "Land/assets already purchased",
           claimProfit: "Estimated profit today",
           claimReimbursement: "Shared-expense reimbursement balance",
           claimCashHeld: "Project cash already sitting with this member",
@@ -1124,6 +1145,16 @@ function MemberStatementDocument({
             <Text style={styles.breakdownValue}>
               {formatCurrency(
                 statement.summary.capitalBalance,
+                statement.project.currencyCode,
+                locale
+              )}
+            </Text>
+          </View>
+          <View style={styles.breakdownRow}>
+            <Text style={styles.breakdownLabel}>{detailCopy.claimAssetBasis}</Text>
+            <Text style={styles.breakdownValue}>
+              {formatSignedCurrency(
+                -statement.summary.assetBasisBalance,
                 statement.project.currencyCode,
                 locale
               )}

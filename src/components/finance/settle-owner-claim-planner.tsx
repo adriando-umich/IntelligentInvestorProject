@@ -30,8 +30,9 @@ import { formatCurrency } from "@/lib/format";
 type ClaimMember = {
   id: string;
   name: string;
-  capitalBalance: number;
-  estimatedProfitShare: number;
+  capitalAvailableToday: number;
+  profitAvailableToday: number;
+  claimAvailableToday: number;
 };
 
 type PayerOption = {
@@ -132,8 +133,9 @@ export function SettleOwnerClaimPlanner({
   });
   const [isSavingLive, startSavingLive] = useTransition();
   const today = new Date().toISOString().slice(0, 10);
-  const capitalAvailable = roundMoney(Math.max(claimMember.capitalBalance, 0));
-  const profitAvailable = roundMoney(Math.max(claimMember.estimatedProfitShare, 0));
+  const capitalAvailable = roundMoney(Math.max(claimMember.capitalAvailableToday, 0));
+  const profitAvailable = roundMoney(Math.max(claimMember.profitAvailableToday, 0));
+  const claimAvailable = roundMoney(Math.max(claimMember.claimAvailableToday, 0));
   const pendingSuffix = locale === "vi" ? " (cho chap nhan)" : " (pending)";
   const schema = useMemo(
     () => buildSchema(locale, capitalAvailable, profitAvailable),
@@ -144,10 +146,11 @@ export function SettleOwnerClaimPlanner({
       ? {
           title: "Settle owner claim",
           description:
-            "Nhap mot lan de ghi nhan phan hoan von, phan tra loi nhuan, hoac ca hai cho thanh vien nay. App se tao cac transaction can thiet o phia duoi.",
+            "Nhap mot lan de ghi nhan phan hoan von va phan tra loi nhuan co the settle bang tien mat ngay bay gio cho thanh vien nay. App se tao cac transaction can thiet o phia duoi.",
           targetMember: "Thanh vien dang duoc settle",
-          capitalAvailable: "Von co the hoan hien tai",
+          capitalAvailable: "Von co the hoan bang tien mat hien tai",
           profitAvailable: "Loi nhuan co the tra hien tai",
+          claimAvailable: "Tong claim co the settle hien tai",
           effectiveDate: "Ngay hieu luc",
           descriptionLabel: "Mo ta",
           descriptionPlaceholder: "Vi du: Rut tien mat cho My Nguyen",
@@ -178,10 +181,11 @@ export function SettleOwnerClaimPlanner({
       : {
           title: "Settle owner claim",
           description:
-            "Enter a capital return amount, a profit payout amount, or both. The app will create the matching ledger entries underneath in one save.",
+            "Enter the capital return and profit payout that can be settled in cash right now for this member. The app will create the matching ledger entries underneath in one save.",
           targetMember: "Member being settled",
-          capitalAvailable: "Capital available to return now",
+          capitalAvailable: "Capital available to return in cash now",
           profitAvailable: "Profit available to pay now",
+          claimAvailable: "Total claim available today",
           effectiveDate: "Effective date",
           descriptionLabel: "Description",
           descriptionPlaceholder: "Example: Cash payout for My Nguyen",
@@ -298,7 +302,7 @@ export function SettleOwnerClaimPlanner({
         </CardHeader>
         <CardContent>
           <form className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                 <p className="text-sm text-slate-500">{copy.targetMember}</p>
                 <p className="mt-2 font-medium text-slate-950">{claimMember.name}</p>
@@ -313,6 +317,12 @@ export function SettleOwnerClaimPlanner({
                 <p className="text-sm text-slate-500">{copy.profitAvailable}</p>
                 <p className="mt-2 font-medium text-slate-950">
                   {formatCurrency(profitAvailable, currencyCode, locale)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-sm text-slate-500">{copy.claimAvailable}</p>
+                <p className="mt-2 font-medium text-slate-950">
+                  {formatCurrency(claimAvailable, currencyCode, locale)}
                 </p>
               </div>
             </div>

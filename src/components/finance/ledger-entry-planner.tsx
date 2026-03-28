@@ -145,6 +145,12 @@ function memberTransferHelperCopy(entryType: PlannerEntryType, locale: "en" | "v
       : "For capital return, choose who is paying the project money out. 'Capital owner' is whose capital balance decreases.";
   }
 
+  if (entryType === "land_purchase") {
+    return locale === "vi"
+      ? "Dùng loại này khi tiền dự án được chuyển sang mua đất. Khoản này vẫn cần chia tỷ lệ giữa các thành viên, nhưng không đi vào chi phí vận hành hay khoản nợ hoàn trả giữa thành viên."
+      : "Use this when project cash is converted into land. The purchase still needs an ownership split across members, but it should not hit operating expense or member reimbursement.";
+  }
+
   if (entryType === "reconciliation_adjustment") {
     return locale === "vi"
       ? "Chỉ dùng một bên. Chọn tăng tiền dự án kỳ vọng khi hệ thống cần cộng thêm tiền dự án cho một thành viên, hoặc chọn giảm khi cần trừ bớt sau đối chiếu."
@@ -224,6 +230,19 @@ function effectCopy(entryType: PlannerEntryType, locale: "en" | "vi") {
         locale === "vi"
           ? "Dùng khi dự án trả phần gốc vay. Nó làm giảm tiền dự án nhưng không được tính là chi phí vận hành, hoàn vốn hay chia lợi nhuận. Lãi vay hãy ghi riêng thành chi phí vận hành."
           : "Use this when the project repays loan principal. It reduces project cash, but it does not count as operating expense, capital return, or profit distribution. Record loan interest separately as operating expense.",
+    };
+  }
+  if (entryType === "land_purchase") {
+    return {
+      icon: <FolderTree className="size-4" />,
+      title:
+        locale === "vi"
+          ? "Tiền mặt đổi thành giá trị đất"
+          : "Cash turns into land value",
+      description:
+        locale === "vi"
+          ? "Khoản này làm giảm tiền mặt của dự án nhưng vẫn giữ giá trị trong dự án dưới dạng đất. Nó không kéo Estimated profit today xuống và không tạo khoản ai nợ ai vì chi phí chung."
+          : "This lowers project cash but keeps the value inside the project as land basis. It does not drag estimated profit down and it does not create shared-expense debt between members.",
     };
   }
   if (entryType === "shared_loan_interest_payment") {
@@ -361,7 +380,7 @@ export function LedgerEntryPlanner({
           chooseCapitalOwner: "Chọn người sở hữu phần vốn",
           allocationMembers: "Những người cùng chia khoản này",
           allocationHint:
-            "Mặc định là chia theo tỷ lệ vốn hiện tại. Nếu cần, bạn vẫn có thể chuyển sang chia đều hoặc custom split.",
+            "Mặc định là chia theo tỷ lệ vốn hiện tại. Nếu cần, bạn vẫn có thể chuyển sang chia đều hoặc custom split cho khoản này.",
           allocationMode: "Che do chia",
           allocationModeHint:
             "Ty le von bam theo so du von hien tai. Chia deu giu cung mot ty le cho moi nguoi. Custom split cho phep sua tung ty le phan tram.",
@@ -374,9 +393,9 @@ export function LedgerEntryPlanner({
           allocationTotalRequired:
             "Custom split phai cong dung 100% truoc khi luu.",
           allocationEqualHint:
-            "Moi thanh vien dang duoc chia deu khoan chi phi nay.",
+            "Moi thanh vien dang duoc chia deu khoan nay.",
           allocationCapitalHint:
-            "Lay so du von hien tai cua nhung thanh vien da chon de dat ty le chia mac dinh.",
+            "Lay so du von hien tai cua nhung thanh vien da chon de dat ty le chia mac dinh cho khoan nay.",
           allocationCustomHint:
             "Sua ty le phan tram cua tung thanh vien. Tong phai bang 100%.",
           allocationCapitalFallback:
@@ -448,9 +467,9 @@ export function LedgerEntryPlanner({
           noReceiverSelected: "No receiver selected",
           capitalOwner: "Capital owner",
           chooseCapitalOwner: "Choose the capital owner",
-          allocationMembers: "Members sharing this expense",
+          allocationMembers: "Members sharing this amount",
           allocationHint:
-            "Capital ratio is the default. Switch to equal or custom if this expense should use a different split.",
+            "Capital ratio is the default. Switch to equal or custom if this amount should use a different split.",
           allocationMode: "Split mode",
           allocationModeHint:
             "Capital ratio follows the selected members' current capital balances. Equal keeps everyone on the same percentage. Custom lets you edit each member's share.",
@@ -463,9 +482,9 @@ export function LedgerEntryPlanner({
           allocationTotalRequired:
             "Custom split must total 100% before saving.",
           allocationEqualHint:
-            "Each selected member is currently carrying the same share of this expense.",
+            "Each selected member is currently carrying the same share of this amount.",
           allocationCapitalHint:
-            "Use the selected members' current capital balances to set the default split.",
+            "Use the selected members' current capital balances to set the default split for this amount.",
           allocationCustomHint:
             "Edit each selected member's percentage. The total must stay at 100%.",
           allocationCapitalFallback:

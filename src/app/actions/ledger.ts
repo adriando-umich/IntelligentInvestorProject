@@ -18,6 +18,10 @@ import {
   supportsLiveEdit,
   type PlannerEntryValues,
 } from "@/lib/finance/entry-form";
+import {
+  getCapitalReturnAvailableToday,
+  getProfitPayoutAvailableToday,
+} from "@/lib/finance/project-cash-claims";
 import { getServerI18n } from "@/lib/i18n/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -201,6 +205,7 @@ function isMissingLedgerUpgrade(error: { code?: string; message?: string }) {
     message.includes("ledger_entry_tags") ||
     message.includes("shared_loan_drawdown") ||
     message.includes("shared_loan_interest_payment") ||
+    message.includes("land_purchase") ||
     message.includes("shared_loan_repayment_principal") ||
     message.includes("update_project_ledger_entry") ||
     message.includes("void_project_ledger_entry") ||
@@ -483,21 +488,20 @@ export async function createClaimSettlementAction(
     };
   }
 
-  if (parsed.data.capitalReturnAmount - claimSummary.capitalBalance > 0.01) {
+  const capitalAvailableToday = getCapitalReturnAvailableToday(claimSummary);
+  const profitAvailableToday = getProfitPayoutAvailableToday(claimSummary);
+
+  if (parsed.data.capitalReturnAmount - capitalAvailableToday > 0.01) {
     return {
       status: "error",
       message:
         locale === "vi"
-          ? "Phan hoan von vuot qua so du von hien tai cua thanh vien nay."
-          : "Capital return exceeds this member's current invested capital.",
+          ? "Phan hoan von vuot qua phan von co the settle bang tien mat hien tai cua thanh vien nay."
+          : "Capital return exceeds the member's capital that can be settled in cash today.",
     };
   }
 
-  if (
-    parsed.data.profitPayoutAmount -
-      Math.max(claimSummary.estimatedProfitShare, 0) >
-    0.01
-  ) {
+  if (parsed.data.profitPayoutAmount - profitAvailableToday > 0.01) {
     return {
       status: "error",
       message:

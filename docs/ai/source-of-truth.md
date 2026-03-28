@@ -85,6 +85,7 @@ Active owners and managers can now remove an already-joined member by deactivati
 Live cash-leg storage now keys ledger custody fields by `project_member_id` first, while legacy `cash_in_member_id` / `cash_out_member_id` user references remain as backward-compatible mirrors when a joined user exists. This lets pending members appear in every person-related field, including cash-holder selectors, without rewriting history when they accept later.
 The transaction model now also exposes a second classification axis in code: `entryFamily = business | correction`. The persisted DB column is still `entry_type`, but the app now derives family labels and uses them in planner guidance and the transaction helper matrix.
 The business-event shortcuts now include `shared_loan_interest_payment`, which behaves like a shared operating cost while staying distinct from shared-loan principal.
+The business-event model now also distinguishes `land_purchase` from `operating_expense`. A land purchase moves value from liquid project cash into deployed asset basis, so it must reduce cash-available claims without lowering operating profit.
 The ledger planner now lets users choose the entry family first, then narrows the entry-type picker accordingly. The planner currently supports `reconciliation_adjustment` inside the `correction` family, while `reversal` still remains guide-only until a dedicated original-entry workflow exists.
 The ledger planner keeps guide/tag navigation in a single page-level support card above the form, instead of duplicating those actions inside the form body. On mobile, the support buttons and the bottom planner actions stretch full width for easier tapping.
 The ledger planner now only shows the cash-leg selectors that matter for the chosen entry type. For example, `capital_contribution` shows only the receiving custody field plus `capital owner`, while `capital_return` shows only the paying custody field plus `capital owner`.
@@ -147,12 +148,14 @@ Only `.env.example` should be committed.
 - Additional reconciliation project-difference migration: `supabase/migrations/20260325193000_reconciliation_project_level_difference.sql`
 - Additional ownership-transfer migration: `supabase/migrations/20260328150000_transfer_project_ownership.sql`
 - Additional member-removal migration: `supabase/migrations/20260328170000_remove_project_member.sql`
+- Additional land-purchase enum migration: `supabase/migrations/20260328190000_add_land_purchase_enum.sql`
+- Additional land-purchase support migration: `supabase/migrations/20260328190500_land_purchase_entry_support.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
-- Live Supabase database: migrated through `20260328170000_remove_project_member.sql`
+- Live Supabase database: migrated through `20260328190500_land_purchase_entry_support.sql`
 - Release policy: production deploys must come from a clean deploy worktree created from an exact committed SHA
 - Current reliable Vercel path: uploaded-file API deployment from a clean commit snapshot
 - Latest production deployment for commit `00deeb7`: ready and promoted on Vercel as `dpl_5juQXS6xBRXnUThwdjvi1WKFp8z6`
@@ -218,6 +221,8 @@ Only `.env.example` should be committed.
 - Fixed the ordering bug in `20260321153000_finance_app_schema.sql` by creating the core tables before helper functions that reference them, then successfully applied the full migration stack to the live Supabase database.
 - Enabled Google OAuth in the live Supabase project using the Supabase management API, updated the auth `site_url`, and added the production/local callback allow-list.
 - Verified from the public auth settings endpoint that Google is enabled and from the production sign-in page that the `Continue with Google` button now renders live.
+- Added `land_purchase` as a first-class ledger entry type, changed claim math so deployed land/assets reduce liquid capital instead of operating profit, and updated dashboard/member/export surfaces to show deployed asset basis separately.
+- Applied the new live land-purchase migrations and backfilled the four obvious live `Mua đất` / `Chuyển tiền ra dự án` rows from `operating_expense` to `land_purchase` so existing projects stop showing false negative profit from asset deployment.
 - Fixed the live first-project RPC so `create_project_with_owner` now runs as `security definer`, and applied an additive migration to update the real Supabase project.
 - Added a persistent project-section navigation layout so the same overview/settlements/tags/members/capital/reconciliation/advanced nav stays visible across project subpages.
 - Added live project invites with `/projects/[projectId]/members` plus a public `/join/[inviteToken]` acceptance route.

@@ -162,6 +162,7 @@ function getCopy(locale: "en" | "vi") {
       reportedTotalProjectCash: "Team bao dang giu",
       differenceAmount: "So lech con lai",
       capitalComponent: "Von con trong project",
+      assetComponent: "Tien da vao dat/tai san",
       sharedLoanComponent: "Goc vay chung con lai",
       profitComponent: "Loi nhuan chua chia",
       reportingCoverage: (submitted: number, total: number) =>
@@ -266,6 +267,7 @@ function getCopy(locale: "en" | "vi") {
     reportedTotalProjectCash: "Reported by the team",
     differenceAmount: "Remaining difference",
     capitalComponent: "Capital still invested",
+    assetComponent: "Cash already deployed into land/assets",
     sharedLoanComponent: "Shared loan principal outstanding",
     profitComponent: "Profit still undistributed",
     reportingCoverage: (submitted: number, total: number) =>
@@ -750,12 +752,22 @@ export function ProjectReconciliationWorkflow({
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                 <p className="text-sm text-slate-500">{copy.capitalComponent}</p>
                 <p className="mt-2 text-lg font-semibold text-slate-950">
                   {formatCurrency(
                     projectAccounting.expectedTotalCapitalOutstanding,
+                    snapshot.dataset.project.currencyCode,
+                    locale
+                  )}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-sm text-slate-500">{copy.assetComponent}</p>
+                <p className="mt-2 text-lg font-semibold text-slate-950">
+                  {formatCurrency(
+                    projectAccounting.expectedTotalDeployedAssetBasis,
                     snapshot.dataset.project.currencyCode,
                     locale
                   )}
