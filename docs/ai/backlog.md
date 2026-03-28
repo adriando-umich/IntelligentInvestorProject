@@ -29,7 +29,8 @@
 - Add the remaining richer member management after invite acceptance:
   - manager/member role changes
   - invite resend UX
-  - browser-level QA for the new ownership-transfer and remove-member flows
+  - apply the pending `20260328210000_project_member_activity.sql` migration and deploy the refreshed members-page governance UX
+  - browser-level QA for the refreshed ownership-transfer/remove-member flows, including the new activity feed and inline success states
 - Run a focused language QA pass in both English and Vietnamese on the live app:
   - check for any remaining English-only strings in less-frequent dashboard/chart states
   - tighten Vietnamese wording where it still sounds too literal or overly technical
@@ -148,3 +149,5 @@
 - Pushed the theme refresh commit `ffb036c`, then shipped it to production through a Vercel uploaded-files deployment after confirming the git-source deployment path still fails with `git_info_fail`.
 - Added canonical deployment docs in `docs/operations/deployment-runbook.md` and `docs/operations/release-checklist.md`, then linked them from `README.md` so future releases know exactly what to deploy, in what order, and from which clean worktree.
 - Added `land_purchase` as a separate business event, updated claim math so land/assets reduce liquid capital instead of operating profit, patched the audit workbook to track asset basis and shared-loan interest separately, and applied/backfilled the live Supabase changes for the obvious land-purchase rows.
+- Added a shared `member-governance` permission helper, lightweight role-matrix tests, `router.refresh()`-based success UX on the members screen, and a new optional `project_member_activity` audit trail + feed that still needs live migration/deploy follow-through.
+- Removed the `Deployed into land/assets` column from the overview holding-money table so the remaining liquid-claim columns no longer get truncated on the project dashboard.

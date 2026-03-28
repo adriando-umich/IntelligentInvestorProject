@@ -63,6 +63,7 @@ The app must keep those concepts separate in both data and UI.
 - Ledger allocations
 - Profit distribution runs and lines
 - Reconciliation runs and checks
+- Project member governance activity
 
 The finance engine already derives:
 
@@ -82,6 +83,7 @@ The live ledger model already supports member-to-member repayment for shared exp
 Project members can now exist as `active` or `pending_invite`. Pending members get a stable `project_member_id` before account acceptance so expenses can be allocated to them before they join, then keep the same history after invite acceptance.
 Project ownership can now be transferred from the current owner to another active member. The previous owner is demoted to `manager`, and `projects.created_by` moves to the new owner in the same RPC.
 Active owners and managers can now remove an already-joined member by deactivating that membership instead of deleting it. Historical statements and ledger rows keep the same `project_member_id`, while current-member surfaces and new-entry selectors stay limited to active memberships.
+The members screen now centralizes transfer/remove permission checks in `src/lib/projects/member-governance.ts`, uses `router.refresh()` instead of hard reloads after those actions, and can render a recent governance-activity feed from `project_member_activity` when that additive migration is present.
 Live cash-leg storage now keys ledger custody fields by `project_member_id` first, while legacy `cash_in_member_id` / `cash_out_member_id` user references remain as backward-compatible mirrors when a joined user exists. This lets pending members appear in every person-related field, including cash-holder selectors, without rewriting history when they accept later.
 The transaction model now also exposes a second classification axis in code: `entryFamily = business | correction`. The persisted DB column is still `entry_type`, but the app now derives family labels and uses them in planner guidance and the transaction helper matrix.
 The business-event shortcuts now include `shared_loan_interest_payment`, which behaves like a shared operating cost while staying distinct from shared-loan principal.
@@ -150,12 +152,14 @@ Only `.env.example` should be committed.
 - Additional member-removal migration: `supabase/migrations/20260328170000_remove_project_member.sql`
 - Additional land-purchase enum migration: `supabase/migrations/20260328190000_add_land_purchase_enum.sql`
 - Additional land-purchase support migration: `supabase/migrations/20260328190500_land_purchase_entry_support.sql`
+- Additional member-governance activity migration: `supabase/migrations/20260328210000_project_member_activity.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
 - Live Supabase database: migrated through `20260328190500_land_purchase_entry_support.sql`
+- Pending live DB upgrade from this repo: `20260328210000_project_member_activity.sql`
 - Release policy: production deploys must come from a clean deploy worktree created from an exact committed SHA
 - Current reliable Vercel path: uploaded-file API deployment from a clean commit snapshot
 - Latest production deployment for commit `00deeb7`: ready and promoted on Vercel as `dpl_5juQXS6xBRXnUThwdjvi1WKFp8z6`
@@ -167,7 +171,9 @@ Only `.env.example` should be committed.
   - `http://127.0.0.1:3000/auth/callback`
 - Vercel project access protection: disabled so the production deployment is public
 - Verification status:
+  - `./node_modules/.bin/tsc --noEmit` passed
   - `npm run build` passed
+  - `npm run test:member-governance` passed
   - `npm run lint` currently fails on a fresh install because `package.json` has a `lint` script but does not declare `eslint` as a direct dev dependency
 - Public Supabase auth settings verified live:
   - email/password enabled
@@ -223,6 +229,8 @@ Only `.env.example` should be committed.
 - Verified from the public auth settings endpoint that Google is enabled and from the production sign-in page that the `Continue with Google` button now renders live.
 - Added `land_purchase` as a first-class ledger entry type, changed claim math so deployed land/assets reduce liquid capital instead of operating profit, and updated dashboard/member/export surfaces to show deployed asset basis separately.
 - Applied the new live land-purchase migrations and backfilled the four obvious live `Mua đất` / `Chuyển tiền ra dự án` rows from `operating_expense` to `land_purchase` so existing projects stop showing false negative profit from asset deployment.
+- Centralized member-governance permission logic in `src/lib/projects/member-governance.ts`, added a lightweight Node test for the transfer/remove role matrix, replaced hard reloads on the members screen with `router.refresh()` plus inline success feedback, and wired an optional recent governance-activity feed off the new `project_member_activity` table.
+- Removed the `Deployed into land/assets` column from the overview card table on `/projects/[projectId]` so the remaining liquid-claim columns fit cleanly without truncating `Estimated profit today`.
 - Fixed the live first-project RPC so `create_project_with_owner` now runs as `security definer`, and applied an additive migration to update the real Supabase project.
 - Added a persistent project-section navigation layout so the same overview/settlements/tags/members/capital/reconciliation/advanced nav stays visible across project subpages.
 - Added live project invites with `/projects/[projectId]/members` plus a public `/join/[inviteToken]` acceptance route.

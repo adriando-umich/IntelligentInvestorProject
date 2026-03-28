@@ -12,6 +12,7 @@ import {
   type Profile,
   type Project,
   type ProjectDataset,
+  type ProjectMemberActivity,
   type ProjectMember,
   type ProjectTag,
   type ReconciliationCheck,
@@ -147,6 +148,16 @@ type DbReconciliationCheckRow = {
   submitted_at: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
+};
+
+type DbProjectMemberActivityRow = {
+  id: string;
+  project_id: string;
+  actor_project_member_id: string;
+  target_project_member_id: string;
+  event_type: ProjectMemberActivity["eventType"];
+  metadata: Record<string, unknown> | null;
+  occurred_at: string;
 };
 
 function toNumber(value: number | string | null | undefined) {
@@ -316,6 +327,20 @@ function mapReconciliationCheck(
     submittedAt: row.submitted_at,
     reviewedBy: row.reviewed_by,
     reviewedAt: row.reviewed_at,
+  };
+}
+
+function mapProjectMemberActivity(
+  row: DbProjectMemberActivityRow
+): ProjectMemberActivity {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    actorProjectMemberId: row.actor_project_member_id,
+    targetProjectMemberId: row.target_project_member_id,
+    eventType: row.event_type,
+    metadata: row.metadata ?? {},
+    occurredAt: row.occurred_at,
   };
 }
 
@@ -496,6 +521,7 @@ export async function getLiveProjectDataset(projectId: string) {
     projectTagsResult,
     linesResult,
     checksResult,
+    memberActivityResult,
   ] =
     await Promise.all([
       userIds.length > 0
@@ -532,6 +558,12 @@ export async function getLiveProjectDataset(projectId: string) {
             .in("run_id", reconciliationRunIds)
             .returns<DbReconciliationCheckRow[]>()
         : Promise.resolve({ data: [], error: null }),
+      supabase
+        .from("project_member_activity")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("occurred_at", { ascending: false })
+        .returns<DbProjectMemberActivityRow[]>(),
     ]);
 
   if (
@@ -539,7 +571,9 @@ export async function getLiveProjectDataset(projectId: string) {
     allocationsResult.error ||
     (!isMissingRelationError(projectTagsResult.error) && projectTagsResult.error) ||
     linesResult.error ||
-    checksResult.error
+    checksResult.error ||
+    (!isMissingRelationError(memberActivityResult.error) &&
+      memberActivityResult.error)
   ) {
     console.error("Unable to load live project related tables", {
       profilesError: profilesResult.error,
@@ -547,6 +581,7 @@ export async function getLiveProjectDataset(projectId: string) {
       projectTagsError: projectTagsResult.error,
       linesError: linesResult.error,
       checksError: checksResult.error,
+      memberActivityError: memberActivityResult.error,
     });
     return null;
   }
@@ -600,5 +635,8 @@ export async function getLiveProjectDataset(projectId: string) {
     ),
     reconciliationRuns: reconciliationRuns.map(mapReconciliationRun),
     reconciliationChecks: (checksResult.data ?? []).map(mapReconciliationCheck),
+    projectMemberActivities: isMissingRelationError(memberActivityResult.error)
+      ? []
+      : (memberActivityResult.data ?? []).map(mapProjectMemberActivity),
   } satisfies ProjectDataset;
 }

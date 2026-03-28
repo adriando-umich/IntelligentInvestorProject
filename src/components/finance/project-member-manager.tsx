@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useMemo, useState, useTransition } from "react";
 import { Copy, Link2, Mail, ShieldCheck, Trash2, Users } from "lucide-react";
 
@@ -45,6 +46,10 @@ import {
 } from "@/components/ui/table";
 import { formatDateLabel } from "@/lib/format";
 import { getMemberRoleLabel } from "@/lib/finance/types";
+import {
+  canRemoveProjectMember,
+  canTransferOwnershipToMember,
+} from "@/lib/projects/member-governance";
 import { normalizeSearchText } from "@/lib/search";
 
 type MemberSummary = {
@@ -65,6 +70,14 @@ type InviteSummary = {
   expiresAt: string;
   createdAt: string;
   inviteLink: string;
+};
+
+type MemberGovernanceActivity = {
+  id: string;
+  actorDisplayName: string;
+  targetDisplayName: string;
+  eventType: "ownership_transferred" | "member_removed";
+  occurredAt: string;
 };
 
 const initialState: ProjectInviteActionState = { status: "idle" };
@@ -115,6 +128,7 @@ export function ProjectMemberManager({
   projectId,
   projectName,
   members,
+  memberActivity,
   invites,
   canManageInvites,
   canTransferOwnership,
@@ -125,6 +139,7 @@ export function ProjectMemberManager({
   projectId: string;
   projectName: string;
   members: MemberSummary[];
+  memberActivity: MemberGovernanceActivity[];
   invites: InviteSummary[];
   canManageInvites: boolean;
   canTransferOwnership: boolean;
@@ -132,6 +147,7 @@ export function ProjectMemberManager({
   viewerRole: MemberSummary["role"] | null;
   liveModeEnabled: boolean;
 }) {
+  const router = useRouter();
   const { locale } = useLocale();
   const [createState, createAction, createPending] = useActionState(
     createProjectInviteAction,
@@ -140,10 +156,12 @@ export function ProjectMemberManager({
   const [revokeMessage, setRevokeMessage] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [revokePending, startRevokeTransition] = useTransition();
+  const [transferMessage, setTransferMessage] = useState<string | null>(null);
   const [transferError, setTransferError] = useState<string | null>(null);
   const [transferTarget, setTransferTarget] = useState<MemberSummary | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferPending, startTransferTransition] = useTransition();
+  const [removeMessage, setRemoveMessage] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [removeTarget, setRemoveTarget] = useState<MemberSummary | null>(null);
   const [removeOpen, setRemoveOpen] = useState(false);
@@ -233,7 +251,20 @@ export function ProjectMemberManager({
           removingMember: "Dang remove member...",
           removeMemberUnavailable:
             "Chi owner hoac manager dang hoat dong moi co the remove mot thanh vien dang hoat dong khac.",
+          transferOwnershipSuccess: "Da cap nhat owner moi cho project.",
+          removeMemberSuccess: "Da remove member khoi project.",
           cancel: "Huy",
+          governanceActivityTitle: "Lich su quan ly thanh vien",
+          governanceActivityDescription:
+            "Theo doi cac thay doi quan trong nhu chuyen ownership va remove member.",
+          noGovernanceActivity:
+            "Chua co thay doi ownership hay remove member nao duoc ghi nhan.",
+          ownershipTransferredActivity: (
+            actorName: string,
+            targetName: string
+          ) => `${actorName} da chuyen ownership cho ${targetName}.`,
+          memberRemovedActivity: (actorName: string, targetName: string) =>
+            `${actorName} da remove ${targetName} khoi project.`,
           reusableShareLink: "Link chia sẻ dùng lại được",
           revoke: "Thu hồi",
           member: "Thành viên",
@@ -318,7 +349,20 @@ export function ProjectMemberManager({
           removingMember: "Removing member...",
           removeMemberUnavailable:
             "Only an active owner or manager can remove another active member.",
+          transferOwnershipSuccess: "Project ownership updated.",
+          removeMemberSuccess: "Member removed from the project.",
           cancel: "Cancel",
+          governanceActivityTitle: "Member governance activity",
+          governanceActivityDescription:
+            "Track important membership changes like ownership transfers and member removals.",
+          noGovernanceActivity:
+            "No ownership transfer or member-removal activity has been recorded yet.",
+          ownershipTransferredActivity: (
+            actorName: string,
+            targetName: string
+          ) => `${actorName} transferred ownership to ${targetName}.`,
+          memberRemovedActivity: (actorName: string, targetName: string) =>
+            `${actorName} removed ${targetName} from the project.`,
           reusableShareLink: "Reusable share link",
           revoke: "Revoke",
           member: "Member",
@@ -431,32 +475,6 @@ export function ProjectMemberManager({
       });
   }, [inviteSearch, inviteSort, inviteStatusFilter, invites, locale]);
 
-  const canManageMembers = viewerRole === "owner" || viewerRole === "manager";
-
-  function canRemoveMember(member: MemberSummary) {
-    if (!liveModeEnabled || !canManageMembers) {
-      return false;
-    }
-
-    if (member.membershipStatus !== "active") {
-      return false;
-    }
-
-    if (member.id === viewerProjectMemberId) {
-      return false;
-    }
-
-    if (member.role === "owner") {
-      return false;
-    }
-
-    if (viewerRole === "manager" && member.role !== "member") {
-      return false;
-    }
-
-    return true;
-  }
-
   async function copyInvite(link: string) {
     try {
       await navigator.clipboard.writeText(link);
@@ -481,17 +499,19 @@ export function ProjectMemberManager({
       }
 
       setRevokeMessage(result.message ?? revokedMessage);
-      window.location.reload();
+      router.refresh();
     });
   }
 
   function openTransferDialog(member: MemberSummary) {
+    setTransferMessage(null);
     setTransferError(null);
     setTransferTarget(member);
     setTransferOpen(true);
   }
 
   function openRemoveDialog(member: MemberSummary) {
+    setRemoveMessage(null);
     setRemoveError(null);
     setRemoveTarget(member);
     setRemoveOpen(true);
@@ -541,7 +561,10 @@ export function ProjectMemberManager({
         return;
       }
 
-      window.location.reload();
+      setTransferOpen(false);
+      setTransferTarget(null);
+      setTransferMessage(result.message ?? copy.transferOwnershipSuccess);
+      router.refresh();
     });
   }
 
@@ -560,8 +583,25 @@ export function ProjectMemberManager({
         return;
       }
 
-      window.location.reload();
+      setRemoveOpen(false);
+      setRemoveTarget(null);
+      setRemoveMessage(result.message ?? copy.removeMemberSuccess);
+      router.refresh();
     });
+  }
+
+  function getGovernanceActivityLabel(activity: MemberGovernanceActivity) {
+    if (activity.eventType === "ownership_transferred") {
+      return copy.ownershipTransferredActivity(
+        activity.actorDisplayName,
+        activity.targetDisplayName
+      );
+    }
+
+    return copy.memberRemovedActivity(
+      activity.actorDisplayName,
+      activity.targetDisplayName
+    );
   }
 
   return (
@@ -615,6 +655,16 @@ export function ProjectMemberManager({
             <CardDescription>{copy.currentMembersDescription}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {transferMessage ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {transferMessage}
+              </div>
+            ) : null}
+            {removeMessage ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {removeMessage}
+              </div>
+            ) : null}
             {transferError ? (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {transferError}
@@ -720,9 +770,12 @@ export function ProjectMemberManager({
                         <TableCell className="text-right">
                           <div className="flex flex-wrap justify-end gap-2">
                             {liveModeEnabled &&
-                            canTransferOwnership &&
-                            member.membershipStatus === "active" &&
-                            member.role !== "owner" ? (
+                            canTransferOwnershipToMember({
+                              liveModeEnabled,
+                              canTransferOwnership,
+                              viewerProjectMemberId,
+                              member,
+                            }) ? (
                               <Button
                                 type="button"
                                 variant="secondary"
@@ -734,7 +787,12 @@ export function ProjectMemberManager({
                                 {copy.transferOwnership}
                               </Button>
                             ) : null}
-                            {canRemoveMember(member) ? (
+                            {canRemoveProjectMember({
+                              liveModeEnabled,
+                              viewerProjectMemberId,
+                              viewerRole,
+                              member,
+                            }) ? (
                               <Button
                                 type="button"
                                 variant="outline"
@@ -776,6 +834,36 @@ export function ProjectMemberManager({
                 </TableBody>
               </Table>
             </TableSurface>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
+          <CardHeader>
+            <CardTitle>{copy.governanceActivityTitle}</CardTitle>
+            <CardDescription>{copy.governanceActivityDescription}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {memberActivity.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-4 text-sm text-slate-500">
+                {copy.noGovernanceActivity}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {memberActivity.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-start sm:justify-between"
+                  >
+                    <p className="text-sm font-medium leading-6 text-slate-900">
+                      {getGovernanceActivityLabel(activity)}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {formatDateLabel(activity.occurredAt, locale)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

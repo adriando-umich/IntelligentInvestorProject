@@ -40,6 +40,12 @@ export default async function ProjectMembersPage({
   const canManageInvites =
     viewerMember?.role === "owner" || viewerMember?.role === "manager";
   const canTransferOwnership = viewerMember?.role === "owner";
+  const displayNameByProjectMemberId = new Map(
+    snapshot.memberSummaries.map((summary) => [
+      summary.projectMember.id,
+      summary.profile.displayName,
+    ])
+  );
 
   let invites: DbProjectInviteRow[] = [];
 
@@ -99,6 +105,24 @@ export default async function ProjectMembersPage({
               summary.projectMember.membershipStatus ?? "active",
           }))
           .sort((left, right) => left.displayName.localeCompare(right.displayName))}
+        memberActivity={(snapshot.dataset.projectMemberActivities ?? [])
+          .map((activity) => ({
+            id: activity.id,
+            actorDisplayName:
+              displayNameByProjectMemberId.get(activity.actorProjectMemberId) ??
+              (locale === "vi" ? "Thanh vien khong ro" : "Unknown member"),
+            targetDisplayName:
+              displayNameByProjectMemberId.get(activity.targetProjectMemberId) ??
+              (locale === "vi" ? "Thanh vien khong ro" : "Unknown member"),
+            eventType: activity.eventType,
+            occurredAt: activity.occurredAt,
+          }))
+          .sort(
+            (left, right) =>
+              new Date(right.occurredAt).getTime() -
+              new Date(left.occurredAt).getTime()
+          )
+          .slice(0, 6)}
         invites={invites.map((invite) => ({
           id: invite.id,
           email: invite.email,

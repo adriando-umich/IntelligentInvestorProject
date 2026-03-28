@@ -598,13 +598,12 @@ export function ProjectDashboard({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table className="min-w-[820px]">
+                <Table className="min-w-[720px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>{copy.member}</TableHead>
                       <TableHead>{copy.projectMoneyHeld}</TableHead>
                       <TableHead>{copy.frontedOwnMoney}</TableHead>
-                      <TableHead>{copy.assetBasisDeployed}</TableHead>
                       <TableHead>{copy.teamOwesYou}</TableHead>
                       <TableHead>{copy.youOweTeam}</TableHead>
                       <TableHead>{copy.estimatedProfitToday}</TableHead>
@@ -629,7 +628,6 @@ export function ProjectDashboard({
                         </TableCell>
                         <TableCell>{formatSignedCurrency(summary.projectCashCustody, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                         <TableCell>{formatCurrency(summary.frontedOwnMoney, snapshot.dataset.project.currencyCode, locale)}</TableCell>
-                        <TableCell>{formatCurrency(summary.assetBasisBalance, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                         <TableCell className="text-emerald-700">{formatCurrency(summary.teamOwesYou, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                         <TableCell className="text-rose-700">{formatCurrency(summary.youOweTeam, snapshot.dataset.project.currencyCode, locale)}</TableCell>
                         <TableCell>{formatCurrency(summary.estimatedProfitShare, snapshot.dataset.project.currencyCode, locale)}</TableCell>

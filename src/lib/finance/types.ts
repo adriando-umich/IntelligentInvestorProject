@@ -336,6 +336,20 @@ export interface ReconciliationCheck {
   reviewedAt?: string | null;
 }
 
+export type ProjectMemberActivityEventType =
+  | "ownership_transferred"
+  | "member_removed";
+
+export interface ProjectMemberActivity {
+  id: string;
+  projectId: string;
+  actorProjectMemberId: string;
+  targetProjectMemberId: string;
+  eventType: ProjectMemberActivityEventType;
+  metadata: Record<string, unknown>;
+  occurredAt: string;
+}
+
 export interface ProjectDataset {
   project: Project;
   profiles: Profile[];
@@ -348,6 +362,7 @@ export interface ProjectDataset {
   profitDistributionLines: ProfitDistributionLine[];
   reconciliationRuns: ReconciliationRun[];
   reconciliationChecks: ReconciliationCheck[];
+  projectMemberActivities?: ProjectMemberActivity[];
 }
 
 export interface MemberFinanceSummary {

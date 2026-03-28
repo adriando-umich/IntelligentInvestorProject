@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:member-governance": "node --experimental-strip-types --test src/lib/projects/member-governance.test.mts",
     "verify:audit-workbook": "node scripts/verify-audit-workbook.mjs"
   },
   "dependencies": {
