@@ -77,6 +77,37 @@ function revalidateProjectPaths(projectId: string) {
   revalidatePath(`/projects/${projectId}/tags`);
 }
 
+function isMissingOwnershipTransferMigration(error: {
+  code?: string;
+  message?: string | null;
+}) {
+  return (
+    error.code === "PGRST202" ||
+    error.message?.toLowerCase().includes("transfer_project_ownership") === true
+  );
+}
+
+function translateTransferOwnershipError(
+  error: { message?: string | null },
+  copy: {
+    permissionDenied: string;
+    invalidTarget: string;
+    transferFailed: string;
+  }
+) {
+  const message = error.message?.toLowerCase() ?? "";
+
+  if (message.includes("only the current project owner can transfer ownership")) {
+    return copy.permissionDenied;
+  }
+
+  if (message.includes("new owner must be a different active project member")) {
+    return copy.invalidTarget;
+  }
+
+  return error.message ?? copy.transferFailed;
+}
+
 export async function createProjectAction(
   _previousState: ProjectActionState,
   formData: FormData
@@ -393,6 +424,118 @@ export async function duplicateProjectAction(
 
   revalidatePath("/projects");
   redirect(`/projects/${projectId.data}`);
+}
+
+export async function transferProjectOwnershipAction(
+  projectId: string,
+  nextOwnerProjectMemberId: string
+): Promise<ProjectActionState> {
+  const { locale } = await getServerI18n();
+  const session = await getSessionState();
+  const copy =
+    locale === "vi"
+      ? {
+          missingProjectId: "Thieu project ID.",
+          missingMemberId: "Thieu member ID.",
+          demoBlocked: "Khong the chuyen ownership trong demo mode.",
+          transferFailed: "Khong the chuyen ownership cho project nay.",
+          signInRequired: "Ban can dang nhap de chuyen ownership.",
+          permissionDenied:
+            "Chi owner hien tai cua project moi duoc chuyen ownership.",
+          invalidTarget:
+            "Nguoi nhan ownership phai la mot thanh vien dang hoat dong khac trong project.",
+          supabaseMissing: "Supabase chua duoc cau hinh.",
+          missingMigration:
+            "Database live dang thieu migration transfer ownership. Hay apply SQL migration moi nhat tren Supabase roi thu lai.",
+          invalidResponse: "Phan hoi transfer ownership khong hop le.",
+          transferred: "Da chuyen ownership cho thanh vien moi.",
+        }
+      : {
+          missingProjectId: "Missing project ID.",
+          missingMemberId: "Missing member ID.",
+          demoBlocked: "Ownership transfer is disabled in demo mode.",
+          transferFailed: "Unable to transfer project ownership.",
+          signInRequired: "You must be signed in to transfer ownership.",
+          permissionDenied:
+            "Only the current project owner can transfer ownership.",
+          invalidTarget:
+            "The new owner must be a different active project member.",
+          supabaseMissing: "Supabase is not configured.",
+          missingMigration:
+            "The live database is missing the ownership-transfer migration. Apply the newest SQL migration in Supabase, then try again.",
+          invalidResponse: "Ownership transfer returned an invalid response.",
+          transferred: "Project ownership transferred.",
+        };
+
+  if (session.demoMode) {
+    return {
+      status: "error",
+      message: copy.demoBlocked,
+    };
+  }
+
+  const parsed = z
+    .object({
+      projectId: z.string().uuid(copy.missingProjectId),
+      nextOwnerProjectMemberId: z.string().uuid(copy.missingMemberId),
+    })
+    .safeParse({
+      projectId,
+      nextOwnerProjectMemberId,
+    });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? copy.transferFailed,
+    };
+  }
+
+  const { supabase, user } = await getAuthenticatedSupabase();
+
+  if (!supabase) {
+    return {
+      status: "error",
+      message: copy.supabaseMissing,
+    };
+  }
+
+  if (!user) {
+    return {
+      status: "error",
+      message: copy.signInRequired,
+    };
+  }
+
+  const { data, error } = await supabase.rpc("transfer_project_ownership", {
+    p_project_id: parsed.data.projectId,
+    p_next_owner_project_member_id: parsed.data.nextOwnerProjectMemberId,
+  });
+
+  if (error) {
+    return {
+      status: "error",
+      message: isMissingOwnershipTransferMigration(error)
+        ? copy.missingMigration
+        : translateTransferOwnershipError(error, copy),
+    };
+  }
+
+  const response = rpcResponseSchema.safeParse(data);
+
+  if (!response.success) {
+    return {
+      status: "error",
+      message: copy.invalidResponse,
+    };
+  }
+
+  revalidateProjectPaths(parsed.data.projectId);
+
+  return {
+    status: "success",
+    message: copy.transferred,
+  };
 }
 
 export async function updateProjectStatusAction(

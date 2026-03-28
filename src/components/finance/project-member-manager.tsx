@@ -9,9 +9,19 @@ import {
   revokeProjectInviteAction,
   type ProjectInviteActionState,
 } from "@/app/actions/project-invites";
+import { transferProjectOwnershipAction } from "@/app/actions/projects";
 import { useLocale } from "@/components/app/locale-provider";
 import { ProfileAvatar } from "@/components/app/profile-avatar";
 import { TableSurface, TableToolbar } from "@/components/finance/table-toolbar";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -104,6 +114,7 @@ export function ProjectMemberManager({
   members,
   invites,
   canManageInvites,
+  canTransferOwnership,
   liveModeEnabled,
 }: {
   projectId: string;
@@ -111,6 +122,7 @@ export function ProjectMemberManager({
   members: MemberSummary[];
   invites: InviteSummary[];
   canManageInvites: boolean;
+  canTransferOwnership: boolean;
   liveModeEnabled: boolean;
 }) {
   const { locale } = useLocale();
@@ -121,6 +133,10 @@ export function ProjectMemberManager({
   const [revokeMessage, setRevokeMessage] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [revokePending, startRevokeTransition] = useTransition();
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [transferTarget, setTransferTarget] = useState<MemberSummary | null>(null);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferPending, startTransferTransition] = useTransition();
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberRoleFilter, setMemberRoleFilter] = useState<
@@ -186,6 +202,17 @@ export function ProjectMemberManager({
           action: "Thao tác",
           statement: "Statement",
           pdf: "PDF",
+          transferOwnership: "Chuyen ownership",
+          transferOwnershipTitle: "Chuyen ownership project?",
+          transferOwnershipDescription: (memberName: string) =>
+            `${memberName} se tro thanh owner moi cua ${projectName}.`,
+          transferOwnershipWarning:
+            "Owner hien tai se duoc doi thanh manager va van giu quyen quan ly project.",
+          transferOwnershipConfirm: "Xac nhan chuyen ownership",
+          transferringOwnership: "Dang chuyen ownership...",
+          transferOwnershipUnavailable:
+            "Chi owner hien tai moi co the chuyen ownership cho mot thanh vien dang hoat dong khac.",
+          cancel: "Huy",
           reusableShareLink: "Link chia sẻ dùng lại được",
           revoke: "Thu hồi",
           member: "Thành viên",
@@ -250,6 +277,17 @@ export function ProjectMemberManager({
           action: "Action",
           statement: "Statement",
           pdf: "PDF",
+          transferOwnership: "Transfer ownership",
+          transferOwnershipTitle: "Transfer project ownership?",
+          transferOwnershipDescription: (memberName: string) =>
+            `${memberName} will become the new owner of ${projectName}.`,
+          transferOwnershipWarning:
+            "The current owner will be downgraded to manager and will still keep project-management access.",
+          transferOwnershipConfirm: "Transfer ownership",
+          transferringOwnership: "Transferring ownership...",
+          transferOwnershipUnavailable:
+            "Only the current owner can transfer ownership to another active project member.",
+          cancel: "Cancel",
           reusableShareLink: "Reusable share link",
           revoke: "Revoke",
           member: "Member",
@@ -390,180 +428,246 @@ export function ProjectMemberManager({
     });
   }
 
+  function openTransferDialog(member: MemberSummary) {
+    setTransferError(null);
+    setTransferTarget(member);
+    setTransferOpen(true);
+  }
+
+  function handleTransferOpenChange(open: boolean) {
+    if (transferPending) {
+      return;
+    }
+
+    setTransferOpen(open);
+
+    if (!open) {
+      setTransferTarget(null);
+      setTransferError(null);
+    }
+  }
+
+  function transferOwnership() {
+    if (!transferTarget) {
+      return;
+    }
+
+    setTransferError(null);
+
+    startTransferTransition(async () => {
+      const result = await transferProjectOwnershipAction(
+        projectId,
+        transferTarget.id
+      );
+
+      if (result.status === "error") {
+        setTransferError(result.message ?? copy.transferOwnershipUnavailable);
+        return;
+      }
+
+      window.location.reload();
+    });
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="rounded-[1.5rem] border-white/70 bg-white/90">
-          <CardContent className="flex items-center gap-4 py-6">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-              <Users className="size-5" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">{copy.currentMembers}</p>
-              <p className="text-2xl font-semibold text-slate-950">{members.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="rounded-[1.5rem] border-white/70 bg-white/90">
-          <CardContent className="flex items-center gap-4 py-6">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-teal-100 text-teal-700">
-              <Link2 className="size-5" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">{copy.pendingInvites}</p>
-              <p className="text-2xl font-semibold text-slate-950">
-                {pendingInvites.length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="rounded-[1.5rem] border-white/70 bg-white/90">
-          <CardContent className="flex items-center gap-4 py-6">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
-              <ShieldCheck className="size-5" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">{copy.joinFlow}</p>
-              <p className="text-sm font-medium text-slate-900">
-                {copy.joinFlowDescription}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+    <>
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="rounded-[1.5rem] border-white/70 bg-white/90">
+            <CardContent className="flex items-center gap-4 py-6">
+              <div className="flex size-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                <Users className="size-5" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">{copy.currentMembers}</p>
+                <p className="text-2xl font-semibold text-slate-950">
+                  {members.length}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="rounded-[1.5rem] border-white/70 bg-white/90">
+            <CardContent className="flex items-center gap-4 py-6">
+              <div className="flex size-11 items-center justify-center rounded-2xl bg-teal-100 text-teal-700">
+                <Link2 className="size-5" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">{copy.pendingInvites}</p>
+                <p className="text-2xl font-semibold text-slate-950">
+                  {pendingInvites.length}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="rounded-[1.5rem] border-white/70 bg-white/90">
+            <CardContent className="flex items-center gap-4 py-6">
+              <div className="flex size-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
+                <ShieldCheck className="size-5" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">{copy.joinFlow}</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {copy.joinFlowDescription}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
-        <CardHeader>
-          <CardTitle>{copy.currentMembersTitle}</CardTitle>
-          <CardDescription>{copy.currentMembersDescription}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <TableToolbar
-            searchLabel={copy.searchLabel}
-            searchValue={memberSearch}
-            onSearchChange={setMemberSearch}
-            searchPlaceholder={copy.memberSearchPlaceholder}
-            resultLabel={copy.showingMembers(displayedMembers.length)}
-            filters={[
-              {
-                key: "member-role",
-                label: copy.role,
-                value: memberRoleFilter,
-                onValueChange: (value) =>
-                  setMemberRoleFilter(
-                    value as "all" | "owner" | "manager" | "member"
-                  ),
-                options: [
-                  { value: "all", label: copy.allRoles },
-                  { value: "owner", label: copy.owner },
-                  { value: "manager", label: copy.manager },
-                  { value: "member", label: copy.member },
-                ],
-              },
-              {
-                key: "member-sort",
-                label: copy.sort,
-                value: memberSort,
-                onValueChange: (value) =>
-                  setMemberSort(value as "name_asc" | "joined_desc" | "role"),
-                options: [
-                  { value: "name_asc", label: copy.sortByName },
-                  { value: "joined_desc", label: copy.sortByJoined },
-                  { value: "role", label: copy.sortByRole },
-                ],
-              },
-            ]}
-          />
+        <Card className="rounded-[1.75rem] border-white/70 bg-white/90">
+          <CardHeader>
+            <CardTitle>{copy.currentMembersTitle}</CardTitle>
+            <CardDescription>{copy.currentMembersDescription}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {transferError ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {transferError}
+              </div>
+            ) : null}
+            <TableToolbar
+              searchLabel={copy.searchLabel}
+              searchValue={memberSearch}
+              onSearchChange={setMemberSearch}
+              searchPlaceholder={copy.memberSearchPlaceholder}
+              resultLabel={copy.showingMembers(displayedMembers.length)}
+              filters={[
+                {
+                  key: "member-role",
+                  label: copy.role,
+                  value: memberRoleFilter,
+                  onValueChange: (value) =>
+                    setMemberRoleFilter(
+                      value as "all" | "owner" | "manager" | "member"
+                    ),
+                  options: [
+                    { value: "all", label: copy.allRoles },
+                    { value: "owner", label: copy.owner },
+                    { value: "manager", label: copy.manager },
+                    { value: "member", label: copy.member },
+                  ],
+                },
+                {
+                  key: "member-sort",
+                  label: copy.sort,
+                  value: memberSort,
+                  onValueChange: (value) =>
+                    setMemberSort(value as "name_asc" | "joined_desc" | "role"),
+                  options: [
+                    { value: "name_asc", label: copy.sortByName },
+                    { value: "joined_desc", label: copy.sortByJoined },
+                    { value: "role", label: copy.sortByRole },
+                  ],
+                },
+              ]}
+            />
 
-          <TableSurface>
-            <Table className="min-w-[880px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[240px]">{memberLabel}</TableHead>
-                  <TableHead className="min-w-[220px]">{copy.email}</TableHead>
-                  <TableHead className="w-[160px]">{copy.role}</TableHead>
-                  <TableHead className="w-[160px]">{memberStatusLabel}</TableHead>
-                  <TableHead className="w-[150px]">{copy.joined}</TableHead>
-                  <TableHead className="w-[220px] text-right">
-                    {locale === "vi" ? "Tài liệu" : "Documents"}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedMembers.length === 0 ? (
+            <TableSurface>
+              <Table className="min-w-[880px]">
+                <TableHeader>
                   <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="py-10 text-center whitespace-normal text-slate-500"
-                    >
-                      {copy.noMembersMatch}
-                    </TableCell>
+                    <TableHead className="min-w-[240px]">{memberLabel}</TableHead>
+                    <TableHead className="min-w-[220px]">{copy.email}</TableHead>
+                    <TableHead className="w-[160px]">{copy.role}</TableHead>
+                    <TableHead className="w-[160px]">{memberStatusLabel}</TableHead>
+                    <TableHead className="w-[150px]">{copy.joined}</TableHead>
+                    <TableHead className="w-[320px] text-right">
+                      {copy.action}
+                    </TableHead>
                   </TableRow>
-                ) : (
-                  displayedMembers.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <ProfileAvatar
-                            name={member.displayName}
-                            avatarUrl={member.avatarUrl}
-                            size="sm"
-                            className="after:hidden"
-                          />
-                          <Link
-                            href={`/projects/${projectId}/members/${member.id}`}
-                            className="font-medium text-slate-950 underline-offset-4 hover:text-teal-700 hover:underline"
-                          >
-                            {member.displayName}
-                          </Link>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {member.email || copy.noEmail}
-                      </TableCell>
-                      <TableCell>
-                        <RoleBadge role={member.role} />
-                      </TableCell>
-                      <TableCell>
-                        <MembershipBadge status={member.membershipStatus} />
-                      </TableCell>
-                      <TableCell>{formatDateLabel(member.joinedAt, locale)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <Link
-                            href={`/projects/${projectId}/members/${member.id}`}
-                            className={buttonVariants({
-                              variant: "outline",
-                              size: "sm",
-                              className: "rounded-full",
-                            })}
-                          >
-                            {locale === "vi" ? "Xem statement" : "Statement"}
-                          </Link>
-                          <a
-                            href={`/projects/${projectId}/members/${member.id}/export`}
-                            download
-                            className={buttonVariants({
-                              variant: "outline",
-                              size: "sm",
-                              className: "rounded-full",
-                            })}
-                          >
-                            {locale === "vi" ? "Tải PDF" : "PDF"}
-                          </a>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {displayedMembers.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="py-10 text-center whitespace-normal text-slate-500"
+                      >
+                        {copy.noMembersMatch}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableSurface>
-        </CardContent>
-      </Card>
+                  ) : (
+                    displayedMembers.map((member) => (
+                      <TableRow key={member.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <ProfileAvatar
+                              name={member.displayName}
+                              avatarUrl={member.avatarUrl}
+                              size="sm"
+                              className="after:hidden"
+                            />
+                            <Link
+                              href={`/projects/${projectId}/members/${member.id}`}
+                              className="font-medium text-slate-950 underline-offset-4 hover:text-teal-700 hover:underline"
+                            >
+                              {member.displayName}
+                            </Link>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-slate-600">
+                          {member.email || copy.noEmail}
+                        </TableCell>
+                        <TableCell>
+                          <RoleBadge role={member.role} />
+                        </TableCell>
+                        <TableCell>
+                          <MembershipBadge status={member.membershipStatus} />
+                        </TableCell>
+                        <TableCell>
+                          {formatDateLabel(member.joinedAt, locale)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            {liveModeEnabled &&
+                            canTransferOwnership &&
+                            member.membershipStatus === "active" &&
+                            member.role !== "owner" ? (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                className="rounded-full"
+                                disabled={transferPending}
+                                onClick={() => openTransferDialog(member)}
+                              >
+                                {copy.transferOwnership}
+                              </Button>
+                            ) : null}
+                            <Link
+                              href={`/projects/${projectId}/members/${member.id}`}
+                              className={buttonVariants({
+                                variant: "outline",
+                                size: "sm",
+                                className: "rounded-full",
+                              })}
+                            >
+                              {locale === "vi" ? "Xem statement" : "Statement"}
+                            </Link>
+                            <a
+                              href={`/projects/${projectId}/members/${member.id}/export`}
+                              download
+                              className={buttonVariants({
+                                variant: "outline",
+                                size: "sm",
+                                className: "rounded-full",
+                              })}
+                            >
+                              {locale === "vi" ? "Tải PDF" : "PDF"}
+                            </a>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableSurface>
+          </CardContent>
+        </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card className="rounded-[1.75rem] border-white/70 bg-[radial-gradient(circle_at_top_left,_rgba(13,148,136,0.18),_transparent_34%),linear-gradient(180deg,_#0f172a_0%,_#1e293b_100%)] text-white shadow-[0_24px_80px_-45px_rgba(15,23,42,0.55)]">
+        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <Card className="rounded-[1.75rem] border-white/70 bg-[radial-gradient(circle_at_top_left,_rgba(13,148,136,0.18),_transparent_34%),linear-gradient(180deg,_#0f172a_0%,_#1e293b_100%)] text-white shadow-[0_24px_80px_-45px_rgba(15,23,42,0.55)]">
           <CardHeader>
             <CardTitle className="text-white">{copy.howMembersJoinTitle}</CardTitle>
             <CardDescription className="text-slate-200">
@@ -815,6 +919,45 @@ export function ProjectMemberManager({
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+
+      <AlertDialog open={transferOpen} onOpenChange={handleTransferOpenChange}>
+        <AlertDialogContent className="rounded-[1.6rem] p-0">
+          <div className="space-y-5 p-6">
+            <AlertDialogHeader className="items-start text-left">
+              <AlertDialogTitle>{copy.transferOwnershipTitle}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {transferTarget
+                  ? copy.transferOwnershipDescription(transferTarget.displayName)
+                  : copy.transferOwnershipUnavailable}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {copy.transferOwnershipWarning}
+            </div>
+            {transferError ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {transferError}
+              </div>
+            ) : null}
+            <AlertDialogFooter className="mx-0 mb-0 rounded-[1.2rem] border-0 bg-transparent p-0">
+              <AlertDialogCancel disabled={transferPending}>
+                {copy.cancel}
+              </AlertDialogCancel>
+              <Button
+                type="button"
+                variant="default"
+                disabled={transferPending || !transferTarget}
+                onClick={transferOwnership}
+              >
+                {transferPending
+                  ? copy.transferringOwnership
+                  : copy.transferOwnershipConfirm}
+              </Button>
+            </AlertDialogFooter>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

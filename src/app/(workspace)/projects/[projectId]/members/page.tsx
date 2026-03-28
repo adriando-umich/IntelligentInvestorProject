@@ -40,6 +40,7 @@ export default async function ProjectMembersPage({
   );
   const canManageInvites =
     viewerMember?.role === "owner" || viewerMember?.role === "manager";
+  const canTransferOwnership = viewerMember?.role === "owner";
 
   let invites: DbProjectInviteRow[] = [];
 
@@ -83,6 +84,7 @@ export default async function ProjectMembersPage({
         projectName={snapshot.dataset.project.name}
         liveModeEnabled={!session.demoMode}
         canManageInvites={canManageInvites}
+        canTransferOwnership={canTransferOwnership}
         members={snapshot.memberSummaries
           .map((summary) => ({
             id: summary.projectMember.id,

@@ -26,10 +26,11 @@
   - manager posts a reconciliation adjustment
   - manager closes the run
 - Add the real live posting flow for profit distributions
-- Add richer member management after invite acceptance:
-  - role changes
+- Add the remaining richer member management after invite acceptance:
+  - manager/member role changes
   - member removal / deactivation
   - invite resend UX
+  - browser-level QA for the new ownership-transfer flow
 - Run a focused language QA pass in both English and Vietnamese on the live app:
   - check for any remaining English-only strings in less-frequent dashboard/chart states
   - tighten Vietnamese wording where it still sounds too literal or overly technical
@@ -133,7 +134,8 @@
 - Added `docs/manual-qa/ledger-planner-ui-ux.md` so future planner UI work has one stable desktop/mobile regression checklist.
 - Tightened the planner so only relevant cash-leg fields show for each entry type, especially around capital contribution vs capital return.
 - Added a project-member-backed cash-leg migration so pending members can now be selected in every person-related field, not just allocations and capital ownership, and verified that those rows still map to the same member after invite acceptance.
-- Moved the remaining work to end-to-end real-user validation, richer member management, profit-distribution write flows, and deeper tag-reporting decisions.
+- Added owner-only project ownership transfer in the members screen, applied the live Supabase migration for it, and verified the RPC on a disposable live project.
+- Moved the remaining work to end-to-end real-user validation, the rest of member management, profit-distribution write flows, and deeper tag-reporting decisions.
 - Refreshed the shared visual system toward a lighter Splitwise/Apple direction across the shell, auth, navigation, and top-level project surfaces, then re-ran `next build` successfully.
 - Pushed the theme refresh commit `ffb036c`, then shipped it to production through a Vercel uploaded-files deployment after confirming the git-source deployment path still fails with `git_info_fail`.
 - Added canonical deployment docs in `docs/operations/deployment-runbook.md` and `docs/operations/release-checklist.md`, then linked them from `README.md` so future releases know exactly what to deploy, in what order, and from which clean worktree.
