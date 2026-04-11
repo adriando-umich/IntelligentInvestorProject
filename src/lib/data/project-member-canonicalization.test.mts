@@ -114,7 +114,7 @@ test("canonicalizeProjectDatasetMembers merges stale pending rows into the activ
   const normalized = canonicalizeProjectDatasetMembers(dataset);
 
   assert.deepEqual(
-    normalized.members.map((member) => member.id),
+    normalized.members.map((member: ProjectDataset["members"][number]) => member.id),
     ["member-user"]
   );
   assert.equal(normalized.entries[0]?.cashOutMemberId, "member-user");
@@ -193,7 +193,7 @@ test("canonicalizeProjectDatasetMembers keeps one pending row for rejoin flows a
   const normalized = canonicalizeProjectDatasetMembers(dataset);
 
   assert.deepEqual(
-    normalized.members.map((member) => member.id),
+    normalized.members.map((member: ProjectDataset["members"][number]) => member.id),
     ["member-rejoin"]
   );
   assert.equal(normalized.entries[0]?.cashInMemberId, "member-rejoin");

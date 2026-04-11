@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { DEMO_COOKIE_NAME } from "@/lib/app-config";
 import { env, isSupabaseConfigured } from "@/lib/env";
+import { recoverProjectMembershipsByEmail } from "@/lib/supabase/membership-recovery";
 import { syncProfileFromAuthUser } from "@/lib/supabase/profile-sync";
 
 const DEFAULT_NEXT_PATH = "/projects";
@@ -100,6 +101,7 @@ export async function GET(request: NextRequest) {
 
   if (user) {
     await syncProfileFromAuthUser(supabase, user);
+    await recoverProjectMembershipsByEmail(supabase);
   }
 
   const redirectResponse = NextResponse.redirect(

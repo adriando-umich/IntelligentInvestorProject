@@ -31,6 +31,7 @@ The app must keep those concepts separate in both data and UI.
   - `/auth/callback` now exchanges the Supabase PKCE code into a cookie-backed session
   - Auth/profile sync now pulls `avatar_url` or `picture` from Google user metadata when available
   - Session refresh is now backed by a root `proxy.ts` plus `src/lib/supabase/proxy.ts`
+  - Source now also includes same-email membership recovery: password sign-in, sign-up-with-session, OAuth callback, and live project loaders attempt `relink_my_project_memberships_by_email()` when that additive Supabase function exists
 
 ## Current Architecture
 
@@ -153,19 +154,21 @@ Only `.env.example` should be committed.
 - Additional land-purchase enum migration: `supabase/migrations/20260328190000_add_land_purchase_enum.sql`
 - Additional land-purchase support migration: `supabase/migrations/20260328190500_land_purchase_entry_support.sql`
 - Additional member-governance activity migration: `supabase/migrations/20260328210000_project_member_activity.sql`
+- Additional same-email membership relink migration: `supabase/migrations/20260411223000_relink_memberships_by_email.sql`
 - README deploy and env guidance: created
 - GitHub remote: configured and pushed
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
 - Live Supabase database: migrated through `20260328190500_land_purchase_entry_support.sql`
-- Pending live DB upgrades from this repo: `20260328210000_project_member_activity.sql`, `20260328233000_canonical_project_member_identities.sql`
+- Pending live DB upgrades from this repo: `20260328210000_project_member_activity.sql`, `20260328233000_canonical_project_member_identities.sql`, `20260411223000_relink_memberships_by_email.sql`
 - Release policy: production deploys must come from a clean deploy worktree created from an exact committed SHA
 - Release policy: every deploy or rollback must start from the current live production baseline, not local memory
 - Current reliable Vercel path: uploaded-file API deployment from a clean commit snapshot
 - Current deploy discipline: record live Vercel deployment metadata plus live Supabase migration state before release, then append a release-ledger entry after release
 - Latest production deployment for commit `1005bc3`: ready and promoted on Vercel as `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE`
 - Current local-not-live follow-up from this workspace: post-deploy release-ledger and memory sync after `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE` (no product-code delta from production)
+- Current local-not-live auth recovery follow-up: the source tree now includes a same-email membership relink path, but production still needs `20260411223000_relink_memberships_by_email.sql` applied before users who accidentally signed in through a second Supabase auth identity will automatically see their historical projects again
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
 - Live Supabase Auth redirect allow-list now includes:
@@ -286,5 +289,7 @@ Only `.env.example` should be committed.
 - Added `supabase/migrations/20260328233000_canonical_project_member_identities.sql` so invite acceptance can merge pending aliases back into the canonical member row instead of creating another identity, but that migration is still pending live until a Supabase access token is available in this workspace.
 - Promoted production deployment `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE` from clean worktree commit `1005bc397c9244f27bcd6aebada9bef29f54e930`, then re-smoked `/sign-in`, `/projects`, `/projects/project-sunrise`, and `/projects/project-sunrise/members` on the live site.
 - Verified from the live production HTML for `/projects/project-sunrise` that both `Cash deployed into land/assets` and `Deployed into land/assets` are absent after the release.
+- Investigated a new production report where `My Nguyen` could sign in successfully but see `No projects yet`; root cause is identity drift between the current Supabase auth user and older `project_members.user_id` rows, not deleted project data.
+- Added a new additive migration `supabase/migrations/20260411223000_relink_memberships_by_email.sql` plus source-side recovery hooks in sign-in, OAuth callback, and live project loaders so same-email memberships can relink automatically once the live database has that function.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

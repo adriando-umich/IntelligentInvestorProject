@@ -7,6 +7,7 @@ import { z } from "zod";
 import { DEMO_COOKIE_NAME } from "@/lib/app-config";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getServerI18n } from "@/lib/i18n/server";
+import { recoverProjectMembershipsByEmail } from "@/lib/supabase/membership-recovery";
 import { syncProfileFromAuthUser } from "@/lib/supabase/profile-sync";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -79,6 +80,7 @@ export async function signInAction(
 
   if (data.user) {
     await syncProfileFromAuthUser(supabase, data.user);
+    await recoverProjectMembershipsByEmail(supabase);
   }
 
   cookieStore.delete(DEMO_COOKIE_NAME);
@@ -153,6 +155,7 @@ export async function signUpAction(
   if (data.session) {
     if (data.user) {
       await syncProfileFromAuthUser(supabase, data.user);
+      await recoverProjectMembershipsByEmail(supabase);
     }
 
     redirect(normalizeNextPath(formData.get("nextPath")));

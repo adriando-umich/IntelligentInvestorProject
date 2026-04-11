@@ -3,6 +3,7 @@ import "server-only";
 import { getSessionState } from "@/lib/auth/session";
 import { canonicalizeProjectDatasetMembers } from "@/lib/data/project-member-canonicalization";
 import { getUserAvatarUrl, getUserDisplayName } from "@/lib/profiles";
+import { recoverProjectMembershipsByEmail } from "@/lib/supabase/membership-recovery";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   type LedgerAllocation,
@@ -362,6 +363,17 @@ export async function shouldUseDemoData() {
   return session.demoMode;
 }
 
+async function recoverMembershipsForAuthenticatedViewer(
+  session: Awaited<ReturnType<typeof getSessionState>>,
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+) {
+  if (!session.isAuthenticated || !supabase) {
+    return;
+  }
+
+  await recoverProjectMembershipsByEmail(supabase);
+}
+
 export async function getLiveViewerProfile() {
   const session = await getSessionState();
 
@@ -373,6 +385,8 @@ export async function getLiveViewerProfile() {
   if (!supabase) {
     return null;
   }
+
+  await recoverMembershipsForAuthenticatedViewer(session, supabase);
 
   const {
     data: { user },
@@ -419,6 +433,8 @@ export async function listLiveProjectIds() {
     return null;
   }
 
+  await recoverMembershipsForAuthenticatedViewer(session, supabase);
+
   const { data, error } = await supabase
     .from("projects")
     .select("id")
@@ -443,6 +459,8 @@ export async function getLiveProjectDataset(projectId: string) {
   if (!supabase) {
     return null;
   }
+
+  await recoverMembershipsForAuthenticatedViewer(session, supabase);
 
   const [
     projectResult,
