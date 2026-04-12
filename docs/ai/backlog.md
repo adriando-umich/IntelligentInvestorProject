@@ -2,10 +2,6 @@
 
 ## Now
 
-- Apply the new `20260411223000_relink_memberships_by_email.sql` migration live once a Supabase admin session is available, then verify on production that:
-  - a user who signs in through Google or password with the same email as an older project identity sees their historical projects again
-  - `/projects` no longer falls back to `No projects yet` for same-email duplicate-auth cases
-  - one mobile Google sign-in round-trip lands on the real project list instead of an empty workspace
 - Validate the full live flow end-to-end:
   - sign up
   - sign in
@@ -167,3 +163,4 @@
 - Kept the DB-side follow-up on the backlog: `20260328210000_project_member_activity.sql` and `20260328233000_canonical_project_member_identities.sql` still need a live Supabase apply once a workspace token is available.
 - Investigated the new report where a signed-in `My Nguyen` saw `No projects yet`; the data is likely still present, but the active Supabase auth identity no longer matches older `project_members.user_id` rows on those projects.
 - Added a new same-email recovery path in source plus `20260411223000_relink_memberships_by_email.sql` so password sign-in, Google callback, and authenticated project loads can relink memberships automatically once the live database receives that RPC.
+- Applied `20260411223000_relink_memberships_by_email.sql` live, deployed production commit `c8d4664`, and shifted the remaining work from “ship the fix” to “QA the real account on desktop/mobile sign-in now that the recovery path is live.”

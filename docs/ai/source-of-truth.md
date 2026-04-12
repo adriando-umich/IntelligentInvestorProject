@@ -160,15 +160,14 @@ Only `.env.example` should be committed.
 - GitHub repo: `https://github.com/adriando-umich/IntelligentInvestorProject`
 - Vercel project: `intelligent-investor-project`
 - Production URL: `https://intelligent-investor-project.vercel.app`
-- Live Supabase database: migrated through `20260328190500_land_purchase_entry_support.sql`
-- Pending live DB upgrades from this repo: `20260328210000_project_member_activity.sql`, `20260328233000_canonical_project_member_identities.sql`, `20260411223000_relink_memberships_by_email.sql`
+- Live Supabase database: migrated through `20260411223000_relink_memberships_by_email.sql`
+- Pending live DB upgrades from this repo: `20260328210000_project_member_activity.sql`, `20260328233000_canonical_project_member_identities.sql`
 - Release policy: production deploys must come from a clean deploy worktree created from an exact committed SHA
 - Release policy: every deploy or rollback must start from the current live production baseline, not local memory
 - Current reliable Vercel path: uploaded-file API deployment from a clean commit snapshot
 - Current deploy discipline: record live Vercel deployment metadata plus live Supabase migration state before release, then append a release-ledger entry after release
-- Latest production deployment for commit `1005bc3`: ready and promoted on Vercel as `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE`
-- Current local-not-live follow-up from this workspace: post-deploy release-ledger and memory sync after `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE` (no product-code delta from production)
-- Current local-not-live auth recovery follow-up: the source tree now includes a same-email membership relink path, but production still needs `20260411223000_relink_memberships_by_email.sql` applied before users who accidentally signed in through a second Supabase auth identity will automatically see their historical projects again
+- Latest production deployment for commit `c8d4664`: ready and promoted on Vercel as `dpl_53hjShQkmoUz5vfso6HXcghH4RaY`
+- Current local-not-live follow-up from this workspace: no known app-code delta from production; the remaining live follow-up is still the pending DB migrations `20260328210000_project_member_activity.sql` and `20260328233000_canonical_project_member_identities.sql`
 - Local and Vercel `NEXT_PUBLIC_SUPABASE_URL` were corrected from a bad project-ref typo to `https://rhvtfzrwgqwljhnpwxzj.supabase.co`
 - Live Supabase Auth `site_url` is now `https://intelligent-investor-project.vercel.app`
 - Live Supabase Auth redirect allow-list now includes:
@@ -291,5 +290,7 @@ Only `.env.example` should be committed.
 - Verified from the live production HTML for `/projects/project-sunrise` that both `Cash deployed into land/assets` and `Deployed into land/assets` are absent after the release.
 - Investigated a new production report where `My Nguyen` could sign in successfully but see `No projects yet`; root cause is identity drift between the current Supabase auth user and older `project_members.user_id` rows, not deleted project data.
 - Added a new additive migration `supabase/migrations/20260411223000_relink_memberships_by_email.sql` plus source-side recovery hooks in sign-in, OAuth callback, and live project loaders so same-email memberships can relink automatically once the live database has that function.
+- Applied `supabase/migrations/20260411223000_relink_memberships_by_email.sql` live through the Supabase SQL editor, then promoted production deployment `dpl_53hjShQkmoUz5vfso6HXcghH4RaY` from clean worktree commit `c8d46648ea3bf52da0cb892d12e88024ede8ca8b`.
+- Re-smoked production after the relink release: `/sign-in` returned `200`, unauthenticated `/projects` redirected `307 -> /sign-in`, `/projects` with demo cookie returned `200`, and `/projects/project-sunrise` with the demo cookie returned `200`.
 - Current limitation: profit distribution still needs a dedicated live posting flow; the planner keeps that type preview-only.
 - Current limitation: a fully manual end-to-end Google sign-in through the external consent screen has not yet been completed from this workspace.

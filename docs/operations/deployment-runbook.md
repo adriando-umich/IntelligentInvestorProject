@@ -51,14 +51,14 @@ The rule for this repo is simple:
 
 Use live production as the starting point, not local memory.
 
-As of the last repo-verified baseline on March 28, 2026:
+As of the last repo-verified baseline on April 12, 2026:
 
 - Production URL: `https://intelligent-investor-project.vercel.app`
 - Vercel project: `intelligent-investor-project`
-- Latest repo-verified promoted production deployment: `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE`
-- Latest repo-verified production commit: `1005bc397c9244f27bcd6aebada9bef29f54e930`
-- Latest repo-verified live Supabase migration: `20260328190500_land_purchase_entry_support.sql`
-- Known local-not-live follow-up at the time of this update: post-deploy ledger and memory sync after `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE`; live DB migrations still pending for `20260328210000_project_member_activity.sql` and `20260328233000_canonical_project_member_identities.sql`
+- Latest repo-verified promoted production deployment: `dpl_53hjShQkmoUz5vfso6HXcghH4RaY`
+- Latest repo-verified production commit: `c8d46648ea3bf52da0cb892d12e88024ede8ca8b`
+- Latest repo-verified live Supabase migration: `20260411223000_relink_memberships_by_email.sql`
+- Known local-not-live follow-up at the time of this update: no known app-code delta from production; live DB migrations still pending for `20260328210000_project_member_activity.sql` and `20260328233000_canonical_project_member_identities.sql`
 
 If live Vercel or live Supabase checks disagree with this section, live state wins immediately and this section must be updated after the release.
 
@@ -326,6 +326,49 @@ If the deploy did not come directly from a clean `main` worktree, the `Notes` fi
 - Notes:
   - This was intentionally an app-only release. The app-side canonicalization is backward-compatible with the current live schema and collapses duplicate members in snapshots without requiring an immediate DB migration.
   - The DB-side preventative migrations `20260328210000_project_member_activity.sql` and `20260328233000_canonical_project_member_identities.sql` are present in source but still pending live until a Supabase access token is available in this workspace.
+
+### 2026-04-12 Same-Email Membership Relink Recovery
+
+- Type: production migration-plus-app deploy
+- UTC timestamp: `2026-04-12T03:05:28Z`
+- Operator: Codex
+- Intended scope: restore project access for returning users who now sign in through a different Supabase auth identity but the same verified email, while keeping production baseline docs aligned with the live release
+- Source branch: `main`
+- Source commit: `c8d46648ea3bf52da0cb892d12e88024ede8ca8b`
+- Source tree path: `/Users/mynguyen/Documents/Nha Trang/IntelligentInvestorProject-deploy-c8d4664`
+- Changed files: `docs/ai/backlog.md`, `docs/ai/issues-and-resolutions.md`, `docs/ai/source-of-truth.md`, `src/app/actions/auth.ts`, `src/app/auth/callback/route.ts`, `src/lib/data/project-member-canonicalization.test.mts`, `src/lib/data/supabase-datasets.ts`, `src/lib/supabase/membership-recovery.ts`, `supabase/migrations/20260411223000_relink_memberships_by_email.sql`
+- Build/deploy path used: `npx --yes vercel deploy --prod --yes --scope adriandos-projects` from a clean detached worktree after `npx --yes vercel link --yes --project intelligent-investor-project --scope adriandos-projects`
+- Manual actions outside the main flow: the Supabase migration `20260411223000_relink_memberships_by_email.sql` was applied manually in the production project's SQL Editor before the app deploy because this workspace still does not have a Supabase admin token; the clean deploy worktree also ran a local `npm ci` so `npm run build` could verify inside the exact release tree
+- Pre-deploy live baseline:
+  - Vercel deployment id: `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE`
+  - Vercel state: `READY`
+  - Vercel readySubstate: `PROMOTED`
+  - Vercel gitCommitSha: `1005bc397c9244f27bcd6aebada9bef29f54e930`
+  - Production URL: `https://intelligent-investor-project.vercel.app`
+  - Supabase migration baseline: `20260411223000_relink_memberships_by_email.sql`
+- Post-deploy live baseline:
+  - Vercel deployment id: `dpl_53hjShQkmoUz5vfso6HXcghH4RaY`
+  - Vercel state: `READY`
+  - Vercel readySubstate: `PROMOTED`
+  - Vercel gitCommitSha: `c8d46648ea3bf52da0cb892d12e88024ede8ca8b`
+  - Production URL: `https://intelligent-investor-project.vercel.app`
+  - Supabase migration baseline: `20260411223000_relink_memberships_by_email.sql` (unchanged during app deploy)
+- Verification results:
+  - `npm run test:project-members` passed in the clean deploy worktree
+  - `npm run test:member-governance` passed in the clean deploy worktree
+  - `npm run build` passed in the clean deploy worktree
+  - Vercel production metadata shows `dpl_53hjShQkmoUz5vfso6HXcghH4RaY` as `READY` with `readySubstate=PROMOTED`
+  - Vercel production metadata `gitCommitSha` matches `c8d46648ea3bf52da0cb892d12e88024ede8ca8b`
+  - [sign-in](https://intelligent-investor-project.vercel.app/sign-in) returned `200`
+  - unauthenticated `/projects` returned `307 -> /sign-in`
+  - `/projects` with demo cookie `pf_demo_session=enabled` returned `200`
+  - `/projects/project-sunrise` with the demo cookie returned `200`
+- Rollback plan or rollback refs:
+  - Vercel rollback target: `dpl_4LfVF8x1U8mT8rTNoBpWGWSJBNuE`
+  - Supabase rollback target: `N/A` as a destructive rollback; this migration is additive and should be followed by a compensating forward fix if needed
+- Notes:
+  - The user manually applied the relink migration in Supabase before the app deploy, which satisfied the repo rule that schema-dependent app code must not ship before the required live SQL exists.
+  - The deployed source was already committed and pushed on `main` as `c8d46648ea3bf52da0cb892d12e88024ede8ca8b` before the production deploy started.
 
 ### Entry Template
 
